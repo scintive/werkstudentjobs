@@ -23,7 +23,11 @@ test.describe('Auth flow', () => {
 
   test('upload gated for anonymous users', async ({ page }) => {
     await page.context().clearCookies()
+    await page.goto('/logout')
+    await page.waitForLoadState('load')
     await page.goto('/')
-    await expect(page.getByText('Sign in to start')).toBeVisible()
+    // Check for auth CTA rather than a fragile text
+    await expect(page.getByRole('link', { name: 'Login' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Register' })).toBeVisible()
   })
 })

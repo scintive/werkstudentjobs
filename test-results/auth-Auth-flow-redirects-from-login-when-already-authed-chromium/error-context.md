@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link "ResumeCraft AI" [ref=e6] [cursor=pointer]:
+            - /url: /
+          - navigation [ref=e7]:
+            - link "Dashboard" [ref=e8] [cursor=pointer]:
+              - /url: /dashboard
+            - link "Jobs" [ref=e9] [cursor=pointer]:
+              - /url: /jobs
+        - generic [ref=e10]:
+          - generic [ref=e11]: varunmisra@gmail.com
+          - link "Logout" [ref=e12] [cursor=pointer]:
+            - /url: /logout
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - img [ref=e17]
+        - heading "Welcome Back" [level=1] [ref=e20]
+        - paragraph [ref=e21]: Sign in to access your resume and job matching
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: Email Address
+          - generic [ref=e25]:
+            - textbox "Email Address" [ref=e26]: varunmisra@gmail.com
+            - img [ref=e27]
+        - generic [ref=e30]:
+          - generic [ref=e31]: Password
+          - generic [ref=e32]:
+            - textbox "Password" [ref=e33]: TestIng!23
+            - img [ref=e34]
+        - button "Sign In" [ref=e37] [cursor=pointer]:
+          - img [ref=e38] [cursor=pointer]
+          - text: Sign In
+      - generic [ref=e41]:
+        - text: New here?
+        - link "Create an account" [ref=e42] [cursor=pointer]:
+          - /url: /register
+  - button "Open Next.js Dev Tools" [ref=e48] [cursor=pointer]:
+    - img [ref=e49] [cursor=pointer]
+  - alert [ref=e52]
+```

@@ -2,72 +2,73 @@
 
 ```yaml
 - generic [active] [ref=e1]:
-  - generic [ref=e3]:
-    - banner [ref=e4]:
-      - generic [ref=e6]:
-        - generic [ref=e7]:
-          - img [ref=e10]
-          - generic [ref=e13]:
-            - heading "ResumeCraft AI" [level=1] [ref=e14]
-            - paragraph [ref=e15]: ✨ Powered by Advanced AI • Premium Results
-        - generic [ref=e18]:
-          - generic [ref=e19]:
-            - generic [ref=e21]: "1"
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link "ResumeCraft AI" [ref=e6] [cursor=pointer]:
+            - /url: /
+          - navigation [ref=e7]:
+            - link "Dashboard" [ref=e8] [cursor=pointer]:
+              - /url: /dashboard
+            - link "Jobs" [ref=e9] [cursor=pointer]:
+              - /url: /jobs
+        - generic [ref=e10]:
+          - link "Login" [ref=e11] [cursor=pointer]:
+            - /url: /login
+          - link "Register" [ref=e12] [cursor=pointer]:
+            - /url: /register
+    - generic [ref=e13]:
+      - banner [ref=e14]:
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - img [ref=e20]
             - generic [ref=e23]:
-              - generic [ref=e24]: Upload
-              - generic [ref=e25]: Upload your resume
+              - heading "ResumeCraft AI" [level=1] [ref=e24]
+              - paragraph [ref=e25]: ✨ Powered by Advanced AI • Premium Results
           - generic [ref=e28]:
-            - generic [ref=e30]: "2"
-            - generic [ref=e31]:
-              - generic [ref=e32]: Editor
-              - generic [ref=e33]: Visual resume editor
-          - generic [ref=e36]:
-            - generic [ref=e38]: "3"
-            - generic [ref=e39]:
-              - generic [ref=e40]: Jobs
-              - generic [ref=e41]: Select target job
-          - generic [ref=e44]:
-            - generic [ref=e46]: "4"
-            - generic [ref=e47]:
-              - generic [ref=e48]: Strategy
-              - generic [ref=e49]: AI job strategy
-          - generic [ref=e52]:
-            - generic [ref=e54]: "5"
-            - generic [ref=e55]:
-              - generic [ref=e56]: Generate
-              - generic [ref=e57]: Download documents
-        - button "Help" [ref=e59]:
-          - img
-          - generic [ref=e60]: Help
-    - main [ref=e61]:
-      - generic [ref=e63]:
-        - generic [ref=e64]:
-          - generic [ref=e67]: Step 1 of 5
-          - heading "Transform Your Resume with AI" [level=1] [ref=e68]
-          - paragraph [ref=e69]: Upload your existing resume and watch our advanced AI extract, analyze, and structure your professional information for maximum impact.
-        - generic [ref=e77] [cursor=pointer]:
-          - img [ref=e78] [cursor=pointer]
-          - generic [ref=e81] [cursor=pointer]:
-            - paragraph [ref=e82] [cursor=pointer]: Upload your resume
-            - paragraph [ref=e83] [cursor=pointer]: Drag and drop your PDF file here, or click to browse
-            - generic [ref=e84] [cursor=pointer]:
-              - generic [ref=e85] [cursor=pointer]: "Supports: .pdf"
-              - generic [ref=e86] [cursor=pointer]: •
-              - generic [ref=e87] [cursor=pointer]: "Max size: 10 MB"
-        - generic [ref=e89]:
-          - generic [ref=e90]:
-            - generic [ref=e92]: 🔒
-            - heading "Secure & Private" [level=4] [ref=e93]
-            - paragraph [ref=e94]: Your data is encrypted and processed securely
-          - generic [ref=e95]:
-            - generic [ref=e97]: ⚡
-            - heading "Lightning Fast" [level=4] [ref=e98]
-            - paragraph [ref=e99]: AI-powered extraction in seconds
-          - generic [ref=e100]:
-            - generic [ref=e102]: 🎯
-            - heading "Highly Accurate" [level=4] [ref=e103]
-            - paragraph [ref=e104]: Advanced AI ensures precise data extraction
-  - button "Open Next.js Dev Tools" [ref=e110] [cursor=pointer]:
-    - img [ref=e111] [cursor=pointer]
-  - alert [ref=e114]
+            - generic [ref=e29]:
+              - generic [ref=e31]: "1"
+              - generic [ref=e33]:
+                - generic [ref=e34]: Upload
+                - generic [ref=e35]: Upload your resume
+            - generic [ref=e38]:
+              - generic [ref=e40]: "2"
+              - generic [ref=e41]:
+                - generic [ref=e42]: Editor
+                - generic [ref=e43]: Visual resume editor
+            - generic [ref=e46]:
+              - generic [ref=e48]: "3"
+              - generic [ref=e49]:
+                - generic [ref=e50]: Jobs
+                - generic [ref=e51]: Select target job
+            - generic [ref=e54]:
+              - generic [ref=e56]: "4"
+              - generic [ref=e57]:
+                - generic [ref=e58]: Strategy
+                - generic [ref=e59]: AI job strategy
+            - generic [ref=e62]:
+              - generic [ref=e64]: "5"
+              - generic [ref=e65]:
+                - generic [ref=e66]: Generate
+                - generic [ref=e67]: Download documents
+          - generic [ref=e68]:
+            - generic [ref=e70]:
+              - img [ref=e71]
+              - generic [ref=e73]: Saved just now
+            - button "Help" [ref=e75] [cursor=pointer]:
+              - img
+              - generic [ref=e76] [cursor=pointer]: Help
+      - main [ref=e77]:
+        - generic [ref=e79]:
+          - heading "Sign in to start" [level=2] [ref=e80]
+          - paragraph [ref=e81]: Create an account or log in to upload your resume and save progress securely.
+          - generic [ref=e82]:
+            - link "Login" [ref=e83] [cursor=pointer]:
+              - /url: /login
+            - link "Register" [ref=e84] [cursor=pointer]:
+              - /url: /register
+  - button "Open Next.js Dev Tools" [ref=e90] [cursor=pointer]:
+    - img [ref=e91] [cursor=pointer]
+  - alert [ref=e94]
 ```

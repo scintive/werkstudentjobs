@@ -14,10 +14,9 @@
             - link "Jobs" [ref=e9] [cursor=pointer]:
               - /url: /jobs
         - generic [ref=e10]:
-          - link "Login" [ref=e11] [cursor=pointer]:
-            - /url: /login
-          - link "Register" [ref=e12] [cursor=pointer]:
-            - /url: /register
+          - generic [ref=e11]: varunmisra@gmail.com
+          - link "Logout" [ref=e12] [cursor=pointer]:
+            - /url: /logout
     - generic [ref=e13]:
       - banner [ref=e14]:
         - generic [ref=e16]:
@@ -61,14 +60,33 @@
               - generic [ref=e76] [cursor=pointer]: Help
       - main [ref=e77]:
         - generic [ref=e79]:
-          - heading "Sign in to start" [level=2] [ref=e80]
-          - paragraph [ref=e81]: Create an account or log in to upload your resume and save progress securely.
-          - generic [ref=e82]:
-            - link "Login" [ref=e83] [cursor=pointer]:
-              - /url: /login
-            - link "Register" [ref=e84] [cursor=pointer]:
-              - /url: /register
-  - button "Open Next.js Dev Tools" [ref=e90] [cursor=pointer]:
-    - img [ref=e91] [cursor=pointer]
-  - alert [ref=e94]
+          - generic [ref=e80]:
+            - generic [ref=e83]: Step 1 of 5
+            - heading "Transform Your Resume with AI" [level=1] [ref=e84]
+            - paragraph [ref=e85]: Upload your existing resume and watch our advanced AI extract, analyze, and structure your professional information for maximum impact.
+          - generic [ref=e93] [cursor=pointer]:
+            - img [ref=e94] [cursor=pointer]
+            - generic [ref=e97] [cursor=pointer]:
+              - paragraph [ref=e98] [cursor=pointer]: Upload your resume
+              - paragraph [ref=e99] [cursor=pointer]: Drag and drop your PDF file here, or click to browse
+              - generic [ref=e100] [cursor=pointer]:
+                - generic [ref=e101] [cursor=pointer]: "Supports: .pdf"
+                - generic [ref=e102] [cursor=pointer]: •
+                - generic [ref=e103] [cursor=pointer]: "Max size: 10 MB"
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - generic [ref=e108]: 🔒
+              - heading "Secure & Private" [level=4] [ref=e109]
+              - paragraph [ref=e110]: Your data is encrypted and processed securely
+            - generic [ref=e111]:
+              - generic [ref=e113]: ⚡
+              - heading "Lightning Fast" [level=4] [ref=e114]
+              - paragraph [ref=e115]: AI-powered extraction in seconds
+            - generic [ref=e116]:
+              - generic [ref=e118]: 🎯
+              - heading "Highly Accurate" [level=4] [ref=e119]
+              - paragraph [ref=e120]: Advanced AI ensures precise data extraction
+  - button "Open Next.js Dev Tools" [ref=e126] [cursor=pointer]:
+    - img [ref=e127] [cursor=pointer]
+  - alert [ref=e130]
 ```

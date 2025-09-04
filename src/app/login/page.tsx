@@ -4,6 +4,12 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Lock, LogIn } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import type { Viewport } from 'next'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
 
 export default function LoginPage() {
   const [email, setEmail] = React.useState('')

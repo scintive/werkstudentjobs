@@ -18,7 +18,7 @@
             - /url: /login
           - link "Register" [ref=e12] [cursor=pointer]:
             - /url: /register
-    - paragraph [ref=e16]: Checking your profile...
+    - generic [ref=e16]: Loading your resume...
   - button "Open Next.js Dev Tools" [ref=e22] [cursor=pointer]:
     - img [ref=e23] [cursor=pointer]
   - alert [ref=e26]
