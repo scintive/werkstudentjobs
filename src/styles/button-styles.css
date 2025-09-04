@@ -1,0 +1,122 @@
+/* Clean, Simple Button Styles for Resume Editor */
+
+/* Base button reset and clean styles */
+.resume-edit-container button,
+.resume-preview-container button,
+.section-container button {
+  /* Reset */
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  position: relative;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+}
+
+/* Primary Add buttons - Simple blue, no gradients */
+.add-button,
+.primary-button,
+button.text-blue-600:not(.delete-button):not(.drag-handle) {
+  background: #3b82f6;
+  color: white !important;
+  font-weight: 500;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.add-button:hover,
+.primary-button:hover,
+button.text-blue-600:not(.delete-button):not(.drag-handle):hover {
+  background: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Delete buttons - Simple and subtle */
+.delete-button,
+button.text-red-500,
+button:has([class*="Trash"]) {
+  background: transparent;
+  color: #ef4444 !important;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.delete-button:hover,
+button.text-red-500:hover,
+button:has([class*="Trash"]):hover {
+  background: #fef2f2;
+}
+
+/* Drag handles - Minimal styling */
+.drag-handle,
+button:has([class*="Grip"]) {
+  background: transparent;
+  color: #94a3b8;
+  padding: 0.25rem;
+  cursor: grab;
+}
+
+.drag-handle:hover,
+button:has([class*="Grip"]):hover {
+  color: #64748b;
+}
+
+.drag-handle:active,
+button:has([class*="Grip"]):active {
+  cursor: grabbing;
+}
+
+/* Icon sizing */
+button svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+button .w-3.h-3 {
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+}
+
+button .w-4.h-4 {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/* Disabled state */
+button:disabled,
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus state - subtle */
+button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
+/* Remove all animations for performance */
+button {
+  animation: none !important;
+}
+
+/* Ensure text is visible */
+button span,
+button:not(:empty) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}

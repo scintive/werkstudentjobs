@@ -1,0 +1,73 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e10]
+          - generic [ref=e13]:
+            - heading "ResumeCraft AI" [level=1] [ref=e14]
+            - paragraph [ref=e15]: ✨ Powered by Advanced AI • Premium Results
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e21]: "1"
+            - generic [ref=e23]:
+              - generic [ref=e24]: Upload
+              - generic [ref=e25]: Upload your resume
+          - generic [ref=e28]:
+            - generic [ref=e30]: "2"
+            - generic [ref=e31]:
+              - generic [ref=e32]: Editor
+              - generic [ref=e33]: Visual resume editor
+          - generic [ref=e36]:
+            - generic [ref=e38]: "3"
+            - generic [ref=e39]:
+              - generic [ref=e40]: Jobs
+              - generic [ref=e41]: Select target job
+          - generic [ref=e44]:
+            - generic [ref=e46]: "4"
+            - generic [ref=e47]:
+              - generic [ref=e48]: Strategy
+              - generic [ref=e49]: AI job strategy
+          - generic [ref=e52]:
+            - generic [ref=e54]: "5"
+            - generic [ref=e55]:
+              - generic [ref=e56]: Generate
+              - generic [ref=e57]: Download documents
+        - button "Help" [ref=e59]:
+          - img
+          - generic [ref=e60]: Help
+    - main [ref=e61]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e67]: Step 1 of 5
+          - heading "Transform Your Resume with AI" [level=1] [ref=e68]
+          - paragraph [ref=e69]: Upload your existing resume and watch our advanced AI extract, analyze, and structure your professional information for maximum impact.
+        - generic [ref=e77] [cursor=pointer]:
+          - img [ref=e78] [cursor=pointer]
+          - generic [ref=e81] [cursor=pointer]:
+            - paragraph [ref=e82] [cursor=pointer]: Upload your resume
+            - paragraph [ref=e83] [cursor=pointer]: Drag and drop your PDF file here, or click to browse
+            - generic [ref=e84] [cursor=pointer]:
+              - generic [ref=e85] [cursor=pointer]: "Supports: .pdf"
+              - generic [ref=e86] [cursor=pointer]: •
+              - generic [ref=e87] [cursor=pointer]: "Max size: 10 MB"
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - generic [ref=e92]: 🔒
+            - heading "Secure & Private" [level=4] [ref=e93]
+            - paragraph [ref=e94]: Your data is encrypted and processed securely
+          - generic [ref=e95]:
+            - generic [ref=e97]: ⚡
+            - heading "Lightning Fast" [level=4] [ref=e98]
+            - paragraph [ref=e99]: AI-powered extraction in seconds
+          - generic [ref=e100]:
+            - generic [ref=e102]: 🎯
+            - heading "Highly Accurate" [level=4] [ref=e103]
+            - paragraph [ref=e104]: Advanced AI ensures precise data extraction
+  - button "Open Next.js Dev Tools" [ref=e110] [cursor=pointer]:
+    - img [ref=e111] [cursor=pointer]
+  - alert [ref=e116]
+```

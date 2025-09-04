@@ -1,0 +1,226 @@
+import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+import { llmService } from '@/lib/services/llmService';
+// Lazy import puppeteer to avoid bundling/runtime issues
+let _puppeteer: any = null;
+async function getPuppeteer() {
+  if (_puppeteer) return _puppeteer;
+  try {
+    // @ts-ignore
+    _puppeteer = (await import('puppeteer')).default;
+  } catch (e) {
+    console.error('🐛 Failed to import puppeteer:', e);
+    throw new Error('Puppeteer not available');
+  }
+  return _puppeteer;
+}
+
+// Primary: Node PDF parser (no network/headless deps)
+async function extractTextFromPDF(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  try {
+    const pdfParse = (await import('pdf-parse')).default as any;
+    const data = await pdfParse(buffer);
+    if (data?.text && data.text.trim().length > 50) {
+      return data.text as string;
+    }
+  } catch (e) {
+    console.warn('📄 pdf-parse failed or returned empty text, will try fallback:', (e as Error).message);
+  }
+
+  // Fallback: Puppeteer + PDF.js (requires network to CDN)
+  const base64 = buffer.toString('base64');
+  const puppeteer = await getPuppeteer();
+  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<!doctype html><html><head>
+      <meta charset="utf-8" />
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+      <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    </head><body></body></html>`, { waitUntil: 'load' });
+    const text = await page.evaluate(async (b64) => {
+      const raw = atob(b64);
+      const len = raw.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = raw.charCodeAt(i);
+      const task = window.pdfjsLib.getDocument({ data: bytes });
+      const pdf = await task.promise;
+      let all = '';
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const txt = content.items.map((it:any) => it.str).join(' ');
+        all += '\n\n' + txt;
+      }
+      return all;
+    }, base64);
+    await browser.close();
+    return text;
+  } catch (err) {
+    try { await browser.close(); } catch {}
+    throw err;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    if (file.type && file.type !== 'application/pdf') {
+      // Some browsers omit type; only enforce when present
+      return NextResponse.json({ error: `Only PDF files are supported (received ${file.type})` }, { status: 400 });
+    }
+
+    // Extract text from PDF
+    let extractedText = '';
+    try {
+      extractedText = await extractTextFromPDF(file);
+    } catch (pdfErr) {
+      console.error('📄 PDF extraction failed:', pdfErr);
+      return NextResponse.json({ error: 'PDF extraction failed', details: pdfErr instanceof Error ? pdfErr.message : 'Unknown PDF error' }, { status: 500 });
+    }
+
+    // Initialize LLM client
+    try {
+      llmService.client = llmService.initializeClient();
+    } catch (e) {
+      console.error('🔐 OpenAI client init failed:', e);
+      return NextResponse.json({ error: 'AI unavailable', details: e instanceof Error ? e.message : 'Init failed' }, { status: 500 });
+    }
+    
+    // Use LLM service to structure the profile
+    let profile: any;
+    try {
+      profile = await llmService.extractProfileFromText(extractedText);
+    } catch (aiErr) {
+      console.error('🧠 Profile extraction LLM failed:', aiErr);
+      return NextResponse.json({ error: 'Profile extraction failed', details: aiErr instanceof Error ? aiErr.message : 'AI error' }, { status: 500 });
+    }
+
+    // Format education entries - try GPT first, fallback to manual expansion
+    if (profile.education && Array.isArray(profile.education)) {
+      console.log('🔍 RAW PROFILE EDUCATION BEFORE FORMATTING:', JSON.stringify(profile.education, null, 2));
+      console.log('🔍 EDUCATION FIELD NAMES:', Object.keys(profile.education[0] || {}));
+      
+      // Use LLM service for reliable education formatting (now with manual expansion fallback)
+      try {
+        profile.education = await llmService.formatEducationEntries(profile.education);
+        console.log('🔍 LLM SERVICE FORMATTED EDUCATION:', JSON.stringify(profile.education, null, 2));
+      } catch (error) {
+        console.warn('🔍 LLM formatting failed, keeping original:', error);
+      }
+    } else {
+      console.log('🔍 NO EDUCATION DATA OR NOT ARRAY:', profile.education);
+    }
+
+    // Manual degree expansion function
+    function expandDegreeAbbreviation(degree: string): string {
+      const expansions: Record<string, string> = {
+        'BSc': 'Bachelor of Science',
+        'B.Sc': 'Bachelor of Science', 
+        'B.Sc.': 'Bachelor of Science',
+        'MSc': 'Master of Science',
+        'M.Sc': 'Master of Science',
+        'M.Sc.': 'Master of Science',
+        'BA': 'Bachelor of Arts',
+        'B.A': 'Bachelor of Arts',
+        'B.A.': 'Bachelor of Arts',
+        'MA': 'Master of Arts',
+        'M.A': 'Master of Arts',
+        'M.A.': 'Master of Arts',
+        'AS': 'Associate of Science',
+        'A.S': 'Associate of Science',
+        'A.S.': 'Associate of Science',
+        'AA': 'Associate of Arts',
+        'A.A': 'Associate of Arts',
+        'A.A.': 'Associate of Arts',
+        'PhD': 'Doctor of Philosophy',
+        'Ph.D': 'Doctor of Philosophy',
+        'Ph.D.': 'Doctor of Philosophy'
+      };
+      
+      return expansions[degree] || degree;
+    }
+
+    // INTELLIGENT SKILL ORGANIZATION - Combined into profile extraction for faster loading
+    console.log('🧠🎯 === ORGANIZING SKILLS INTELLIGENTLY ===');
+    let organizedSkills = null;
+    
+    try {
+      // Extract current skills array from profile
+      const currentSkills: string[] = [];
+      if (profile.skills) {
+        Object.values(profile.skills).forEach((skillArray: any) => {
+          if (Array.isArray(skillArray)) {
+            currentSkills.push(...skillArray);
+          }
+        });
+      }
+      
+      console.log('🧠🎯 Current skills found:', currentSkills.length);
+      
+      // Organize skills intelligently using GPT
+      if (process.env.OPENAI_API_KEY) {
+        organizedSkills = await llmService.organizeSkillsIntelligently(profile, currentSkills);
+        console.log('🧠🎯 Categories created:', Object.keys(organizedSkills.organized_categories || {}).length);
+      } else {
+        console.log('🧠🎯 No OpenAI key, using fallback organization');
+        organizedSkills = {
+          organized_categories: {
+            "Core Skills": {
+              skills: currentSkills.slice(0, 5),
+              suggestions: ["Communication", "Problem Solving", "Time Management"],
+              reasoning: "Essential professional skills"
+            },
+            "Technical Skills": {
+              skills: currentSkills.slice(5),
+              suggestions: ["Microsoft Office", "Data Analysis", "Project Management"],
+              reasoning: "Basic technical competencies"
+            }
+          },
+          profile_assessment: {
+            career_focus: "Professional Development",
+            skill_level: "entry", 
+            recommendations: "Build foundational skills"
+          },
+          category_mapping: {},
+          source: 'fallback'
+        };
+      }
+    } catch (error) {
+      console.error('🧠🎯 Skill organization failed (non-critical):', error);
+      // Don't fail the entire extraction if skill organization fails
+      // Just return null and let the frontend handle it
+    }
+
+    // Debug custom sections extraction
+    console.log('🔍 PROFILE EXTRACTION - Custom sections extracted:', JSON.stringify(profile.custom_sections, null, 2));
+    console.log('🔍 PROFILE EXTRACTION - Profile keys:', Object.keys(profile));
+
+    return NextResponse.json({ 
+      success: true,
+      profile,
+      organizedSkills, // Include organized skills in the response
+      message: 'Profile extracted and skills organized successfully'
+    });
+
+  } catch (error) {
+    console.error('Profile extraction error (outer):', error);
+    
+    return NextResponse.json(
+      { 
+        error: 'Failed to extract profile from resume',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, 
+      { status: 500 }
+    );
+  }
+}

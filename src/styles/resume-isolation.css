@@ -1,0 +1,97 @@
+/* Resume Template CSS Isolation */
+
+/* Isolate resume containers from global page styles */
+.resume-preview-container,
+.resume-edit-container {
+  /* Create isolated stacking context */
+  isolation: isolate;
+  
+  /* Prevent style leakage */
+  contain: style layout;
+  
+  /* Reset any inherited styles that could interfere */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* Isolated content should not inherit problematic styles */
+.resume-content-isolated {
+  /* Reset all styles to prevent inheritance */
+  all: unset;
+  display: block;
+  
+  /* Allow template styles to take precedence */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* Ensure resume content doesn't inherit global styles */
+.resume-content-isolated * {
+  /* Let each element use its own defined styles */
+  all: revert;
+}
+
+/* Specifically isolate common conflicting elements */
+.resume-preview-container h1,
+.resume-preview-container h2,
+.resume-preview-container h3,
+.resume-preview-container h4,
+.resume-preview-container h5,
+.resume-preview-container h6,
+.resume-edit-container h1,
+.resume-edit-container h2,
+.resume-edit-container h3,
+.resume-edit-container h4,
+.resume-edit-container h5,
+.resume-edit-container h6 {
+  /* Reset heading styles */
+  all: revert;
+  margin: revert;
+  padding: revert;
+  font-size: revert;
+  font-weight: revert;
+  line-height: revert;
+  color: revert;
+}
+
+.resume-preview-container p,
+.resume-edit-container p {
+  /* Reset paragraph styles */
+  all: revert;
+  margin: revert;
+  padding: revert;
+  font-size: revert;
+  line-height: revert;
+  color: revert;
+}
+
+.resume-preview-container div,
+.resume-edit-container div {
+  /* Reset div styles */
+  box-sizing: border-box;
+}
+
+/* Ensure buttons and interactive elements work properly */
+.resume-preview-container button,
+.resume-edit-container button {
+  all: revert;
+}
+
+/* Prevent Tailwind CSS from interfering with template styles */
+.resume-preview-container .not-prose,
+.resume-edit-container .not-prose {
+  /* Disable prose styles */
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Override any global reset that might interfere */
+.resume-preview-container *,
+.resume-edit-container * {
+  box-sizing: border-box;
+}

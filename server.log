@@ -1,0 +1,1584 @@
+
+> visual-app@0.1.0 dev
+> next dev --turbopack
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/varunmishra/Documents/Projects/WorkingStudent/prototype-cli/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/varunmishra/Documents/Projects/WorkingStudent/prototype-cli/visual-app/visual-app/package-lock.json
+
+ ⚠ Port 3000 is in use by process 16965, using available port 3001 instead.
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.0.71:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1960ms
+ ○ Compiling /api/profile/latest ...
+ ✓ Compiled /api/profile/latest in 1633ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: afe7533f-41d1-4682-bfed-1fc022ee6550 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: afe7533f-41d1-4682-bfed-1fc022ee6550
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 2448ms
+ ✓ Compiled /api/jobs/strategy-student in 439ms
+🎓 STUDENT STRATEGY: Analyzing job cm4xcrr9100p4vhwx8i5jxm0w
+🎓 STUDENT STRATEGY: Job fetch error: {
+  code: '22P02',
+  details: null,
+  hint: null,
+  message: 'invalid input syntax for type uuid: "cm4xcrr9100p4vhwx8i5jxm0w"'
+}
+ POST /api/jobs/strategy-student 404 in 903ms
+ ✓ Compiled /api/jobs/fetch in 146ms
+ GET /api/jobs/fetch?limit=1 200 in 683ms
+🎓 STUDENT STRATEGY: Analyzing job 612dfc17-139a-4439-b54d-bc75db4581dc
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: afe7533f-41d1-4682-bfed-1fc022ee6550 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: afe7533f-41d1-4682-bfed-1fc022ee6550
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 448ms
+🎓 STUDENT STRATEGY: Converting resume_data to user_profiles format
+🎓 STUDENT STRATEGY: Profile loaded from /api/profile/latest
+🎓 STUDENT STRATEGY: Profile data check:
+  - Name: Varun Mishra
+  - Education: {
+  degree: 'Bachelor of Science',
+  institution: 'OTH Amberg-Weiden',
+  field_of_study: 'Digital Technology & Management'
+}
+  - Degree program: Digital Technology & Management
+  - Current year: undefined
+  - Expected graduation: undefined
+  - Professional title: AI Automation Specialist
+  - Skills count: 19
+  - Projects count: 4
+  - Compact context student: {
+  degree: 'Digital Technology & Management',
+  year: null,
+  graduation: null,
+  coursework: [],
+  projects: [
+    {
+      title: 'OneTap – Factory Time Tracking IoT System',
+      tech: [],
+      metrics: 'Led the full-stack development of an IoT time-tracking system that solved a critical data-accuracy problem for a major industrial partner – Krones AG.'
+    },
+    {
+      title: 'Vertical – Smart Hydroponic Farming System',
+      tech: [],
+      metrics: "Initiated and led the product strategy for an in-home hydroponic farming system, framing it as a solution to the 'broken food system.' Drove the project from initial market research to a functional IoT hardware prototype, developing the brand identity, business plan, and pitch deck that secured market validation at the BayStartup conference."
+    },
+    {
+      title: 'Make or Spot – AI Generated Party Game',
+      tech: [],
+      metrics: "Created a production-ready physical card game by mastering AI-driven design consistency. Developed a 'master prompt' engineering workflow in ChatGPT to generate 90 unique, stylistically-cohesive card illustrations, evolving the product from a prototype to a polished final version."
+    }
+  ],
+  skills: [
+    'Prompt Engineering', 'Generative AI',
+    'Midjourney',         'Zapier',
+    'REST APIs',          'React',
+    'JavaScript',         'Express',
+    'MongoDB',            'Final Cut Pro',
+    'HTML5',              'CSS3',
+    'Tailwind CSS',       'Next.js',
+    'Node.js',            'Figma',
+    'Flutter',            'WordPress',
+    'IoT'
+  ],
+  tools: [
+    'UI/UX Design',
+    'Figma',
+    'Interactive Specifications',
+    'User-Centric Information Architecture'
+  ],
+  languages: [ 'English (Native)', 'German (B1)', 'Hindi (Native)' ],
+  availability: null,
+  start_date: null,
+  duration: null
+}
+🎓 STUDENT STRATEGY: Raw AI response length: 3804
+🎓 STUDENT STRATEGY: Generated - 0 courses, 3 projects aligned
+ POST /api/jobs/strategy-student 200 in 14536ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: afe7533f-41d1-4682-bfed-1fc022ee6550 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: afe7533f-41d1-4682-bfed-1fc022ee6550
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 552ms
+ ✓ Compiled /api/jobs/strategy-enhanced in 115ms
+🎯 ENHANCED STRATEGY: Generating comprehensive strategy for job 612dfc17-139a-4439-b54d-bc75db4581dc
+🎯 ENHANCED STRATEGY: Job fetch error: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column companies_1.size does not exist'
+}
+ POST /api/jobs/strategy-enhanced 404 in 657ms
+🎯 ENHANCED STRATEGY: Generating comprehensive strategy for job 612dfc17-139a-4439-b54d-bc75db4581dc
+🎯 ENHANCED STRATEGY: Job fetch error: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column companies_1.website does not exist'
+}
+ POST /api/jobs/strategy-enhanced 404 in 481ms
+🎯 ENHANCED STRATEGY: Generating comprehensive strategy for job 612dfc17-139a-4439-b54d-bc75db4581dc
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: afe7533f-41d1-4682-bfed-1fc022ee6550 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: afe7533f-41d1-4682-bfed-1fc022ee6550
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 485ms
+🎯 ENHANCED STRATEGY: Raw AI response length: 8903
+🎯 ENHANCED STRATEGY: Generated comprehensive strategy with 8 sections
+ POST /api/jobs/strategy-enhanced 200 in 23388ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: f6232a78-7181-446b-97f2-1dd4c760520e email: sawicka.maria.2000@gmail.com
+🔍 LATEST PROFILE: Using session: f6232a78-7181-446b-97f2-1dd4c760520e email: sawicka.maria.2000@gmail.com
+🔍 LATEST PROFILE: Found user profile session: 676a3fd4-7cb2-44d4-87a9-2a8c1f5c812d
+🔍 LATEST PROFILE: Found user profile session: 676a3fd4-7cb2-44d4-87a9-2a8c1f5c812d
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 493ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 496ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: f6232a78-7181-446b-97f2-1dd4c760520e email: sawicka.maria.2000@gmail.com
+🔍 LATEST PROFILE: Using session: f6232a78-7181-446b-97f2-1dd4c760520e email: sawicka.maria.2000@gmail.com
+🔍 LATEST PROFILE: Found user profile session: 676a3fd4-7cb2-44d4-87a9-2a8c1f5c812d
+🔍 LATEST PROFILE: Found user profile session: 676a3fd4-7cb2-44d4-87a9-2a8c1f5c812d
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 544ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 550ms
+🎯 ENHANCED STRATEGY: Generating comprehensive strategy for job 601b28bd-28aa-4674-a97c-15382edff409
+🎯 ENHANCED STRATEGY: Job title: Werkstudent (m/w/d)
+🎯 ENHANCED STRATEGY: Company name: undefined
+🎯 ENHANCED STRATEGY: Job description length: 0
+🎯 ENHANCED STRATEGY: Skills required: ["Project responsibility","Team collaboration","Time management"]
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: f6232a78-7181-446b-97f2-1dd4c760520e email: sawicka.maria.2000@gmail.com
+🔍 LATEST PROFILE: Found user profile session: 676a3fd4-7cb2-44d4-87a9-2a8c1f5c812d
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 349ms
+🎯 ENHANCED STRATEGY: Sending context to GPT:
+🎯 ENHANCED STRATEGY: - Job: Werkstudent (m/w/d) at Company
+🎯 ENHANCED STRATEGY: - Candidate: Maria Sawicka
+ GET /api/jobs/fetch?limit=1 200 in 440ms
+🎯 ENHANCED STRATEGY: Raw AI response length: 8594
+🎯 ENHANCED STRATEGY: Generated comprehensive strategy with 8 sections
+ POST /api/jobs/strategy-enhanced 200 in 21725ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: 30b94bcf-4fed-477b-a761-a95552c08f40 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: 30b94bcf-4fed-477b-a761-a95552c08f40 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: 30b94bcf-4fed-477b-a761-a95552c08f40
+🔍 LATEST PROFILE: Found user profile session: 30b94bcf-4fed-477b-a761-a95552c08f40
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 450ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 402ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: 30b94bcf-4fed-477b-a761-a95552c08f40 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: 30b94bcf-4fed-477b-a761-a95552c08f40
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 405ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: 30b94bcf-4fed-477b-a761-a95552c08f40 email: m.varun@oth-aw.de
+🔍 LATEST PROFILE: Found user profile session: 30b94bcf-4fed-477b-a761-a95552c08f40
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 339ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 0
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 0
+🔍 LATEST PROFILE: No profiles found
+ GET /api/profile/latest 404 in 914ms
+🔍 LATEST PROFILE: No profiles found
+ GET /api/profile/latest 404 in 961ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.3s
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 3742ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 1245ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 369ms
+ GET /api/profile/latest 200 in 390ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ ○ Compiling /jobs ...
+ ✓ Compiled /jobs in 524ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /jobs. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /jobs. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /jobs 200 in 626ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 341ms
+ GET /api/jobs/fetch?limit=30 200 in 657ms
+ GET /api/jobs/fetch?limit=30 200 in 681ms
+ ○ Compiling /jobs/[id]/tailor ...
+ ✓ Compiled /jobs/[id]/tailor in 658ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /jobs/[id]/tailor. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /jobs/[id]/tailor. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /jobs/af43fc76-5fcb-4ab8-9389-e2588da17075/tailor 200 in 1235ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 873ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 882ms
+ ✓ Compiled /api/jobs/details in 83ms
+🔍 JOB DETAILS: Fetching job af43fc76-5fcb-4ab8-9389-e2588da17075
+🔍 JOB DETAILS: Fetching job af43fc76-5fcb-4ab8-9389-e2588da17075
+🔍 JOB DETAILS: Found job "Working Student - Content/Social Media" at youngle GmbH
+ GET /api/jobs/details?job_id=af43fc76-5fcb-4ab8-9389-e2588da17075 200 in 462ms
+🔍 JOB DETAILS: Found job "Working Student - Content/Social Media" at youngle GmbH
+ GET /api/jobs/details?job_id=af43fc76-5fcb-4ab8-9389-e2588da17075 200 in 485ms
+🎓 STUDENT STRATEGY: Analyzing job af43fc76-5fcb-4ab8-9389-e2588da17075
+🎓 STUDENT STRATEGY: Analyzing job af43fc76-5fcb-4ab8-9389-e2588da17075
+🎓 STUDENT STRATEGY: Cache disabled - generating fresh analysis with real data
+🎓 STUDENT STRATEGY: Profile data check:
+  - Name: undefined
+  - Education: {
+  year: 'Expected 2026',
+  degree: 'Bachelor of Science Digital Technology & Management',
+  institution: 'OTH Amberg-Weiden, Germany',
+  field_of_study: ''
+}
+  - Degree program: undefined
+  - Current year: undefined
+  - Expected graduation: 2026-01-01
+  - Professional title: undefined
+  - Skills count: N/A
+  - Projects count: 4
+  - Compact context student: {
+  degree: 'Bachelor of Science Digital Technology & Management in ',
+  year: null,
+  graduation: '2026-01-01',
+  coursework: [],
+  projects: [
+    {
+      title: 'OneTap – Factory Time Tracking IoT System',
+      tech: [],
+      metrics: 'Led full-stack development of an IoT time-tracking system for Krones AG, building a native Swift/watchOS app and a real-time Next.js dashboard powered by Node.js and Socket.IO, achieving a System Usability Score of 87.5.'
+    },
+    {
+      title: 'Vertical – Smart Hydroponic Farming System',
+      tech: [],
+      metrics: 'Initiated and led product strategy for an in-home hydroponic farming system, driving market research, hardware prototyping, brand identity, business plan, and pitch deck to secure validation at BayStartup.'
+    },
+    {
+      title: 'Make or Spot – AI-Generated Party Game',
+      tech: [],
+      metrics: "Created a production-ready physical card game using an AI-driven 'master prompt' workflow in ChatGPT to generate 90 unique, stylistically-cohesive card illustrations, evolving the prototype into a polished final product."
+    }
+  ],
+  skills: {
+    backend___real_time_systems: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    frontend_development___design: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    product_management___ux_strategy: [
+      'Product Strategy',
+      'UI/UX Design',
+      'Stakeholder Management',
+      'Project Management',
+      'Agile/Scrum',
+      'Training & Mentoring'
+    ],
+    devops__collaboration___deployment: [
+      'Git',
+      'GitHub',
+      'Vercel',
+      'Cursor IDE',
+      'Microsoft Office Suite (Excel, Word, PowerPoint)'
+    ],
+    ai__automation___prompt_engineering: [ [Object], [Object], [Object], [Object], [Object], [Object] ]
+  },
+  tools: [],
+  languages: [],
+  availability: null,
+  start_date: null,
+  duration: null
+}
+🎓 STUDENT STRATEGY: Cache disabled - generating fresh analysis with real data
+🎓 STUDENT STRATEGY: Profile data check:
+  - Name: undefined
+  - Education: {
+  year: 'Expected 2026',
+  degree: 'Bachelor of Science Digital Technology & Management',
+  institution: 'OTH Amberg-Weiden, Germany',
+  field_of_study: ''
+}
+  - Degree program: undefined
+  - Current year: undefined
+  - Expected graduation: 2026-01-01
+  - Professional title: undefined
+  - Skills count: N/A
+  - Projects count: 4
+  - Compact context student: {
+  degree: 'Bachelor of Science Digital Technology & Management in ',
+  year: null,
+  graduation: '2026-01-01',
+  coursework: [],
+  projects: [
+    {
+      title: 'OneTap – Factory Time Tracking IoT System',
+      tech: [],
+      metrics: 'Led full-stack development of an IoT time-tracking system for Krones AG, building a native Swift/watchOS app and a real-time Next.js dashboard powered by Node.js and Socket.IO, achieving a System Usability Score of 87.5.'
+    },
+    {
+      title: 'Vertical – Smart Hydroponic Farming System',
+      tech: [],
+      metrics: 'Initiated and led product strategy for an in-home hydroponic farming system, driving market research, hardware prototyping, brand identity, business plan, and pitch deck to secure validation at BayStartup.'
+    },
+    {
+      title: 'Make or Spot – AI-Generated Party Game',
+      tech: [],
+      metrics: "Created a production-ready physical card game using an AI-driven 'master prompt' workflow in ChatGPT to generate 90 unique, stylistically-cohesive card illustrations, evolving the prototype into a polished final product."
+    }
+  ],
+  skills: {
+    backend___real_time_systems: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    frontend_development___design: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    product_management___ux_strategy: [
+      'Product Strategy',
+      'UI/UX Design',
+      'Stakeholder Management',
+      'Project Management',
+      'Agile/Scrum',
+      'Training & Mentoring'
+    ],
+    devops__collaboration___deployment: [
+      'Git',
+      'GitHub',
+      'Vercel',
+      'Cursor IDE',
+      'Microsoft Office Suite (Excel, Word, PowerPoint)'
+    ],
+    ai__automation___prompt_engineering: [ [Object], [Object], [Object], [Object], [Object], [Object] ]
+  },
+  tools: [],
+  languages: [],
+  availability: null,
+  start_date: null,
+  duration: null
+}
+ ✓ Compiled in 554ms
+🎓 STUDENT STRATEGY: Raw AI response length: 4472
+🎓 STUDENT STRATEGY: Generated - 0 courses, 3 projects aligned
+ POST /api/jobs/strategy-student 200 in 28678ms
+ POST /api/jobs/strategy-enhanced 400 in 396ms
+🎓 STUDENT STRATEGY: Raw AI response length: 4818
+🎓 STUDENT STRATEGY: Generated - 0 courses, 3 projects aligned
+ POST /api/jobs/strategy-student 200 in 31850ms
+ POST /api/jobs/strategy-enhanced 400 in 266ms
+ ✓ Compiled in 448ms
+ ✓ Compiled /api/jobs/resume/patches in 255ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 722ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 734ms
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+🎯 PATCHES: Raw AI response length: 553
+🎯 PATCHES: Raw AI response length: 492
+🎯 PATCHES: Raw AI response length: 554
+🎯 PATCHES: Raw AI response length: 547
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 8472ms
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 8897ms
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 7869ms
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 7956ms
+ ✓ Compiled in 1220ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Unsupported metadata viewport is configured in metadata export in /jobs. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /jobs. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /jobs 200 in 369ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 651ms
+ GET /api/jobs/fetch?limit=30 200 in 575ms
+ GET /api/jobs/fetch?limit=30 200 in 803ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 1261ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /jobs/[id]/tailor. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /jobs/[id]/tailor. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /jobs/aaef8f78-656a-49e8-b6ac-f7b38f8f28b2/tailor 200 in 997ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 814ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 816ms
+🔍 JOB DETAILS: Fetching job aaef8f78-656a-49e8-b6ac-f7b38f8f28b2
+🔍 JOB DETAILS: Fetching job aaef8f78-656a-49e8-b6ac-f7b38f8f28b2
+🔍 JOB DETAILS: Found job "Working Student (f/m/x) Entrepreneurship & Tech Programs at TUM Venture Labs" at TUM Venture Labs
+ GET /api/jobs/details?job_id=aaef8f78-656a-49e8-b6ac-f7b38f8f28b2 200 in 491ms
+🔍 JOB DETAILS: Found job "Working Student (f/m/x) Entrepreneurship & Tech Programs at TUM Venture Labs" at TUM Venture Labs
+ GET /api/jobs/details?job_id=aaef8f78-656a-49e8-b6ac-f7b38f8f28b2 200 in 493ms
+🎓 STUDENT STRATEGY: Analyzing job aaef8f78-656a-49e8-b6ac-f7b38f8f28b2
+🎓 STUDENT STRATEGY: Analyzing job aaef8f78-656a-49e8-b6ac-f7b38f8f28b2
+🎓 STUDENT STRATEGY: Cache disabled - generating fresh analysis with real data
+🎓 STUDENT STRATEGY: Profile data check:
+  - Name: undefined
+  - Education: {
+  degree: 'Bachelor of Science Digital Technology & Management',
+  institution: 'OTH Amberg-Weiden, Germany',
+  field_of_study: 'Digital Technology & Management'
+}
+  - Degree program: undefined
+  - Current year: undefined
+  - Expected graduation: 2026-01-01
+  - Professional title: undefined
+  - Skills count: N/A
+  - Projects count: 4
+  - Compact context student: {
+  degree: 'Digital Technology & Management',
+  year: null,
+  graduation: '2026-01-01',
+  coursework: [],
+  projects: [
+    {
+      title: 'OneTap – Factory Time Tracking IoT System',
+      tech: [],
+      metrics: 'Led the full-stack development of an IoT time-tracking system that solved a critical data-accuracy problem for a major industrial partner (Krones AG). Built a complete ecosystem—from a native Swift/watchOS app to a real-time Next.js dashboard—powered by Node.js and Socket.IO, achieving a System Usability Score of 87.5.'
+    },
+    {
+      title: 'Vertical – Smart Hydroponic Farming System',
+      tech: [],
+      metrics: 'Initiated and led the product strategy for an in-home hydroponic farming system. Drove the project from initial market research to a functional IoT hardware prototype, developing brand identity, business plan, and pitch deck that secured market validation at the BayStartup conference.'
+    },
+    {
+      title: 'Make or Spot – AI-Generated Party Game',
+      tech: [],
+      metrics: "Created a production-ready physical card game using AI-driven design consistency. Developed a 'master prompt' engineering workflow in ChatGPT to generate 90 unique, stylistically-cohesive card illustrations, evolving the product from prototype to polished final version."
+    }
+  ],
+  skills: {
+    backend___real_time_systems: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    devops__tooling___collaboration: [ 'Git', 'GitHub', 'Vercel', 'JIRA', 'Cursor IDE' ],
+    product_strategy__research___ux: [
+      'Product Strategy',
+      'UI/UX Design',
+      'Stakeholder Management',
+      'Project Management',
+      'Agile/Scrum',
+      'ARIS (BPM)',
+      'Microsoft Office Suite (Excel, Word, PowerPoint)',
+      'Service Design / Journey Mapping',
+      'User Research & Usability Testing (moderation, task analysis)'
+    ],
+    frontend___product_ui_engineering: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object]
+    ],
+    ai__automation___prompt_engineering: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ]
+  },
+  tools: [],
+  languages: [],
+  availability: null,
+  start_date: null,
+  duration: null
+}
+🎓 STUDENT STRATEGY: Cache disabled - generating fresh analysis with real data
+🎓 STUDENT STRATEGY: Profile data check:
+  - Name: undefined
+  - Education: {
+  degree: 'Bachelor of Science Digital Technology & Management',
+  institution: 'OTH Amberg-Weiden, Germany',
+  field_of_study: 'Digital Technology & Management'
+}
+  - Degree program: undefined
+  - Current year: undefined
+  - Expected graduation: 2026-01-01
+  - Professional title: undefined
+  - Skills count: N/A
+  - Projects count: 4
+  - Compact context student: {
+  degree: 'Digital Technology & Management',
+  year: null,
+  graduation: '2026-01-01',
+  coursework: [],
+  projects: [
+    {
+      title: 'OneTap – Factory Time Tracking IoT System',
+      tech: [],
+      metrics: 'Led the full-stack development of an IoT time-tracking system that solved a critical data-accuracy problem for a major industrial partner (Krones AG). Built a complete ecosystem—from a native Swift/watchOS app to a real-time Next.js dashboard—powered by Node.js and Socket.IO, achieving a System Usability Score of 87.5.'
+    },
+    {
+      title: 'Vertical – Smart Hydroponic Farming System',
+      tech: [],
+      metrics: 'Initiated and led the product strategy for an in-home hydroponic farming system. Drove the project from initial market research to a functional IoT hardware prototype, developing brand identity, business plan, and pitch deck that secured market validation at the BayStartup conference.'
+    },
+    {
+      title: 'Make or Spot – AI-Generated Party Game',
+      tech: [],
+      metrics: "Created a production-ready physical card game using AI-driven design consistency. Developed a 'master prompt' engineering workflow in ChatGPT to generate 90 unique, stylistically-cohesive card illustrations, evolving the product from prototype to polished final version."
+    }
+  ],
+  skills: {
+    backend___real_time_systems: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    devops__tooling___collaboration: [ 'Git', 'GitHub', 'Vercel', 'JIRA', 'Cursor IDE' ],
+    product_strategy__research___ux: [
+      'Product Strategy',
+      'UI/UX Design',
+      'Stakeholder Management',
+      'Project Management',
+      'Agile/Scrum',
+      'ARIS (BPM)',
+      'Microsoft Office Suite (Excel, Word, PowerPoint)',
+      'Service Design / Journey Mapping',
+      'User Research & Usability Testing (moderation, task analysis)'
+    ],
+    frontend___product_ui_engineering: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object]
+    ],
+    ai__automation___prompt_engineering: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ]
+  },
+  tools: [],
+  languages: [],
+  availability: null,
+  start_date: null,
+  duration: null
+}
+🎓 STUDENT STRATEGY: Raw AI response length: 4129
+🎓 STUDENT STRATEGY: Generated - 0 courses, 3 projects aligned
+ POST /api/jobs/strategy-student 200 in 18390ms
+ POST /api/jobs/strategy-enhanced 400 in 304ms
+🎓 STUDENT STRATEGY: Raw AI response length: 4710
+🎓 STUDENT STRATEGY: Generated - 0 courses, 3 projects aligned
+ POST /api/jobs/strategy-student 200 in 23355ms
+ POST /api/jobs/strategy-enhanced 400 in 297ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 1070ms
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 1049ms
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+ ○ Compiling /api/resume/preview ...
+🎯 PATCHES: Generating suggestion for summary:professional_summary
+ ✓ Compiled /api/resume/preview in 1436ms
+🎯 API: PROFICIENCY DEBUG - showSkillLevelsInResume: false
+API: Received request for template: swiss
+API: Resume data keys: [
+  'personalInfo',
+  'professionalTitle',
+  'professionalSummary',
+  'enableProfessionalSummary',
+  'skills',
+  'experience',
+  'education',
+  'projects',
+  'certifications',
+  'customSections'
+]
+API: Raw skills data: {
+  "backend___real_time_systems": [
+    {
+      "skill": "Node.js",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Express",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "MongoDB",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Socket.IO",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "REST APIs",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Swift (iOS/watchOS)",
+      "proficiency": "Intermediate"
+    }
+  ],
+  "devops__tooling___collaboration": [
+    "Git",
+    "GitHub",
+    "Vercel",
+    "JIRA",
+    "Cursor IDE"
+  ],
+  "product_strategy__research___ux": [
+    "Product Strategy",
+    "UI/UX Design",
+    "Stakeholder Management",
+    "Project Management",
+    "Agile/Scrum",
+    "ARIS (BPM)",
+    "Microsoft Office Suite (Excel, Word, PowerPoint)",
+    "Service Design / Journey Mapping",
+    "User Research & Usability Testing (moderation, task analysis)"
+  ],
+  "frontend___product_ui_engineering": [
+    {
+      "skill": "React",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Next.js",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "JavaScript (ES6+)",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "HTML5",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "CSS3",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Tailwind CSS",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Design Systems",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Figma",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Adobe XD",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Photoshop",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Canva",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Final Cut Pro",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "TypeScript",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Component Testing (Jest, React Testing Library)",
+      "proficiency": "Intermediate"
+    }
+  ],
+  "ai__automation___prompt_engineering": [
+    {
+      "skill": "Prompt Engineering",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Generative AI Workflows",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Midjourney",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Claude",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Zapier",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "n8n",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Automation",
+      "proficiency": "Intermediate"
+    }
+  ]
+}
+API: Raw experience count: 4
+API: Raw experience sample: {
+  "company": "Conrad Electronic SE",
+  "duration": "Mar 2023 – May 2025",
+  "position": "Werkstudent, AI, Automation & Product Development",
+  "achievements": [
+    "Managed a complete UI/UX overhaul of the seller support platform, shifting from a technical structure to a user-centric, journey-based information architecture.",
+    "Designed and developed a functional React/Next.js prototype for a new Zendesk Help Center ( Live Mockup ) and presented a bilingual AI chatbot proof-of-concept to key stakeholders.",
+    "Managed the full project lifecycle, from discovery and stakeholder interviews to development, documentation, and training two interns on automation best practices."
+  ]
+}
+API: Raw certifications count: 3
+🔧 processSkillArray called with: {
+  categoryName: 'Backend & real Time Systems',
+  showSkillLevelsInResume: false,
+  skillArraySample: [
+    { skill: 'Node.js', proficiency: 'Intermediate' },
+    { skill: 'Express', proficiency: 'Intermediate' },
+    { skill: 'MongoDB', proficiency: 'Intermediate' }
+  ],
+  skillArrayLength: 6
+}
+🔧 Category "Backend & real Time Systems" should have proficiency: false
+🔧 Returning strings: [ 'Node.js', 'Express', 'MongoDB' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Devops  Tooling & collaboration',
+  showSkillLevelsInResume: false,
+  skillArraySample: [ 'Git', 'GitHub', 'Vercel' ],
+  skillArrayLength: 5
+}
+🔧 Category "Devops  Tooling & collaboration" should have proficiency: false
+🔧 Returning strings: [ 'Git', 'GitHub', 'Vercel' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Product Strategy  Research & ux',
+  showSkillLevelsInResume: false,
+  skillArraySample: [ 'Product Strategy', 'UI/UX Design', 'Stakeholder Management' ],
+  skillArrayLength: 9
+}
+🔧 Category "Product Strategy  Research & ux" should have proficiency: false
+🔧 Returning strings: [ 'Product Strategy', 'UI/UX Design', 'Stakeholder Management' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Frontend & product Ui Engineering',
+  showSkillLevelsInResume: false,
+  skillArraySample: [
+    { skill: 'React', proficiency: 'Intermediate' },
+    { skill: 'Next.js', proficiency: 'Intermediate' },
+    { skill: 'JavaScript (ES6+)', proficiency: 'Intermediate' }
+  ],
+  skillArrayLength: 14
+}
+🔧 Category "Frontend & product Ui Engineering" should have proficiency: false
+🔧 Returning strings: [ 'React', 'Next.js', 'JavaScript (ES6+)' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Ai  Automation & prompt Engineering',
+  showSkillLevelsInResume: false,
+  skillArraySample: [
+    { skill: 'Prompt Engineering', proficiency: 'Intermediate' },
+    { skill: 'Generative AI Workflows', proficiency: 'Intermediate' },
+    { skill: 'Midjourney', proficiency: 'Intermediate' }
+  ],
+  skillArrayLength: 7
+}
+🔧 Category "Ai  Automation & prompt Engineering" should have proficiency: false
+🔧 Returning strings: [ 'Prompt Engineering', 'Generative AI Workflows', 'Midjourney' ]
+🎯 FINAL PROCESSED SKILLS: {
+  "Backend & real Time Systems": [
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "Socket.IO",
+    "REST APIs",
+    "Swift (iOS/watchOS)"
+  ],
+  "Devops  Tooling & collaboration": [
+    "Git",
+    "GitHub",
+    "Vercel",
+    "JIRA",
+    "Cursor IDE"
+  ],
+  "Product Strategy  Research & ux": [
+    "Product Strategy",
+    "UI/UX Design",
+    "Stakeholder Management",
+    "Project Management",
+    "Agile/Scrum",
+    "ARIS (BPM)",
+    "Microsoft Office Suite (Excel, Word, PowerPoint)",
+    "Service Design / Journey Mapping",
+    "User Research & Usability Testing (moderation, task analysis)"
+  ],
+  "Frontend & product Ui Engineering": [
+    "React",
+    "Next.js",
+    "JavaScript (ES6+)",
+    "HTML5",
+    "CSS3",
+    "Tailwind CSS",
+    "Design Systems",
+    "Figma",
+    "Adobe XD",
+    "Photoshop",
+    "Canva",
+    "Final Cut Pro",
+    "TypeScript",
+    "Component Testing (Jest, React Testing Library)"
+  ],
+  "Ai  Automation & prompt Engineering": [
+    "Prompt Engineering",
+    "Generative AI Workflows",
+    "Midjourney",
+    "Claude",
+    "Zapier",
+    "n8n",
+    "Automation"
+  ]
+}
+🎯 showSkillLevelsInResume passed to templates: false
+API: Formatted template data keys: [
+  'personalInfo',
+  'professionalTitle',
+  'professionalSummary',
+  'enableProfessionalSummary',
+  'skills',
+  'experience',
+  'education',
+  'projects',
+  'certifications',
+  'customSections',
+  'languages',
+  'showSkillLevelsInResume'
+]
+API: Personal info: {
+  name: 'Varun Mishra',
+  email: 'm.varun@oth-aw.de',
+  phone: '+49 176 134 20040',
+  location: 'Weiden in der Oberpfalz, Germany',
+  linkedin: '',
+  website: undefined,
+  customHeader: undefined
+}
+API: Formatted skills: {
+  "Backend & real Time Systems": [
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "Socket.IO",
+    "REST APIs",
+    "Swift (iOS/watchOS)"
+  ],
+  "Devops  Tooling & collaboration": [
+    "Git",
+    "GitHub",
+    "Vercel",
+    "JIRA",
+    "Cursor IDE"
+  ],
+  "Product Strategy  Research & ux": [
+    "Product Strategy",
+    "UI/UX Design",
+    "Stakeholder Management",
+    "Project Management",
+    "Agile/Scrum",
+    "ARIS (BPM)",
+    "Microsoft Office Suite (Excel, Word, PowerPoint)",
+    "Service Design / Journey Mapping",
+    "User Research & Usability Testing (moderation, task analysis)"
+  ],
+  "Frontend & product Ui Engineering": [
+    "React",
+    "Next.js",
+    "JavaScript (ES6+)",
+    "HTML5",
+    "CSS3",
+    "Tailwind CSS",
+    "Design Systems",
+    "Figma",
+    "Adobe XD",
+    "Photoshop",
+    "Canva",
+    "Final Cut Pro",
+    "TypeScript",
+    "Component Testing (Jest, React Testing Library)"
+  ],
+  "Ai  Automation & prompt Engineering": [
+    "Prompt Engineering",
+    "Generative AI Workflows",
+    "Midjourney",
+    "Claude",
+    "Zapier",
+    "n8n",
+    "Automation"
+  ]
+}
+API: Formatted certifications: [
+  {
+    "name": "ARIS for Business Process Management",
+    "issuer": "Software AG",
+    "date": "Jul 2022"
+  },
+  {
+    "name": "Full-Stack Development: Flutter & Node.js",
+    "issuer": "Udemy",
+    "date": "Jun 2020"
+  },
+  {
+    "name": "Big Data Foundations",
+    "issuer": "WSB University, Poznan",
+    "date": "Jun 2023"
+  }
+]
+API: Formatted custom sections: []
+API: Generated HTML length: 22452
+API: HTML preview (first 500 chars): <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Varun Mishra</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --bg-primary: #ffffff;
+            --bg-secondar
+ POST /api/resume/preview 200 in 1749ms
+🎯 PATCHES: Raw AI response length: 524
+🎯 PATCHES: Raw AI response length: 537
+🎯 PATCHES: Raw AI response length: 652
+🎯 API: PROFICIENCY DEBUG - showSkillLevelsInResume: false
+API: Received request for template: swiss
+API: Resume data keys: [
+  'personalInfo',
+  'professionalTitle',
+  'professionalSummary',
+  'enableProfessionalSummary',
+  'skills',
+  'experience',
+  'education',
+  'projects',
+  'certifications',
+  'customSections'
+]
+API: Raw skills data: {
+  "backend___real_time_systems": [
+    {
+      "skill": "Node.js",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Express",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "MongoDB",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Socket.IO",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "REST APIs",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Swift (iOS/watchOS)",
+      "proficiency": "Intermediate"
+    }
+  ],
+  "devops__tooling___collaboration": [
+    "Git",
+    "GitHub",
+    "Vercel",
+    "JIRA",
+    "Cursor IDE"
+  ],
+  "product_strategy__research___ux": [
+    "Product Strategy",
+    "UI/UX Design",
+    "Stakeholder Management",
+    "Project Management",
+    "Agile/Scrum",
+    "ARIS (BPM)",
+    "Microsoft Office Suite (Excel, Word, PowerPoint)",
+    "Service Design / Journey Mapping",
+    "User Research & Usability Testing (moderation, task analysis)"
+  ],
+  "frontend___product_ui_engineering": [
+    {
+      "skill": "React",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Next.js",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "JavaScript (ES6+)",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "HTML5",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "CSS3",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Tailwind CSS",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Design Systems",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Figma",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Adobe XD",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Photoshop",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Canva",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Final Cut Pro",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "TypeScript",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Component Testing (Jest, React Testing Library)",
+      "proficiency": "Intermediate"
+    }
+  ],
+  "ai__automation___prompt_engineering": [
+    {
+      "skill": "Prompt Engineering",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Generative AI Workflows",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Midjourney",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Claude",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Zapier",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "n8n",
+      "proficiency": "Intermediate"
+    },
+    {
+      "skill": "Automation",
+      "proficiency": "Intermediate"
+    }
+  ]
+}
+API: Raw experience count: 4
+API: Raw experience sample: {
+  "company": "Conrad Electronic SE",
+  "duration": "Mar 2023 – May 2025",
+  "position": "Werkstudent, AI, Automation & Product Development",
+  "achievements": [
+    "Managed a complete UI/UX overhaul of the seller support platform, shifting from a technical structure to a user-centric, journey-based information architecture.",
+    "Designed and developed a functional React/Next.js prototype for a new Zendesk Help Center ( Live Mockup ) and presented a bilingual AI chatbot proof-of-concept to key stakeholders.",
+    "Managed the full project lifecycle, from discovery and stakeholder interviews to development, documentation, and training two interns on automation best practices."
+  ]
+}
+API: Raw certifications count: 3
+🔧 processSkillArray called with: {
+  categoryName: 'Backend & real Time Systems',
+  showSkillLevelsInResume: false,
+  skillArraySample: [
+    { skill: 'Node.js', proficiency: 'Intermediate' },
+    { skill: 'Express', proficiency: 'Intermediate' },
+    { skill: 'MongoDB', proficiency: 'Intermediate' }
+  ],
+  skillArrayLength: 6
+}
+🔧 Category "Backend & real Time Systems" should have proficiency: false
+🔧 Returning strings: [ 'Node.js', 'Express', 'MongoDB' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Devops  Tooling & collaboration',
+  showSkillLevelsInResume: false,
+  skillArraySample: [ 'Git', 'GitHub', 'Vercel' ],
+  skillArrayLength: 5
+}
+🔧 Category "Devops  Tooling & collaboration" should have proficiency: false
+🔧 Returning strings: [ 'Git', 'GitHub', 'Vercel' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Product Strategy  Research & ux',
+  showSkillLevelsInResume: false,
+  skillArraySample: [ 'Product Strategy', 'UI/UX Design', 'Stakeholder Management' ],
+  skillArrayLength: 9
+}
+🔧 Category "Product Strategy  Research & ux" should have proficiency: false
+🔧 Returning strings: [ 'Product Strategy', 'UI/UX Design', 'Stakeholder Management' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Frontend & product Ui Engineering',
+  showSkillLevelsInResume: false,
+  skillArraySample: [
+    { skill: 'React', proficiency: 'Intermediate' },
+    { skill: 'Next.js', proficiency: 'Intermediate' },
+    { skill: 'JavaScript (ES6+)', proficiency: 'Intermediate' }
+  ],
+  skillArrayLength: 14
+}
+🔧 Category "Frontend & product Ui Engineering" should have proficiency: false
+🔧 Returning strings: [ 'React', 'Next.js', 'JavaScript (ES6+)' ]
+🔧 processSkillArray called with: {
+  categoryName: 'Ai  Automation & prompt Engineering',
+  showSkillLevelsInResume: false,
+  skillArraySample: [
+    { skill: 'Prompt Engineering', proficiency: 'Intermediate' },
+    { skill: 'Generative AI Workflows', proficiency: 'Intermediate' },
+    { skill: 'Midjourney', proficiency: 'Intermediate' }
+  ],
+  skillArrayLength: 7
+}
+🔧 Category "Ai  Automation & prompt Engineering" should have proficiency: false
+🔧 Returning strings: [ 'Prompt Engineering', 'Generative AI Workflows', 'Midjourney' ]
+🎯 FINAL PROCESSED SKILLS: {
+  "Backend & real Time Systems": [
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "Socket.IO",
+    "REST APIs",
+    "Swift (iOS/watchOS)"
+  ],
+  "Devops  Tooling & collaboration": [
+    "Git",
+    "GitHub",
+    "Vercel",
+    "JIRA",
+    "Cursor IDE"
+  ],
+  "Product Strategy  Research & ux": [
+    "Product Strategy",
+    "UI/UX Design",
+    "Stakeholder Management",
+    "Project Management",
+    "Agile/Scrum",
+    "ARIS (BPM)",
+    "Microsoft Office Suite (Excel, Word, PowerPoint)",
+    "Service Design / Journey Mapping",
+    "User Research & Usability Testing (moderation, task analysis)"
+  ],
+  "Frontend & product Ui Engineering": [
+    "React",
+    "Next.js",
+    "JavaScript (ES6+)",
+    "HTML5",
+    "CSS3",
+    "Tailwind CSS",
+    "Design Systems",
+    "Figma",
+    "Adobe XD",
+    "Photoshop",
+    "Canva",
+    "Final Cut Pro",
+    "TypeScript",
+    "Component Testing (Jest, React Testing Library)"
+  ],
+  "Ai  Automation & prompt Engineering": [
+    "Prompt Engineering",
+    "Generative AI Workflows",
+    "Midjourney",
+    "Claude",
+    "Zapier",
+    "n8n",
+    "Automation"
+  ]
+}
+🎯 showSkillLevelsInResume passed to templates: false
+API: Formatted template data keys: [
+  'personalInfo',
+  'professionalTitle',
+  'professionalSummary',
+  'enableProfessionalSummary',
+  'skills',
+  'experience',
+  'education',
+  'projects',
+  'certifications',
+  'customSections',
+  'languages',
+  'showSkillLevelsInResume'
+]
+API: Personal info: {
+  name: 'Varun Mishra',
+  email: 'm.varun@oth-aw.de',
+  phone: '+49 176 134 20040',
+  location: 'Weiden in der Oberpfalz, Germany',
+  linkedin: '',
+  website: undefined,
+  customHeader: undefined
+}
+API: Formatted skills: {
+  "Backend & real Time Systems": [
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "Socket.IO",
+    "REST APIs",
+    "Swift (iOS/watchOS)"
+  ],
+  "Devops  Tooling & collaboration": [
+    "Git",
+    "GitHub",
+    "Vercel",
+    "JIRA",
+    "Cursor IDE"
+  ],
+  "Product Strategy  Research & ux": [
+    "Product Strategy",
+    "UI/UX Design",
+    "Stakeholder Management",
+    "Project Management",
+    "Agile/Scrum",
+    "ARIS (BPM)",
+    "Microsoft Office Suite (Excel, Word, PowerPoint)",
+    "Service Design / Journey Mapping",
+    "User Research & Usability Testing (moderation, task analysis)"
+  ],
+  "Frontend & product Ui Engineering": [
+    "React",
+    "Next.js",
+    "JavaScript (ES6+)",
+    "HTML5",
+    "CSS3",
+    "Tailwind CSS",
+    "Design Systems",
+    "Figma",
+    "Adobe XD",
+    "Photoshop",
+    "Canva",
+    "Final Cut Pro",
+    "TypeScript",
+    "Component Testing (Jest, React Testing Library)"
+  ],
+  "Ai  Automation & prompt Engineering": [
+    "Prompt Engineering",
+    "Generative AI Workflows",
+    "Midjourney",
+    "Claude",
+    "Zapier",
+    "n8n",
+    "Automation"
+  ]
+}
+API: Formatted certifications: [
+  {
+    "name": "ARIS for Business Process Management",
+    "issuer": "Software AG",
+    "date": "Jul 2022"
+  },
+  {
+    "name": "Full-Stack Development: Flutter & Node.js",
+    "issuer": "Udemy",
+    "date": "Jun 2020"
+  },
+  {
+    "name": "Big Data Foundations",
+    "issuer": "WSB University, Poznan",
+    "date": "Jun 2023"
+  }
+]
+API: Formatted custom sections: []
+API: Generated HTML length: 22452
+API: HTML preview (first 500 chars): <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Varun Mishra</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --bg-primary: #ffffff;
+            --bg-secondar
+ POST /api/resume/preview 200 in 278ms
+🎯 PATCHES: Raw AI response length: 562
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 6528ms
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 6948ms
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 5504ms
+🎯 PATCHES: Generated suggestion with 0 keywords
+ POST /api/jobs/resume/patches 200 in 7466ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 897ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 726ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 487ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 467ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 467ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 825ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 2005ms
+🔍 LATEST PROFILE: Fetching profile for authenticated user
+🔍 LATEST PROFILE: Demo mode - using most recent resume data
+🔍 LATEST PROFILE: Using session: undefined email: undefined
+🔍 LATEST PROFILE: Demo mode - fetching resume with actual content
+🔍 LATEST PROFILE: Resume query result - error: null
+🔍 LATEST PROFILE: Resume query result - data count: 1
+🔍 LATEST PROFILE: Found complete resume data
+ GET /api/profile/latest 200 in 908ms
+ ○ Compiling /_not-found/page ...
+ ✓ Compiled /_not-found/page in 2.2s
+ ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /editor 404 in 3717ms
+ ○ Compiling /favicon.ico ...
+ ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /apple-touch-icon-precomposed.png 404 in 29215ms
+ GET /apple-touch-icon.png 404 in 29114ms
+ GET / 200 in 29594ms
+ ✓ Compiled /favicon.ico in 29s
+ GET /favicon.ico 200 in 30118ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 940ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 781ms
+   Reload env: .env.local
+   Reload env: .env.local
+[?25h

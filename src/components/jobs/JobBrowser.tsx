@@ -1,0 +1,1658 @@
+'use client'
+
+import * as React from 'react'
+import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Search, 
+  MapPin, 
+  Briefcase, 
+  Calendar, 
+  Users, 
+  Building2, 
+  Globe2, 
+  Filter,
+  SlidersHorizontal,
+  Bookmark,
+  BookmarkCheck,
+  ExternalLink,
+  ChevronRight,
+  Sparkles,
+  TrendingUp,
+  Clock,
+  DollarSign,
+  Home,
+  Laptop,
+  Building,
+  Star,
+  X,
+  Check,
+  ArrowUpDown,
+  ChevronDown,
+  Zap,
+  Award,
+  Target,
+  Mail,
+  Phone,
+  LinkIcon,
+  FileText,
+  Heart,
+  Share2,
+  Download,
+  MessageCircle
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel 
+} from '@/components/ui/dropdown-menu'
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
+import { SkillsAnalysisPanel } from './SkillsAnalysisPanel'
+import { CompanyIntelligencePanel } from './CompanyIntelligencePanel'
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
+import { useGeoEnhancedJobs } from '@/lib/hooks/useGeoEnhancedJobs'
+import EligibilityChecker from '@/components/werkstudent/EligibilityChecker'
+import type { StudentProfile } from '@/lib/types/studentProfile'
+
+// Import types
+import type { JobWithCompany } from '@/lib/supabase/types'
+
+interface JobBrowserProps {
+  userProfile?: unknown
+  onJobSelect?: (job: JobWithCompany) => void
+  className?: string
+}
+
+// Work mode icons
+const workModeIcons = {
+  remote: <Laptop className="w-4 h-4" />,
+  hybrid: <Home className="w-4 h-4" />,
+  onsite: <Building className="w-4 h-4" />,
+  unknown: <Globe2 className="w-4 h-4" />
+}
+
+// Work mode colors
+const workModeColors = {
+  remote: 'bg-green-50 text-green-700 border-green-200',
+  hybrid: 'bg-blue-50 text-blue-700 border-blue-200',
+  onsite: 'bg-purple-50 text-purple-700 border-purple-200',
+  unknown: 'bg-gray-50 text-gray-700 border-gray-200'
+}
+
+// Enhanced Match score colors - Professional gradient palette
+const getMatchScoreColor = (score: number) => {
+  if (score >= 90) return 'bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg'
+  if (score >= 85) return 'bg-gradient-to-r from-emerald-400 to-teal-400 shadow-md'
+  if (score >= 75) return 'bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md'
+  if (score >= 70) return 'bg-gradient-to-r from-sky-400 to-indigo-400'
+  if (score >= 60) return 'bg-gradient-to-r from-blue-400 to-cyan-400'
+  if (score >= 50) return 'bg-gradient-to-r from-amber-400 to-orange-400'
+  if (score > 0) return 'bg-gradient-to-r from-orange-300 to-red-400'
+  return 'bg-gradient-to-r from-red-500 to-rose-600 shadow-md' // 0% - Strong red for no match
+}
+
+// Get match score text color for better contrast
+const getMatchScoreTextColor = (score: number) => {
+  if (score >= 50) return 'text-white'
+  if (score === 0) return 'text-white' // White text on red background for 0%
+  return 'text-gray-700'
+}
+
+// Get match score description
+const getMatchScoreDescription = (score: number, isPlaceholder: boolean = false) => {
+  const baseDescription = (() => {
+    if (score >= 90) return 'Excellent Match'
+    if (score >= 85) return 'Great Match'
+    if (score >= 75) return 'Very Good Match'
+    if (score >= 70) return 'Good Match'
+    if (score >= 60) return 'Fair Match'
+    if (score >= 50) return 'Potential Match'
+    if (score >= 25) return 'Low Match'
+    if (score > 0) return 'Minimal Match'
+    return 'No Skills Match'
+  })()
+  
+  return isPlaceholder ? `${baseDescription} (Estimated)` : baseDescription
+}
+
+// Get detailed tooltip text for match scores
+const getMatchScoreTooltip = (score: number, isPlaceholder: boolean = false, jobTitle: string = '') => {
+  if (isPlaceholder) {
+    return `Estimated ${getMatchScoreDescription(score, false)} (${score}%)\n\nThis is a placeholder score. Upload your resume in step 1 to get real AI-powered match scores based on:\n• Skills overlap (55%)\n• Tools & technologies (20%)\n• Language requirements (15%)\n• Location preferences (10%)`
+  }
+  
+  if (score === 0) {
+    return `No Skills Match (0%)\n\nThis job has zero overlap with your current skill set.\n\n📊 AI Analysis:\n• Skills overlap: 0% (no matching skills found)\n• Tools & technologies: 0% (no matching tools)\n• Language requirements: May still match\n• Location: May still match\n\n💡 Consider this as a learning opportunity or career pivot role.\n\nFor "${jobTitle}"`
+  }
+  
+  return `${getMatchScoreDescription(score)} (${score}%)\n\nCalculated using AI-powered matching:\n• Skills overlap: 55% weight\n• Tools & technologies: 20% weight\n• Language requirements: 15% weight\n• Location preferences: 10% weight\n\nFor "${jobTitle}"`
+}
+
+// Helper function to render content that can be either array or markdown string
+function renderJobContent(content: any) {
+  // If it's an array (new clean format), render as clean list
+  if (Array.isArray(content)) {
+    return (
+      <ul className="space-y-1.5">
+        {content.map((item, index) => (
+          <li key={index} className="flex items-start">
+            <span className="flex-shrink-0 w-1.5 h-1.5 bg-sky-400 rounded-full mt-2 mr-3"></span>
+            <span className="text-slate-600 leading-relaxed">{item}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  
+  // If it's a string (fallback or old data), try to render as markdown if it contains markdown syntax
+  if (typeof content === 'string') {
+    // Check if it contains markdown formatting
+    if (content.includes('**') || content.includes('*') || content.includes('#') || content.includes('•')) {
+      return <MarkdownRenderer content={content} variant="compact" />;
+    } else {
+      // Plain text - render as single item
+      return (
+        <div className="text-slate-600 leading-relaxed">
+          {content}
+        </div>
+      );
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to convert user profile to student profile format
+function convertToStudentProfile(userProfile: any): Partial<StudentProfile> | null {
+  if (!userProfile || typeof userProfile !== 'object') return null;
+  
+  // Check if this looks like a student profile
+  const hasStudentIndicators = (
+    userProfile.degree_program ||
+    userProfile.university ||
+    userProfile.current_year ||
+    userProfile.expected_graduation ||
+    userProfile.enrollment_status ||
+    userProfile.weekly_availability
+  );
+  
+  if (!hasStudentIndicators) return null;
+  
+  return {
+    degree_program: userProfile.degree_program || 'Computer Science',
+    university: userProfile.university || '',
+    current_year: userProfile.current_year || 3,
+    expected_graduation: userProfile.expected_graduation,
+    weekly_availability: userProfile.weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
+    earliest_start_date: userProfile.earliest_start_date || 'immediately',
+    preferred_duration: userProfile.preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
+    enrollment_status: userProfile.enrollment_status || 'enrolled',
+    language_proficiencies: userProfile.language_proficiencies || [],
+    academic_projects: userProfile.academic_projects || [],
+    relevant_coursework: userProfile.relevant_coursework || [],
+    preferred_locations: userProfile.preferred_locations || [],
+    remote_preference: userProfile.remote_preference || 'flexible',
+    visa_status: userProfile.visa_status
+  };
+}
+
+function extractSalaryFromBenefits(benefits: string[] | null): string | null {
+  if (!benefits || !Array.isArray(benefits)) return null;
+  
+  for (const benefit of benefits) {
+    if (typeof benefit === 'string') {
+      // Look for salary patterns like "€520 per month", "$2000/month", etc.
+      const salaryMatch = benefit.match(/[€$£¥][\d,.]+ (?:per month|\/month|monthly|per year|\/year|annually)/i);
+      if (salaryMatch) {
+        return salaryMatch[0];
+      }
+      // Look for just numbers with currency
+      const currencyMatch = benefit.match(/[€$£¥][\d,.]+/);
+      if (currencyMatch && benefit.toLowerCase().includes('month')) {
+        return `${currencyMatch[0]} per month`;
+      }
+    }
+  }
+  return null;
+}
+
+// Mock data for demonstration
+const mockJobs: JobWithCompany[] = [
+  {
+    id: '1',
+    company_id: '1',
+    external_id: '12345',
+    title: 'Senior Full Stack Developer',
+    description_html: '<p>Join our team...</p>',
+    description_text: 'Join our team as a Senior Full Stack Developer...',
+    location_city: 'Berlin',
+    location_country: 'Germany',
+    location_full: 'Berlin, Germany',
+    work_mode: 'hybrid',
+    employment_type: 'Full-time',
+    seniority_level: 'Senior',
+    salary_info: '€80,000 - €120,000',
+    posted_at: '2025-08-20',
+    application_url: 'https://example.com/apply',
+    linkedin_url: 'https://linkedin.com/jobs/123',
+    job_function: 'Engineering',
+    industries: ['Technology', 'SaaS'],
+    applicants_count: 45,
+    is_werkstudent: false,
+    german_required: 'both',
+    created_at: '2025-08-20',
+    updated_at: '2025-08-20',
+    user_saved: false,
+    user_applied: false,
+    user_notes: null,
+    match_score: 92,
+    company: {
+      id: '1',
+      name: 'TechCorp Solutions',
+      logo_url: 'https://via.placeholder.com/100',
+      website: 'https://techcorp.com',
+      linkedin_url: 'https://linkedin.com/company/techcorp',
+      description: 'Leading technology solutions provider',
+      slogan: 'Innovation at Scale',
+      employee_count: 500,
+      industry: 'Technology',
+      location: 'Berlin, Germany',
+      created_at: '2025-08-20',
+      updated_at: '2025-08-20'
+    }
+  },
+  {
+    id: '2',
+    company_id: '2',
+    external_id: '12346',
+    title: 'Product Designer',
+    description_html: '<p>We are looking for...</p>',
+    description_text: 'We are looking for a talented Product Designer...',
+    location_city: 'Munich',
+    location_country: 'Germany',
+    location_full: 'Munich, Germany',
+    work_mode: 'remote',
+    employment_type: 'Full-time',
+    seniority_level: 'Mid-level',
+    salary_info: '€60,000 - €85,000',
+    posted_at: '2025-08-22',
+    application_url: 'https://example.com/apply',
+    linkedin_url: 'https://linkedin.com/jobs/124',
+    job_function: 'Design',
+    industries: ['Design', 'Digital'],
+    applicants_count: 28,
+    is_werkstudent: false,
+    german_required: 'no',
+    created_at: '2025-08-22',
+    updated_at: '2025-08-22',
+    user_saved: true,
+    user_applied: false,
+    user_notes: null,
+    match_score: 78,
+    company: {
+      id: '2',
+      name: 'Design Studio Pro',
+      logo_url: 'https://via.placeholder.com/100',
+      website: 'https://designstudio.com',
+      linkedin_url: 'https://linkedin.com/company/designstudio',
+      description: 'Award-winning design agency',
+      slogan: 'Design that Matters',
+      employee_count: 150,
+      industry: 'Design',
+      location: 'Munich, Germany',
+      created_at: '2025-08-22',
+      updated_at: '2025-08-22'
+    }
+  }
+]
+
+export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserProps) {
+  const router = useRouter()
+  const [jobs, setJobs] = React.useState<JobWithCompany[]>([])
+  const [loading, setLoading] = React.useState(false)
+  const [showPlaceholderNotice, setShowPlaceholderNotice] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [selectedTab, setSelectedTab] = React.useState('all')
+  const [selectedWorkMode, setSelectedWorkMode] = React.useState<string>('all')
+  const [selectedLanguage, setSelectedLanguage] = React.useState<string>('all')
+  const [selectedLocation, setSelectedLocation] = React.useState<string>('all')
+  const [locationSearch, setLocationSearch] = React.useState<string>('')
+  const [distanceRadius, setDistanceRadius] = React.useState<number>(100)
+  const [selectedJobType, setSelectedJobType] = React.useState<string>('all')
+  const [sortBy, setSortBy] = React.useState<string>('match_score')
+  const [savedJobs, setSavedJobs] = React.useState<Set<string>>(new Set())
+  const [selectedJob, setSelectedJob] = React.useState<JobWithCompany | null>(null)
+  const [expandedSkillSections, setExpandedSkillSections] = React.useState<{
+    technical: boolean;
+    soft: boolean;
+    design: boolean;
+  }>({ technical: false, soft: false, design: false })
+
+  // Extract user location from profile or location search for geo-enhanced matching
+  const userLocation = React.useMemo(() => {
+    console.log('🗺️ DEBUG: userProfile structure:', JSON.stringify(userProfile, null, 2));
+    console.log('🗺️ DEBUG: locationSearch:', locationSearch);
+    
+    // Priority 1: If user typed a location search, use that
+    if (locationSearch.trim()) {
+      console.log('🗺️ Using location search as user location:', locationSearch.trim());
+      return locationSearch.trim();
+    }
+    
+    // Priority 2: Extract from user profile
+    if (userProfile && typeof userProfile === 'object') {
+      let profileLocation = null;
+      
+      // Try different possible location fields
+      if ('personal_details' in userProfile && userProfile.personal_details) {
+        const details = userProfile.personal_details as any;
+        profileLocation = details?.contact?.address || details?.location || details?.city || details?.address || null;
+      }
+      
+      // Try alternative structures
+      if (!profileLocation && 'personalInfo' in userProfile) {
+        const info = (userProfile as any).personalInfo;
+        profileLocation = info?.location || info?.address || info?.city || null;
+      }
+      
+      if (profileLocation) {
+        console.log('🗺️ Using profile location as user location:', profileLocation);
+        return profileLocation;
+      } else {
+        console.log('🗺️ No location found in user profile');
+      }
+    }
+    
+    console.log('🗺️ No user location available');
+    return null;
+  }, [userProfile, locationSearch]);
+
+  // Geo-enhanced job matching
+  const {
+    enhancedJobs,
+    jobsByDistance,
+    isProcessing: isGeoProcessing,
+    stats: geoStats
+  } = useGeoEnhancedJobs({
+    jobs,
+    userLocation,
+    maxDistanceKm: distanceRadius,
+    enableGeoMatching: true
+  });
+
+  // Fetch jobs on mount
+  React.useEffect(() => {
+    fetchJobs()
+  }, [])
+
+  const fetchJobs = async () => {
+    setLoading(true)
+    try {
+      // Check if we should use API or mock data
+      // Create AbortController for timeout handling
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout
+      
+      const response = await fetch('/api/jobs/fetch?limit=30', {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Data is now coming directly from Supabase in the correct format
+        const transformedJobs = data.jobs.map((job: any) => {
+          // Job already comes with the correct Supabase structure and company info
+          return {
+            ...job,
+            // Ensure compatibility with existing component expectations
+            company: job.companies || {
+              id: job.company_id,
+              name: 'Unknown Company',
+              logo_url: null,
+              domain: null,
+              industry: null,
+              size_category: null,
+              headquarters: null,
+              website_url: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          };
+        })
+
+        // WEIGHTED MATCHING: Calculate real match scores if user profile is available
+        if (userProfile && transformedJobs.length > 0) {
+          console.log('🎯 User profile available, calculating weighted match scores...')
+          try {
+            const matchingController = new AbortController()
+            const matchingTimeoutId = setTimeout(() => matchingController.abort(), 30000) // 30s timeout for matching
+            
+            const matchingResponse = await fetch('/api/jobs/match-scores', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userProfile,
+                jobs: transformedJobs
+              }),
+              signal: matchingController.signal
+            })
+            
+            clearTimeout(matchingTimeoutId)
+            
+            if (matchingResponse.ok) {
+              const matchingData = await matchingResponse.json()
+              console.log('🎯 Weighted matching successful:', matchingData.algorithm, '- Average score:', matchingData.averageScore)
+              
+              // Use the matched jobs with calculated scores
+              const matchedJobs = matchingData.matchedJobs || transformedJobs
+              setJobs(matchedJobs)
+              // Auto-select first job
+              if (matchedJobs.length > 0 && !selectedJob) {
+                setSelectedJob(matchedJobs[0])
+              }
+            } else {
+              console.warn('🎯 Matching API failed, showing jobs without scores')
+              // NO PLACEHOLDER SCORES - just show jobs without match scores
+              setJobs(transformedJobs)
+              if (transformedJobs.length > 0 && !selectedJob) {
+                setSelectedJob(transformedJobs[0])
+              }
+            }
+          } catch (matchingError) {
+            console.warn('🎯 Matching error:', matchingError)
+            // NO PLACEHOLDER SCORES - just show jobs without match scores
+            setJobs(transformedJobs)
+            if (transformedJobs.length > 0 && !selectedJob) {
+              setSelectedJob(transformedJobs[0])
+            }
+          }
+        } else {
+          console.log('🎯 No user profile provided - showing jobs without match scores')
+          // NO PROFILE = Show jobs WITHOUT match scores (no redirect to avoid loops)
+          setJobs(transformedJobs)
+          setShowPlaceholderNotice(false) // Don't show placeholder notice
+          if (transformedJobs.length > 0 && !selectedJob) {
+            setSelectedJob(transformedJobs[0])
+          }
+        }
+      } else {
+        console.error('JobBrowser: API returned error status:', response.status)
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error('JobBrowser: API request timed out after 2 minutes')
+      } else {
+        console.error('JobBrowser: Error fetching jobs:', error)
+      }
+      
+      // No fallback - show empty state as requested
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleSaveJob = (jobId: string) => {
+    setSavedJobs(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId)
+      } else {
+        newSet.add(jobId)
+      }
+      return newSet
+    })
+  }
+
+  // Filter and sort jobs (using geo-enhanced jobs)
+  const filteredJobs = React.useMemo(() => {
+    let filtered = [...enhancedJobs]
+
+    // Enhanced search filter - search across multiple fields
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(job => {
+        // Search in job title
+        if (job.title.toLowerCase().includes(query)) return true
+        // Search in company name
+        if (job.company.name.toLowerCase().includes(query)) return true
+        // Search in location
+        if (job.location_city?.toLowerCase().includes(query)) return true
+        if (job.city?.toLowerCase().includes(query)) return true
+        if (job.country?.toLowerCase().includes(query)) return true
+        // Search in skills
+        if (job.skills_original && Array.isArray(job.skills_original)) {
+          if (job.skills_original.some(skill => skill.toLowerCase().includes(query))) return true
+        }
+        // Search in tools
+        if (job.tools_original && Array.isArray(job.tools_original)) {
+          if (job.tools_original.some(tool => tool.toLowerCase().includes(query))) return true
+        }
+        // Search in job description
+        if (job.description?.toLowerCase().includes(query)) return true
+        
+        return false
+      })
+    }
+
+    // Tab filter
+    if (selectedTab === 'saved') {
+      filtered = filtered.filter(job => savedJobs.has(job.id))
+    } else if (selectedTab === 'applied') {
+      filtered = filtered.filter(job => job.user_applied)
+    }
+
+    // Work mode filter - handle multiple possible field names
+    if (selectedWorkMode !== 'all') {
+      filtered = filtered.filter(job => {
+        const workMode = job.work_mode?.toLowerCase() || '';
+        const selectedMode = selectedWorkMode.toLowerCase();
+        
+        // Handle remote jobs
+        if (selectedMode === 'remote') {
+          return workMode === 'remote' || job.is_remote === true || job.remote_allowed === true;
+        }
+        
+        // Handle hybrid jobs  
+        if (selectedMode === 'hybrid') {
+          return workMode === 'hybrid' || job.hybrid_allowed === true;
+        }
+        
+        // Handle onsite jobs
+        if (selectedMode === 'onsite') {
+          return workMode === 'onsite' || workMode === 'office' || 
+                 (workMode !== 'remote' && workMode !== 'hybrid' && !job.is_remote && !job.remote_allowed);
+        }
+        
+        return workMode === selectedMode;
+      })
+    }
+
+    // Language filter - handle multiple possible field names and values
+    if (selectedLanguage !== 'all') {
+      filtered = filtered.filter(job => {
+        const germanReq = job.german_required?.toLowerCase() || '';
+        const languageReq = job.language_required?.toLowerCase() || '';
+        const contentLang = job.content_language?.toLowerCase() || '';
+        
+        if (selectedLanguage === 'EN') {
+          // English only - jobs that don't require German
+          return germanReq === 'no' || germanReq === 'en' || !germanReq ||
+                 languageReq === 'en' || contentLang === 'en';
+        }
+        
+        if (selectedLanguage === 'DE') {
+          // German required - jobs that require German
+          return germanReq === 'yes' || germanReq === 'de' || germanReq === 'both' ||
+                 languageReq === 'de' || contentLang === 'de';
+        }
+        
+        if (selectedLanguage === 'BOTH') {
+          // Both languages required
+          return germanReq === 'both' || languageReq === 'both';
+        }
+        
+        return true;
+      })
+    }
+
+    // Note: Location filtering is now handled by geo-enhanced matching with real distances
+    // Only handle remote filter explicitly since it's work-mode based
+    if (selectedLocation === 'Remote') {
+      filtered = filtered.filter(job => job.is_remote || job.work_mode === 'remote');
+    }
+
+    // Job type filter
+    if (selectedJobType !== 'all') {
+      filtered = filtered.filter(job => {
+        if (selectedJobType === 'internship') {
+          return job.title.toLowerCase().includes('intern') || job.employment_type?.toLowerCase().includes('intern')
+        }
+        if (selectedJobType === 'werkstudent') {
+          return job.is_werkstudent === true || job.title.toLowerCase().includes('werkstudent')
+        }
+        return true
+      })
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'match_score':
+          // Use enhanced match score if available, otherwise fall back to original
+          const scoreA = ('enhancedMatchScore' in a ? a.enhancedMatchScore : a.match_score) || 0;
+          const scoreB = ('enhancedMatchScore' in b ? b.enhancedMatchScore : b.match_score) || 0;
+          return scoreB - scoreA;
+        case 'distance':
+          // Sort by distance (remote jobs go last)
+          const distA = ('distanceKm' in a && a.work_mode !== 'remote') ? a.distanceKm || 999 : 999;
+          const distB = ('distanceKm' in b && b.work_mode !== 'remote') ? b.distanceKm || 999 : 999;
+          return distA - distB;
+        case 'date':
+          return new Date(b.posted_at || 0).getTime() - new Date(a.posted_at || 0).getTime()
+        case 'applicants':
+          return (a.applicants_count || 0) - (b.applicants_count || 0)
+        default:
+          return 0
+      }
+    })
+
+    return filtered
+  }, [enhancedJobs, searchQuery, selectedTab, selectedWorkMode, selectedLocation, locationSearch, selectedJobType, sortBy, savedJobs])
+
+  // Get unique locations for filter
+  const locations = React.useMemo(() => {
+    const locs = new Set(jobs.map(job => job.location_city).filter(Boolean))
+    return Array.from(locs)
+  }, [jobs])
+  
+  // Convert user profile to student profile if applicable
+  const studentProfile = React.useMemo(() => {
+    return convertToStudentProfile(userProfile);
+  }, [userProfile]);
+
+  return (
+    <div className={cn("w-full h-screen flex flex-col bg-gray-50", className)}>
+      {/* Header Section - Ultra Compact */}
+      <div className="bg-white border-b border-gray-200 px-6 py-2 flex-shrink-0 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Find Your Perfect Role</h2>
+            <p className="text-gray-600 text-xs">AI-powered job matching</p>
+          </div>
+        </div>
+
+        {/* Beautiful Search Interface */}
+        <div className="space-y-4">
+          {/* Primary Search */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search jobs, companies, and skills..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-11 h-11 text-sm bg-white border-gray-200 rounded-xl shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+            />
+          </div>
+
+          {/* Elegant Filter Row */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gray-500">Filter by:</span>
+            
+            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+              <Laptop className="w-3 h-3 text-gray-400" />
+              <select
+                value={selectedWorkMode}
+                onChange={(e) => setSelectedWorkMode(e.target.value)}
+                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[80px]"
+              >
+                <option value="all">Any mode</option>
+                <option value="remote">Remote</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="onsite">On-site</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+              <Briefcase className="w-3 h-3 text-gray-400" />
+              <select
+                value={selectedJobType}
+                onChange={(e) => setSelectedJobType(e.target.value)}
+                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[70px]"
+              >
+                <option value="all">All types</option>
+                <option value="internship">Internships</option>
+                <option value="werkstudent">Werkstudent</option>
+              </select>
+            </div>
+
+            <div className="relative">
+              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+                <MapPin className="w-3 h-3 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="e.g. Berlin, Munich, Frankfurt..."
+                  value={locationSearch}
+                  onChange={(e) => {
+                    setLocationSearch(e.target.value);
+                    if (e.target.value.trim()) {
+                      setSelectedLocation('all'); // Clear selection when typing
+                    }
+                  }}
+                  className="text-xs bg-transparent border-none outline-none text-gray-700 min-w-[120px] placeholder-gray-400"
+                />
+                {locationSearch && (
+                  <button
+                    onClick={() => setLocationSearch('')}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              
+              {/* Quick location suggestions */}
+              {!locationSearch && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm py-1 z-10 hidden group-hover:block">
+                  {['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne'].map(city => (
+                    <button
+                      key={city}
+                      onClick={() => setLocationSearch(city)}
+                      className="block w-full text-left px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+              <Target className="w-3 h-3 text-gray-400" />
+              <select
+                value={distanceRadius}
+                onChange={(e) => setDistanceRadius(Number(e.target.value))}
+                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[50px]"
+              >
+                <option value={20}>20km</option>
+                <option value={50}>50km</option>
+                <option value={100}>100km</option>
+                <option value={200}>200km</option>
+                <option value={500}>500km</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
+              <Globe2 className="w-3 h-3 text-gray-400" />
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[90px]"
+              >
+                <option value="all">Any language</option>
+                <option value="EN">English only</option>
+                <option value="DE">German required</option>
+                <option value="BOTH">Both required</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Placeholder Scores Notice */}
+      {showPlaceholderNotice && (
+        <motion.div 
+          className="bg-white border border-blue-200 mx-6 my-2 p-3 rounded-lg shadow-sm"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <Target className="w-5 h-5 text-blue-600 mt-0.5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                Showing Estimated Match Scores
+              </h4>
+              <p className="text-sm text-blue-800 leading-relaxed">
+                Upload your resume in <strong>Step 1</strong> to get real AI-powered match scores based on skills overlap, tools, language requirements, and location preferences.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPlaceholderNotice(false)}
+              className="flex-shrink-0 text-blue-500 hover:text-blue-700 transition-colors p-1"
+              title="Dismiss notice"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* LinkedIn-style Layout: Jobs List + Job Details */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel: Jobs List - Compact */}
+        <div className="w-1/3 min-w-0 bg-white border-r border-gray-200 overflow-y-auto">
+          <div className="p-2">
+            <div className="text-xs text-gray-600 mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span>{filteredJobs.length} jobs</span>
+                {showPlaceholderNotice && (
+                  <div className="flex items-center gap-0.5 text-blue-600" title="Estimated scores shown - upload resume for real AI matching">
+                    <Target className="w-2.5 h-2.5" />
+                    <span className="text-xs font-medium">Est. Scores</span>
+                  </div>
+                )}
+                {/* Geo-enhanced stats */}
+                {userLocation && geoStats && geoStats.jobsWithDistance > 0 && (
+                  <div className="flex items-center gap-0.5 text-emerald-600" title={`Enhanced location matching active - ${geoStats.nearbyJobs} nearby jobs`}>
+                    <MapPin className="w-2.5 h-2.5" />
+                    <span className="text-xs font-medium">{geoStats.nearbyJobs} nearby</span>
+                    {isGeoProcessing && <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>}
+                  </div>
+                )}
+              </div>
+              <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+                <TabsList className="h-7 bg-gray-100 p-1 rounded-lg border border-gray-200">
+                  <TabsTrigger 
+                    value="all" 
+                    className="text-xs px-3 h-5 font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-gray-900 data-[state=inactive]:text-gray-600 transition-all"
+                  >
+                    All Jobs
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="saved" 
+                    className="text-xs px-3 h-5 font-medium data-[state=active]:bg-blue-600 data-[state=active]:shadow-sm data-[state=active]:text-white data-[state=inactive]:text-gray-600 transition-all"
+                  >
+                    <Bookmark className="w-3 h-3 mr-1" />
+                    Saved
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+          
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="space-y-3 text-center">
+                  <div className="w-12 h-12 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-gray-600 text-sm">Finding matches...</p>
+                </div>
+              </div>
+            ) : filteredJobs.length === 0 ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="space-y-3 text-center px-6">
+                  <Search className="w-12 h-12 text-gray-400 mx-auto" />
+                  <p className="text-gray-600 text-sm">No jobs found</p>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setSearchQuery('')
+                    setSelectedWorkMode('all')
+                    setSelectedLanguage('all')
+                    setSelectedLocation('all')
+                    setLocationSearch('')
+                    setSelectedJobType('all')
+                  }}>
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {filteredJobs.map((job, index) => (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ delay: index * 0.02 }}
+                  >
+                    <motion.div 
+                      className={cn(
+                        "p-1.5 border-b border-gray-100 cursor-pointer transition-all duration-200 group",
+                        selectedJob?.id === job.id 
+                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500 shadow-sm" 
+                          : "hover:bg-gray-50 hover:shadow-sm hover:border-l-2 hover:border-l-gray-300"
+                      )}
+                      whileHover={{ x: 2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelectedJob(job)}
+                    >
+                      <div className="flex gap-1.5">
+                        {/* Enhanced Company Logo */}
+                        <div className="flex-shrink-0">
+                          <motion.div 
+                            className="w-6 h-6 bg-gradient-to-br from-gray-100 to-gray-50 rounded-md flex items-center justify-center overflow-hidden shadow-sm border border-gray-200/50 group-hover:shadow-md transition-shadow"
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            {job.company.logo_url ? (
+                              <img src={job.company.logo_url} alt={job.company.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                            )}
+                          </motion.div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          {/* Title and Score - Same Line */}
+                          <div className="flex items-start justify-between mb-0.5">
+                            <h3 className="font-medium text-gray-900 text-xs truncate pr-1 leading-tight">{job.title}</h3>
+                            {(job.match_score || job.match_score === 0) && (() => {
+                              // Use enhanced score if available
+                              const displayScore = ('enhancedMatchScore' in job ? job.enhancedMatchScore : job.match_score) || job.match_score;
+                              const isEnhanced = 'enhancedMatchScore' in job && job.enhancedMatchScore !== job.match_score;
+                              
+                              return (
+                                <motion.div 
+                                  className={cn(
+                                    "px-1.5 py-0.5 rounded-full text-xs font-bold flex-shrink-0 flex items-center gap-0.5 border",
+                                    getMatchScoreColor(displayScore),
+                                    getMatchScoreTextColor(displayScore),
+                                    job.is_placeholder_score 
+                                      ? "border-white/30 border-dashed" 
+                                      : "border-white/20",
+                                    isEnhanced && "ring-1 ring-emerald-300" // Subtle indicator for enhanced scores
+                                  )}
+                                  initial={{ scale: 0.8, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.2, delay: 0.1 }}
+                                  title={`${getMatchScoreTooltip(displayScore, job.is_placeholder_score, job.title)}${isEnhanced ? ' (Enhanced with real distance data)' : ''}`}
+                                >
+                                  {job.is_placeholder_score ? (
+                                    <Target className="w-2 h-2" />
+                                  ) : displayScore === 0 ? (
+                                    <X className="w-2 h-2" />
+                                  ) : isEnhanced ? (
+                                    <MapPin className="w-2 h-2" />
+                                  ) : (
+                                    <Sparkles className="w-2 h-2" />
+                                  )}
+                                  <>
+                                    {displayScore}%
+                                    {job.is_placeholder_score && (
+                                      <span className="text-xs opacity-75">*</span>
+                                    )}
+                                  </>
+                                </motion.div>
+                              );
+                            })()}
+                          </div>
+                          
+                          <p className="text-xs text-gray-600 mb-0.5 truncate">{job.company.name}</p>
+                          
+                          {/* Ultra Compact Meta with Distance */}
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mb-0.5">
+                            {(job.city || job.location_city) && (
+                              <span className="flex items-center gap-0.5 truncate">
+                                <MapPin className="w-2 h-2" />
+                                {job.city || job.location_city}
+                              </span>
+                            )}
+                            {/* Show distance if available */}
+                            {'distanceKm' in job && job.distanceKm !== undefined && job.work_mode !== 'remote' && (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-xs font-medium text-blue-600">{job.distanceKm}km</span>
+                              </>
+                            )}
+                            {job.work_mode && job.work_mode !== 'Unknown' && (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-xs">{job.work_mode}</span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Employment Type, Language Badges, and Eligibility */}
+                          <div className="flex items-center gap-0.5 flex-wrap">
+                            {job.is_werkstudent && (
+                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs h-3.5 px-1 font-medium">
+                                Werkstudent
+                              </Badge>
+                            )}
+                            {((job.employment_type && job.employment_type.toLowerCase().includes('intern')) || 
+                              (job.title && job.title.toLowerCase().includes('intern')) ||
+                              (job.contract_type && job.contract_type.toLowerCase().includes('intern'))) && (
+                              <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs h-3.5 px-1 font-medium">
+                                Intern
+                              </Badge>
+                            )}
+                            
+                            {/* Werkstudent Eligibility Badge */}
+                            {(job.is_werkstudent || (job.title && job.title.toLowerCase().includes('werkstudent'))) && studentProfile && (
+                              <div className="mt-0.5">
+                                <EligibilityChecker
+                                  studentProfile={studentProfile}
+                                  jobRequirements={{
+                                    hours_per_week: job.hours_per_week || '15-20',
+                                    language_required: job.german_required || job.language_required,
+                                    location: job.location_city,
+                                    duration: job.duration_months?.toString(),
+                                    start_date: job.start_date
+                                  }}
+                                  compact={true}
+                                />
+                              </div>
+                            )}
+                            {(() => {
+                              // Smart language detection for existing jobs
+                              let detectedLanguage = job.german_required;
+                              
+                              // If unknown, try to detect from job content
+                              if (detectedLanguage === 'unknown' || !detectedLanguage) {
+                                // Check if job content appears to be in English
+                                const englishIndicators = [
+                                  job.title?.includes('Intern'),
+                                  job.responsibilities_original?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                                  job.skills_original?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some(eng => s.includes(eng)))
+                                ];
+                                
+                                if (englishIndicators.filter(Boolean).length >= 2) {
+                                  detectedLanguage = 'EN';
+                                }
+                              }
+                              
+                              return detectedLanguage && detectedLanguage !== 'unknown' ? (
+                                <Badge className={cn("gap-0.5 text-xs h-4 px-1.5 font-medium border", 
+                                  detectedLanguage === 'DE' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                                  detectedLanguage === 'EN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  detectedLanguage === 'both' ? 'bg-rose-50 text-rose-700 border-rose-200' : ''
+                                )}>
+                                  <Globe2 className="w-2.5 h-2.5" />
+                                  {detectedLanguage === 'DE' ? 'DE' :
+                                   detectedLanguage === 'EN' ? 'EN' :
+                                   detectedLanguage === 'both' ? 'DE/EN' : ''}
+                                </Badge>
+                              ) : null;
+                            })()}
+                          </div>
+
+                          {/* Bottom Row */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant={savedJobs.has(job.id) ? "default" : "ghost"}
+                                className="h-4 w-4 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleSaveJob(job.id)
+                                }}
+                              >
+                                {savedJobs.has(job.id) ? (
+                                  <BookmarkCheck className="w-2.5 h-2.5" />
+                                ) : (
+                                  <Bookmark className="w-2.5 h-2.5" />
+                                )}
+                              </Button>
+                              {job.posted_at && (
+                                <span className="text-xs text-gray-400">
+                                  {new Date(job.posted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                </span>
+                              )}
+                            </div>
+                            
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Right Panel: Job Details */}
+        <div className="flex-1 min-w-0 overflow-y-auto bg-white">
+          {selectedJob ? (
+            <div className="h-full">
+              {/* Job Header - Enhanced with match score emphasis */}
+              <motion.div 
+                className={cn(
+                  "border-b border-gray-200 p-3 relative overflow-hidden",
+                  selectedJob.match_score && selectedJob.match_score >= 85 
+                    ? "bg-gradient-to-r from-emerald-50/80 to-green-50/80" 
+                    : selectedJob.match_score && selectedJob.match_score >= 70
+                    ? "bg-gradient-to-r from-blue-50/80 to-indigo-50/80"
+                    : "bg-gradient-to-r from-gray-50 to-blue-50"
+                )}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Background decoration for high matches */}
+                {selectedJob.match_score && selectedJob.match_score >= 85 && (
+                  <motion.div 
+                    className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-200/20 to-green-200/20 rounded-full blur-2xl"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                  />
+                )}
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-lg font-bold text-gray-900 mb-1 pr-2">{selectedJob.title}</h1>
+                    <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                      <span className="font-medium">{selectedJob.company.name}</span>
+                      {(selectedJob.city || selectedJob.location_city) && (
+                        <>
+                          <span className="text-gray-400">•</span>
+                          <span className="flex items-center gap-0.5">
+                            <MapPin className="w-3 h-3" />
+                            {selectedJob.city || selectedJob.location_city}
+                          </span>
+                        </>
+                      )}
+                      {selectedJob.posted_at && (
+                        <>
+                          <span className="text-gray-400">•</span>
+                          <span className="flex items-center gap-0.5">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(selectedJob.posted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Werkstudent Eligibility for Selected Job */}
+                    {(selectedJob.is_werkstudent || (selectedJob.title && selectedJob.title.toLowerCase().includes('werkstudent'))) && studentProfile && (
+                      <div className="mb-3">
+                        <EligibilityChecker
+                          studentProfile={studentProfile}
+                          jobRequirements={{
+                            hours_per_week: selectedJob.hours_per_week || '15-20',
+                            language_required: selectedJob.german_required || selectedJob.language_required,
+                            location: selectedJob.location_city,
+                            duration: selectedJob.duration_months?.toString(),
+                            start_date: selectedJob.start_date
+                          }}
+                          compact={false}
+                        />
+                      </div>
+                    )}
+
+                    {/* Compact Badges */}
+                    <div className="flex flex-wrap gap-1">
+                      {(selectedJob.match_score || selectedJob.match_score === 0) && (
+                        <motion.div 
+                          className={cn(
+                            "px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border",
+                            getMatchScoreColor(selectedJob.match_score),
+                            getMatchScoreTextColor(selectedJob.match_score),
+                            selectedJob.is_placeholder_score 
+                              ? "border-white/40 border-dashed" 
+                              : "border-white/30"
+                          )}
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                          title={getMatchScoreTooltip(selectedJob.match_score, selectedJob.is_placeholder_score, selectedJob.title)}
+                        >
+                          {selectedJob.is_placeholder_score ? (
+                            <Target className="w-3 h-3" />
+                          ) : selectedJob.match_score === 0 ? (
+                            <X className="w-3 h-3" />
+                          ) : (
+                            <Sparkles className="w-3 h-3" />
+                          )}
+                          <>
+                            <span className="font-extrabold">{selectedJob.match_score}%</span>
+                            <span className="text-xs opacity-90">
+                              {getMatchScoreDescription(selectedJob.match_score, selectedJob.is_placeholder_score)}
+                            </span>
+                          </>
+                        </motion.div>
+                      )}
+                      {selectedJob.work_mode && selectedJob.work_mode !== 'Unknown' && (
+                        <Badge variant="outline" className="gap-0.5 text-xs h-5 px-1.5">
+                          {workModeIcons[selectedJob.work_mode as keyof typeof workModeIcons]}
+                          {selectedJob.work_mode}
+                        </Badge>
+                      )}
+                      {selectedJob.employment_type && selectedJob.employment_type !== 'Unknown' && (
+                        <Badge variant="outline" className="text-xs h-5 px-1.5">{selectedJob.employment_type}</Badge>
+                      )}
+                      {selectedJob.is_werkstudent && (
+                        <Badge className="bg-amber-100 text-amber-800 text-xs h-5 px-1.5">Werkstudent</Badge>
+                      )}
+                      {(() => {
+                        // Smart language detection for existing jobs
+                        let detectedLanguage = selectedJob.german_required;
+                        
+                        // If unknown, try to detect from job content
+                        if (detectedLanguage === 'unknown' || !detectedLanguage) {
+                          // Check if job content appears to be in English
+                          const englishIndicators = [
+                            selectedJob.title?.includes('Intern'),
+                            selectedJob.responsibilities_original?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                            selectedJob.skills_original?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some(eng => s.includes(eng)))
+                          ];
+                          
+                          if (englishIndicators.filter(Boolean).length >= 2) {
+                            detectedLanguage = 'EN';
+                          }
+                        }
+                        
+                        return detectedLanguage && detectedLanguage !== 'unknown' ? (
+                          <Badge className={cn("gap-0.5 text-xs h-5 px-1.5 font-medium border", 
+                            detectedLanguage === 'DE' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            detectedLanguage === 'EN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            detectedLanguage === 'both' ? 'bg-purple-50 text-purple-700 border-purple-200' : ''
+                          )}>
+                            <Globe2 className="w-2.5 h-2.5" />
+                            {detectedLanguage === 'DE' ? 'DE' :
+                             detectedLanguage === 'EN' ? 'EN' :
+                             detectedLanguage === 'both' ? 'DE/EN' : ''}
+                          </Badge>
+                        ) : null;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Compact */}
+                  <div className="ml-3 flex gap-1 flex-shrink-0">
+                    {/* Tailor Application Button - Prominent */}
+                    <Button
+                      size="sm"
+                      className="gap-1.5 h-9 text-sm bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-md font-semibold px-4 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105"
+                      onClick={() => router.push(`/jobs/${selectedJob.id}/tailor`)}
+                      title="Tailor resume + cover letter for this job"
+                    >
+                      <Sparkles className="w-4 h-4 animate-pulse" />
+                      AI Tailor
+                    </Button>
+                    
+                    {(selectedJob.application_url || selectedJob.linkedin_url) && (
+                      <Button 
+                        size="sm"
+                        className="gap-1 h-9 text-sm px-4"
+                        onClick={() => window.open(selectedJob.application_url || selectedJob.linkedin_url!, '_blank')}
+                      >
+                        Apply
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
+                    )}
+                    <Button
+                      variant={savedJobs.has(selectedJob.id) ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => toggleSaveJob(selectedJob.id)}
+                    >
+                      {savedJobs.has(selectedJob.id) ? (
+                        <BookmarkCheck className="w-3 h-3" />
+                      ) : (
+                        <Bookmark className="w-3 h-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Job Content - Ultra Compact */}
+              <div className="p-3">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {/* Main Content */}
+                  <div className="lg:col-span-2 space-y-3">
+                    {/* Salary Information - Inline */}
+                    {(extractSalaryFromBenefits(selectedJob.benefits_original) || selectedJob.salary_min || selectedJob.salary_max || selectedJob.salary_info) && (
+                      <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded p-2 border border-emerald-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
+                          <h3 className="font-medium text-emerald-900 text-sm">Compensation</h3>
+                        </div>
+                        <div className="text-emerald-800 text-xs space-y-0.5">
+                          {extractSalaryFromBenefits(selectedJob.benefits_original) && (
+                            <p className="font-medium">{extractSalaryFromBenefits(selectedJob.benefits_original)}</p>
+                          )}
+                          {(selectedJob.salary_min || selectedJob.salary_max) && (
+                            <p>
+                              {selectedJob.salary_min && selectedJob.salary_max 
+                                ? `€${selectedJob.salary_min.toLocaleString()} - €${selectedJob.salary_max.toLocaleString()}`
+                                : selectedJob.salary_min 
+                                ? `From €${selectedJob.salary_min.toLocaleString()}`
+                                : `Up to €${selectedJob.salary_max?.toLocaleString()}`
+                              }
+                            </p>
+                          )}
+                          {selectedJob.salary_info && <p>{selectedJob.salary_info}</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Responsibilities - Compact */}
+                    {selectedJob.responsibilities_original && (Array.isArray(selectedJob.responsibilities_original) ? selectedJob.responsibilities_original.length > 0 : true) && (
+                      <div className="bg-white rounded border border-gray-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="w-3 h-3 text-blue-600" />
+                          <h3 className="font-medium text-gray-900 text-sm">What You'll Do</h3>
+                        </div>
+                        <div className="text-xs">
+                          {renderJobContent(selectedJob.responsibilities_original)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nice to Have - Compact */}
+                    {selectedJob.nice_to_have_original && (Array.isArray(selectedJob.nice_to_have_original) ? selectedJob.nice_to_have_original.length > 0 : true) && (
+                      <div className="bg-white rounded border border-gray-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Star className="w-3 h-3 text-emerald-600" />
+                          <h3 className="font-medium text-gray-900 text-sm">Nice to Have</h3>
+                        </div>
+                        <div className="text-xs">
+                          {renderJobContent(selectedJob.nice_to_have_original)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Benefits - Compact */}
+                    {selectedJob.benefits_original && (Array.isArray(selectedJob.benefits_original) ? selectedJob.benefits_original.length > 0 : true) && (
+                      <div className="bg-white rounded border border-gray-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Award className="w-3 h-3 text-purple-600" />
+                          <h3 className="font-medium text-gray-900 text-sm">What We Offer</h3>
+                        </div>
+                        <div className="text-xs">
+                          {renderJobContent(selectedJob.benefits_original)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Who We Are Looking For - Compact */}
+                    {selectedJob.who_we_are_looking_for_original && (() => {
+                      try {
+                        const whoWeAreLookingFor = JSON.parse(selectedJob.who_we_are_looking_for_original);
+                        const content = Array.isArray(whoWeAreLookingFor) && whoWeAreLookingFor.length > 0 ? whoWeAreLookingFor : null;
+                        
+                        if (content) {
+                          return (
+                            <div className="bg-white rounded border border-gray-200 p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Users className="w-3 h-3 text-indigo-600" />
+                                <h3 className="font-medium text-gray-900 text-sm">Who We're Looking For</h3>
+                              </div>
+                              <div className="text-xs">
+                                {renderJobContent(content)}
+                              </div>
+                            </div>
+                          );
+                        }
+                      } catch (e) {
+                        if (typeof selectedJob.who_we_are_looking_for_original === 'string' && selectedJob.who_we_are_looking_for_original.trim()) {
+                          return (
+                            <div className="bg-white rounded border border-gray-200 p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Users className="w-3 h-3 text-indigo-600" />
+                                <h3 className="font-medium text-gray-900 text-sm">Who We're Looking For</h3>
+                              </div>
+                              <div className="text-xs">
+                                {renderJobContent(selectedJob.who_we_are_looking_for_original)}
+                              </div>
+                            </div>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
+
+                    {/* Application Requirements - Pills Format */}
+                    {selectedJob.application_requirements_original && Array.isArray(selectedJob.application_requirements_original) && selectedJob.application_requirements_original.length > 0 && (
+                      <div className="bg-white rounded border border-gray-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="w-3 h-3 text-orange-600" />
+                          <h3 className="font-medium text-gray-900 text-sm">What to Include in Your Application</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedJob.application_requirements_original.map((requirement, index) => (
+                            <Badge 
+                              key={index} 
+                              variant="outline"
+                              className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-2 py-1 font-medium hover:bg-orange-100 transition-colors"
+                            >
+                              {requirement}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Sidebar - Compact */}
+                  <div className="space-y-2">
+                    {/* Matching Skills Card - Shows intersection between user skills and job requirements */}
+                    {userProfile && selectedJob && (
+                      <div className="transform scale-90 origin-top">
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-4 h-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-green-900 text-sm">Matching Skills</h3>
+                            <div className="ml-auto text-xs text-green-600 font-medium">
+                              {(() => {
+                                // Get all user skills from all categories
+                                const allUserSkills: string[] = [];
+                                if (userProfile.skills && typeof userProfile.skills === 'object') {
+                                  Object.values(userProfile.skills).forEach(skillArray => {
+                                    if (Array.isArray(skillArray)) {
+                                      allUserSkills.push(...skillArray);
+                                    }
+                                  });
+                                }
+                                const normalizedUserSkills = allUserSkills.map(skill => skill.toLowerCase().trim());
+
+                                // Get job required skills
+                                const jobSkills = (selectedJob.skills_original || [])
+                                  .map(skill => skill.toLowerCase().trim());
+
+                                // Find intersection
+                                const matchingSkills = jobSkills.filter(jobSkill => 
+                                  normalizedUserSkills.some(userSkill => 
+                                    userSkill === jobSkill || 
+                                    userSkill.includes(jobSkill) || 
+                                    jobSkill.includes(userSkill)
+                                  )
+                                );
+
+                                return `${matchingSkills.length} matches`;
+                              })()}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {(() => {
+                              // Get all user skills with categories based on actual structure
+                              const userTechSkills: string[] = [];
+                              const userSoftSkills: string[] = [];
+                              const userDesignSkills: string[] = [];
+                              
+                              if (userProfile.skills && typeof userProfile.skills === 'object') {
+                                Object.entries(userProfile.skills).forEach(([category, skillArray]) => {
+                                  if (Array.isArray(skillArray)) {
+                                    const normalizedSkills = skillArray.map(s => s.toLowerCase().trim());
+                                    // Categorize based on category name
+                                    if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('tech')) {
+                                      userTechSkills.push(...normalizedSkills);
+                                    } else if (category.toLowerCase().includes('soft') || category.toLowerCase().includes('business')) {
+                                      userSoftSkills.push(...normalizedSkills);
+                                    } else if (category.toLowerCase().includes('design') || category.toLowerCase().includes('tools')) {
+                                      userDesignSkills.push(...normalizedSkills);
+                                    } else {
+                                      // Default to technical for unknown categories
+                                      userTechSkills.push(...normalizedSkills);
+                                    }
+                                  }
+                                });
+                              }
+                              
+                              // Get job required skills
+                              const jobSkills = (selectedJob.skills_original || []);
+                              
+                              // Find matches by category
+                              const matchingTechSkills = jobSkills.filter(jobSkill => 
+                                userTechSkills.some(userSkill => 
+                                  userSkill === jobSkill.toLowerCase().trim() || 
+                                  userSkill.includes(jobSkill.toLowerCase().trim()) || 
+                                  jobSkill.toLowerCase().trim().includes(userSkill)
+                                )
+                              );
+                              
+                              const matchingSoftSkills = jobSkills.filter(jobSkill => 
+                                userSoftSkills.some(userSkill => 
+                                  userSkill === jobSkill.toLowerCase().trim() || 
+                                  userSkill.includes(jobSkill.toLowerCase().trim()) || 
+                                  jobSkill.toLowerCase().trim().includes(userSkill)
+                                )
+                              );
+                              
+                              const matchingDesignSkills = jobSkills.filter(jobSkill => 
+                                userDesignSkills.some(userSkill => 
+                                  userSkill === jobSkill.toLowerCase().trim() || 
+                                  userSkill.includes(jobSkill.toLowerCase().trim()) || 
+                                  jobSkill.toLowerCase().trim().includes(userSkill)
+                                )
+                              );
+
+                              return (
+                                <>
+                                  {/* Technical Matches */}
+                                  {matchingTechSkills.length > 0 && (
+                                    <div>
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className="text-xs font-medium text-green-800">Technical</span>
+                                        <span className="text-xs text-green-600">({matchingTechSkills.length})</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: string, index: number) => (
+                                          <span
+                                            key={index}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+                                          >
+                                            {skill}
+                                          </span>
+                                        ))}
+                                        {matchingTechSkills.length > 6 && (
+                                          <button
+                                            onClick={() => setExpandedSkillSections(prev => ({ ...prev, technical: !prev.technical }))}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors cursor-pointer"
+                                          >
+                                            {expandedSkillSections.technical ? 'Show less' : `+${matchingTechSkills.length - 6} more`}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Soft Skills Matches */}
+                                  {matchingSoftSkills.length > 0 && (
+                                    <div>
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                        <span className="text-xs font-medium text-emerald-800">Soft Skills</span>
+                                        <span className="text-xs text-emerald-600">({matchingSoftSkills.length})</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {(expandedSkillSections.soft ? matchingSoftSkills : matchingSoftSkills.slice(0, 4)).map((skill: string, index: number) => (
+                                          <span
+                                            key={index}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                          >
+                                            {skill}
+                                          </span>
+                                        ))}
+                                        {matchingSoftSkills.length > 4 && (
+                                          <button
+                                            onClick={() => setExpandedSkillSections(prev => ({ ...prev, soft: !prev.soft }))}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                          >
+                                            {expandedSkillSections.soft ? 'Show less' : `+${matchingSoftSkills.length - 4} more`}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Design & Tools Matches */}
+                                  {matchingDesignSkills.length > 0 && (
+                                    <div>
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                        <span className="text-xs font-medium text-purple-800">Design & Tools</span>
+                                        <span className="text-xs text-purple-600">({matchingDesignSkills.length})</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: string, index: number) => (
+                                          <span
+                                            key={index}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200"
+                                          >
+                                            {skill}
+                                          </span>
+                                        ))}
+                                        {matchingDesignSkills.length > 4 && (
+                                          <button
+                                            onClick={() => setExpandedSkillSections(prev => ({ ...prev, design: !prev.design }))}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
+                                          >
+                                            {expandedSkillSections.design ? 'Show less' : `+${matchingDesignSkills.length - 4} more`}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* No matches message */}
+                                  {matchingTechSkills.length === 0 && matchingSoftSkills.length === 0 && matchingDesignSkills.length === 0 && (
+                                    <div className="text-center py-2">
+                                      <span className="text-xs text-gray-500">No matching skills found</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Skills Analysis Panel - Moved to top */}
+                    {selectedJob.skills_original && Array.isArray(selectedJob.skills_original) && selectedJob.skills_original.length > 0 && (
+                      <div className="transform scale-90 origin-top">
+                        <SkillsAnalysisPanel 
+                          jobSkills={selectedJob.skills_original}
+                          jobTitle={selectedJob.title}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Company Intelligence Panel - Moved below skills */}
+                    <div className="transform scale-90 origin-top">
+                      <CompanyIntelligencePanel 
+                        company={selectedJob.company} 
+                        jobSpecificInsights={{
+                          hiring_manager: selectedJob.hiring_manager,
+                          additional_insights: selectedJob.additional_insights
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center space-y-3">
+                <Briefcase className="w-16 h-16 text-gray-300 mx-auto" />
+                <p className="text-gray-500">Select a job to view details</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

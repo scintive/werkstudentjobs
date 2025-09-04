@@ -1,0 +1,540 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      companies: {
+        Row: {
+          id: string
+          name: string
+          domain: string | null
+          logo_url: string | null
+          industry: string | null
+          size_category: 'startup' | 'small' | 'medium' | 'large' | 'enterprise' | null
+          headquarters: string | null
+          website_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          domain?: string | null
+          logo_url?: string | null
+          industry?: string | null
+          size_category?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise' | null
+          headquarters?: string | null
+          website_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          domain?: string | null
+          logo_url?: string | null
+          industry?: string | null
+          size_category?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise' | null
+          headquarters?: string | null
+          website_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      jobs: {
+        Row: {
+          id: string
+          external_id: string | null
+          company_id: string | null
+          title: string
+          description: string | null
+          portal: string | null
+          portal_link: string | null
+          job_description_link: string | null
+          application_link: string | null
+          werkstudent: boolean | null
+          work_mode: 'Remote' | 'Hybrid' | 'Onsite' | 'Unknown' | null
+          contract_type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship' | 'Werkstudent' | 'Unknown' | null
+          location_raw: string | null
+          city: string | null
+          country: string | null
+          is_remote: boolean | null
+          salary_min: number | null
+          salary_max: number | null
+          salary_currency: string | null
+          salary_period: 'hourly' | 'monthly' | 'yearly' | null
+          content_language: 'DE' | 'EN' | 'unknown' | null
+          skills_original: string[] | null
+          tools_original: string[] | null
+          skills_canonical: string[] | null
+          tools_canonical: string[] | null
+          skills_canonical_flat: string[] | null
+          tools_canonical_flat: string[] | null
+          language_required: 'DE' | 'EN' | 'BOTH' | 'UNKNOWN' | null
+          description_embedding: number[] | null
+          posted_at: string | null
+          expires_at: string | null
+          source_quality_score: number | null
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+          last_matched_at: string | null
+          // GPT Pipeline Fields - maintaining existing flow
+          is_werkstudent: boolean | null
+          german_required: 'yes' | 'no' | 'both' | 'unknown' | null
+          employment_type: string | null
+          seniority_level: string | null
+          salary_info: string | null
+          linkedin_url: string | null
+          job_function: string | null
+          industries: string[] | null
+          applicants_count: number | null
+          user_saved: boolean | null
+          user_applied: boolean | null
+          user_notes: string | null
+          match_score: number | null
+          responsibilities_original: string[] | null
+          nice_to_have_original: string[] | null
+          benefits_original: string[] | null
+          application_requirements_original: string[] | null
+          responsibilities_canonical: string[] | null
+          nice_to_have_canonical: string[] | null
+          benefits_canonical: string[] | null
+          remote_allowed: boolean | null
+          hybrid_allowed: boolean | null
+          onsite_required: boolean | null
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          external_id?: string | null
+          title: string
+          description_html?: string | null
+          description_text?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_full?: string | null
+          work_mode?: 'remote' | 'hybrid' | 'onsite' | 'unknown'
+          employment_type?: string | null
+          seniority_level?: string | null
+          salary_info?: string | null
+          posted_at?: string | null
+          application_url?: string | null
+          linkedin_url?: string | null
+          job_function?: string | null
+          industries?: string[] | null
+          applicants_count?: number | null
+          is_werkstudent?: boolean
+          german_required?: 'yes' | 'no' | 'both' | 'unknown'
+          created_at?: string
+          updated_at?: string
+          user_saved?: boolean
+          user_applied?: boolean
+          user_notes?: string | null
+          match_score?: number | null
+          // MULTILINGUAL MATCHING FIELDS (added for weighted scoring)
+          content_language?: 'DE' | 'EN' | 'unknown' | null
+          skills_original?: string[] | null
+          tools_original?: string[] | null
+          responsibilities_original?: string[] | null
+          nice_to_have_original?: string[] | null
+          benefits_original?: string[] | null
+          application_requirements_original?: string[] | null
+          skills_canonical?: string[] | null
+          tools_canonical?: string[] | null
+          responsibilities_canonical?: string[] | null
+          nice_to_have_canonical?: string[] | null
+          benefits_canonical?: string[] | null
+          skills_canonical_flat?: string[] | null
+          tools_canonical_flat?: string[] | null
+          language_required?: 'DE' | 'EN' | 'BOTH' | 'UNKNOWN' | null
+          remote_allowed?: boolean | null
+          hybrid_allowed?: boolean | null
+          onsite_required?: boolean | null
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          external_id?: string | null
+          title?: string
+          description_html?: string | null
+          description_text?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_full?: string | null
+          work_mode?: 'remote' | 'hybrid' | 'onsite' | 'unknown'
+          employment_type?: string | null
+          seniority_level?: string | null
+          salary_info?: string | null
+          posted_at?: string | null
+          application_url?: string | null
+          linkedin_url?: string | null
+          job_function?: string | null
+          industries?: string[] | null
+          applicants_count?: number | null
+          is_werkstudent?: boolean
+          german_required?: 'yes' | 'no' | 'both' | 'unknown'
+          created_at?: string
+          updated_at?: string
+          user_saved?: boolean
+          user_applied?: boolean
+          user_notes?: string | null
+          match_score?: number | null
+          // MULTILINGUAL MATCHING FIELDS (added for weighted scoring)
+          content_language?: 'DE' | 'EN' | 'unknown' | null
+          skills_original?: string[] | null
+          tools_original?: string[] | null
+          responsibilities_original?: string[] | null
+          nice_to_have_original?: string[] | null
+          benefits_original?: string[] | null
+          application_requirements_original?: string[] | null
+          skills_canonical?: string[] | null
+          tools_canonical?: string[] | null
+          responsibilities_canonical?: string[] | null
+          nice_to_have_canonical?: string[] | null
+          benefits_canonical?: string[] | null
+          skills_canonical_flat?: string[] | null
+          tools_canonical_flat?: string[] | null
+          language_required?: 'DE' | 'EN' | 'BOTH' | 'UNKNOWN' | null
+          remote_allowed?: boolean | null
+          hybrid_allowed?: boolean | null
+          onsite_required?: boolean | null
+        }
+      }
+      job_requirements: {
+        Row: {
+          id: string
+          job_id: string
+          requirement_type: 'must_have' | 'nice_to_have' | 'benefit'
+          requirement_text: string
+          requirement_english: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          requirement_type: 'must_have' | 'nice_to_have' | 'benefit'
+          requirement_text: string
+          requirement_english?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          requirement_type?: 'must_have' | 'nice_to_have' | 'benefit'
+          requirement_text?: string
+          requirement_english?: string | null
+          created_at?: string
+        }
+      }
+      job_skills: {
+        Row: {
+          id: string
+          job_id: string
+          skill_name: string
+          skill_category: string | null
+          importance_level: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          skill_name: string
+          skill_category?: string | null
+          importance_level?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          skill_name?: string
+          skill_category?: string | null
+          importance_level?: number | null
+          created_at?: string
+        }
+      }
+      user_job_interactions: {
+        Row: {
+          id: string
+          user_id: string
+          job_id: string
+          interaction_type: 'viewed' | 'saved' | 'applied' | 'rejected'
+          interaction_data: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          job_id: string
+          interaction_type: 'viewed' | 'saved' | 'applied' | 'rejected'
+          interaction_data?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          job_id?: string
+          interaction_type?: 'viewed' | 'saved' | 'applied' | 'rejected'
+          interaction_data?: Json | null
+          created_at?: string
+        }
+      }
+      user_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          profile_data: Json
+          skills_canonical: string[] | null
+          tools_canonical: string[] | null
+          languages: Json | null
+          city: string | null
+          willing_remote: boolean | null
+          willing_hybrid: boolean | null
+          education_level: string | null
+          years_experience: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          profile_data: Json
+          skills_canonical?: string[] | null
+          tools_canonical?: string[] | null
+          languages?: Json | null
+          city?: string | null
+          willing_remote?: boolean | null
+          willing_hybrid?: boolean | null
+          education_level?: string | null
+          years_experience?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          profile_data?: Json
+          skills_canonical?: string[] | null
+          tools_canonical?: string[] | null
+          languages?: Json | null
+          city?: string | null
+          willing_remote?: boolean | null
+          willing_hybrid?: boolean | null
+          education_level?: string | null
+          years_experience?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      resume_data: {
+        Row: {
+          id: string
+          session_id: string | null
+          user_id: string | null
+          personal_info: Json
+          professional_title: string
+          professional_summary: string
+          enable_professional_summary: boolean
+          skills: Json
+          experience: Json
+          education: Json
+          projects: Json | null
+          certifications: Json | null
+          custom_sections: Json | null
+          last_template_used: string
+          is_active: boolean
+          profile_completeness: number
+          created_at: string
+          updated_at: string
+          last_accessed_at: string
+        }
+        Insert: {
+          id?: string
+          session_id?: string | null
+          user_id?: string | null
+          personal_info: Json
+          professional_title?: string
+          professional_summary?: string
+          enable_professional_summary?: boolean
+          skills: Json
+          experience: Json
+          education: Json
+          projects?: Json | null
+          certifications?: Json | null
+          custom_sections?: Json | null
+          last_template_used?: string
+          is_active?: boolean
+          profile_completeness?: number
+          created_at?: string
+          updated_at?: string
+          last_accessed_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string | null
+          user_id?: string | null
+          personal_info?: Json
+          professional_title?: string
+          professional_summary?: string
+          enable_professional_summary?: boolean
+          skills?: Json
+          experience?: Json
+          education?: Json
+          projects?: Json | null
+          certifications?: Json | null
+          custom_sections?: Json | null
+          last_template_used?: string
+          is_active?: boolean
+          profile_completeness?: number
+          created_at?: string
+          updated_at?: string
+          last_accessed_at?: string
+        }
+      }
+      job_match_results: {
+        Row: {
+          id: string
+          user_profile_id: string
+          job_id: string
+          match_score: number
+          skills_overlap_score: number
+          tools_overlap_score: number
+          language_fit_score: number
+          location_fit_score: number
+          skills_matched: string[] | null
+          skills_missing: string[] | null
+          tools_matched: string[] | null
+          tools_missing: string[] | null
+          language_explanation: string | null
+          location_explanation: string | null
+          overall_explanation: string | null
+          calculation_weights: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_profile_id: string
+          job_id: string
+          match_score: number
+          skills_overlap_score: number
+          tools_overlap_score: number
+          language_fit_score: number
+          location_fit_score: number
+          skills_matched?: string[] | null
+          skills_missing?: string[] | null
+          tools_matched?: string[] | null
+          tools_missing?: string[] | null
+          language_explanation?: string | null
+          location_explanation?: string | null
+          overall_explanation?: string | null
+          calculation_weights?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_profile_id?: string
+          job_id?: string
+          match_score?: number
+          skills_overlap_score?: number
+          tools_overlap_score?: number
+          language_fit_score?: number
+          location_fit_score?: number
+          skills_matched?: string[] | null
+          skills_missing?: string[] | null
+          tools_matched?: string[] | null
+          tools_missing?: string[] | null
+          language_explanation?: string | null
+          location_explanation?: string | null
+          overall_explanation?: string | null
+          calculation_weights?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+  }
+}
+
+// Helper types
+export type Company = Database['public']['Tables']['companies']['Row']
+export type Job = Database['public']['Tables']['jobs']['Row']
+export type JobRequirement = Database['public']['Tables']['job_requirements']['Row']
+export type JobSkill = Database['public']['Tables']['job_skills']['Row']
+export type UserJobInteraction = Database['public']['Tables']['user_job_interactions']['Row']
+export type UserProfile = Database['public']['Tables']['user_profiles']['Row']
+export type JobMatchResult = Database['public']['Tables']['job_match_results']['Row']
+export type ResumeData = Database['public']['Tables']['resume_data']['Row']
+
+// Extended job type with company info and match result
+export interface JobWithCompany extends Job {
+  company: Company
+  requirements?: JobRequirement[]
+  skills?: JobSkill[]
+  matchResult?: JobMatchResult
+}
+
+// Extended user profile with match capabilities
+export interface UserProfileWithMatching extends UserProfile {
+  matchResults?: JobMatchResult[]
+}
+
+// Match calculation interfaces
+export interface MatchCalculation {
+  skillsOverlap: {
+    score: number
+    matched: string[]
+    missing: string[]
+    intersection: string[]
+    union: string[]
+  }
+  toolsOverlap: {
+    score: number
+    matched: string[]
+    missing: string[]
+    intersection: string[]
+    union: string[]
+  }
+  languageFit: {
+    score: number
+    required: string
+    userHas: string[]
+    explanation: string
+  }
+  locationFit: {
+    score: number
+    jobLocation: string
+    userLocation: string
+    remoteAllowed: boolean
+    explanation: string
+  }
+  totalScore: number
+  weights: {
+    skills: number
+    tools: number
+    language: number
+    location: number
+  }
+}
+
+// Language proficiency interface
+export interface LanguageSkill {
+  language: string
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'native'
+}
