@@ -18,6 +18,11 @@ Recent Enhancements (Sept 2025)
 - Tailor Studio Parity: Editor’s left pane now matches Resume Studio UX (bullet-by-bullet experience, certifications, custom sections, languages under Skills) while preserving Tailor AI suggestion features.
 - UI/UX: Global header with Dashboard/Jobs/Login/Register/Logout; new Dashboard; live Preview zoom; skeleton loaders; card hover and focus polish.
 
+Matching + Strategy Overhaul (Sept 2025)
+- Matching: server-first overlap used for chips; single‑label de‑duplication via canonical keys (react/react.js/reactjs → React; js/es6 → JavaScript, etc.). Fast TF‑IDF+fuzzy tightened (phrase‑level only), containment requires ratio ≥ 0.8, fuzzy ≥ 0.88; chips always show job phrases, never resume fragments. Strict relevance in evidence.
+- One‑Pager Strategy: AI Strategy tab now renders a single, dense page (no ATS/Interview/Coursework blocks). xl 3‑column grid: two columns of tasks + one evidence column. Each task shows: meter + %, a task_explainer, organic user_alignment, and domain‑aware learn chips (quick wins, certifications, deepening). Evidence is visually grouped: Relevant Experience, Projects, Certifications (with hover micro‑interactions and tooltips). HTML in resume bullets is sanitized.
+- GPT schema (student): job_task_analysis items include { task, task_explainer, compatibility_score, user_alignment, user_evidence, learning_paths: { quick_wins[], certifications[], deepening[] } }. Prompt enforces strict relevance (no unrelated mapping) and truthfully states gaps.
+
 
 ## High-Level Architecture
 - Frontend (Next.js):
@@ -178,6 +183,15 @@ Tailor Studio Parity (New)
 - Component: `src/components/jobs/JobBrowser.tsx` renders split‑pane UI; uses badges for EN/DE and intern/Werkstudent; integrates skills analysis and company intelligence panels.
 - Strategy (Student): `/api/jobs/strategy-student` builds compact contexts from real job fields (`responsibilities_original`, `skills_original`, etc.) and the student profile, then invokes LLM to produce detailed job strategy artifacts. Caching via `job_analysis_cache` keyed by `job_id` + profile hash exists but is selectively bypassed for “real data” freshness.
 - Other strategy routes: `strategy`, `strategy-enhanced`, and cover letter routes exist for non-student flows.
+
+Authoring Rules (matching + strategy)
+- Never mock data in UI; all verification via Supabase and live API routes.
+- Matching chips must come from server overlap (matchCalculation.skillsOverlap.matched). Only fall back locally when server arrays are truly empty.
+- Normalize once; de‑duplicate by canonical job phrase; never show resume tokens as chips.
+- Strategy tab shows one‑pager only. No ATS keywords, interview lists, or coursework alignment on the one‑pager.
+- Per‑task content: render { task, % meter, task_explainer, user_alignment (truthful), learn chips }. Do not add unrelated evidence.
+- Evidence: show as three visual blocks (Experience, Projects, Certifications). Sanitize any HTML; clamp lines; add hover tooltips.
+- Regeneration: if strategy cache exists, allow a UI refresh control or cache-buster to fetch the latest GPT schema.
 
 
 ## Skills Intelligence

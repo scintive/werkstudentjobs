@@ -268,12 +268,20 @@ export async function POST(request: NextRequest) {
 - Highlight relevant internships, part-time work, or volunteer experience
 - Show progression and growth in their academic journey
 
-💡 TASK-BY-TASK ANALYSIS:
+💡 TASK-BY-TASK ANALYSIS (RICH OUTPUT):
 For each job responsibility, provide:
-1. How well their current background fits (with evidence)
-2. What specific experience/coursework applies
-3. What they need to learn or develop
-4. Concrete steps to bridge any gaps
+1) task_explainer: a crisp 1–2 sentence explanation of what the task actually entails in this role/company (no fluff, no generic definitions)
+2) compatibility_score: realistic 0–100, based ONLY on resume/portfolio evidence
+3) user_alignment: a specific, organic sentence tying user’s best relevant project/experience to this task (reference the exact item name). If nothing truly relevant exists, say so clearly (e.g., "No direct WordPress experience")
+4) learning_paths: concrete actions grouped as { quick_wins: [2–3 items], certifications: [0–2 items], deepening: [1–2 items] }
+   - quick_wins: short actions doable this week (tutorials, docs sections)
+   - certifications: named certificates that matter for THIS task (not generic)
+   - deepening: a medium project or course to close the gap
+
+STRICT RELEVANCE RULES:
+- Do NOT include unrelated evidence (e.g., prompt‑engineering project is NOT relevant to WordPress site building)
+- Only map projects/experience/coursework that truly align with the task (tech, domain, output)
+- If no genuine evidence exists, set user_alignment to a truthful statement and focus learning_paths on how to close that gap quickly
 
 OUTPUT FORMAT: Return your analysis as a valid JSON object following the schema below.
 
@@ -288,12 +296,15 @@ OUTPUT SCHEMA:
   "job_task_analysis": [
     {
       "task": "EXACT job responsibility from job posting",
+      "task_explainer": "1–2 sentences explaining the real‑world shape of this task",
       "compatibility_score": 0-100,
-      "user_evidence": "SPECIFIC projects/coursework/experience that shows they can do this",
-      "academic_connection": "how their degree/courses relate to this responsibility", 
-      "skill_gap": "what specific skills/knowledge they need to develop",
-      "learning_path": "concrete steps to prepare for this responsibility",
-      "interview_talking_point": "how they should present their relevant experience"
+      "user_alignment": "organic, specific sentence tying best related project/experience; or state 'no direct experience'",
+      "user_evidence": "SPECIFIC project/coursework/experience names that support the alignment (or empty)",
+      "learning_paths": {
+        "quick_wins": ["short actions this week"],
+        "certifications": ["named certificates, 0–2"],
+        "deepening": ["project/course for deeper skill"]
+      }
     }
   ],
   "skills_analysis": {

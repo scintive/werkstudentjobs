@@ -23,6 +23,26 @@ export async function POST(request: NextRequest) {
     
     // Use the fast matching service with TF-IDF and cosine similarity
     const matchedJobsWithDetails = await fastMatchingService.calculateBatchMatches(jobs, userProfile);
+
+    // Optional debug instrumentation (single-line JSON)
+    if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
+      try {
+        const sample = matchedJobsWithDetails[0];
+        const dbg = {
+          kind: 'match.debug',
+          jobs: jobs.length,
+          userSkillCats: userProfile?.skills ? Object.keys(userProfile.skills) : [],
+          sample: sample ? {
+            id: sample.id,
+            score: sample.match_score,
+            skillsMatched: sample.matchCalculation?.skillsOverlap?.matched?.length || 0,
+            toolsMatched: sample.matchCalculation?.toolsOverlap?.matched?.length || 0
+          } : null
+        };
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify(dbg));
+      } catch {}
+    }
     
     console.log('🎯 Matching complete. Top 3 matches:',
       matchedJobsWithDetails.slice(0, 3).map(j => 

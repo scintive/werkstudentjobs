@@ -100,6 +100,7 @@ export function useGeoEnhancedJobs({
   }, [jobs, userLocation, enableGeoMatching, maxDistanceKm]);
 
   // Memoized filtering and sorting functions
+  const normalizeMode = (mode?: string | null) => (mode || '').toString().toLowerCase();
   const jobsByDistance = useMemo(() => {
     if (!enableGeoMatching) return enhancedJobs;
 
@@ -107,12 +108,14 @@ export function useGeoEnhancedJobs({
       .filter(job => 
         !job.distanceKm || // Include remote/unknown
         job.distanceKm <= maxDistanceKm ||
-        job.work_mode === 'remote'
+        normalizeMode(job.work_mode) === 'remote'
       )
       .sort((a, b) => {
         // Remote jobs first
-        if (a.work_mode === 'remote' && b.work_mode !== 'remote') return -1;
-        if (b.work_mode === 'remote' && a.work_mode !== 'remote') return 1;
+        const aRemote = normalizeMode(a.work_mode) === 'remote';
+        const bRemote = normalizeMode(b.work_mode) === 'remote';
+        if (aRemote && !bRemote) return -1;
+        if (bRemote && !aRemote) return 1;
         
         // Then by distance
         const aDist = a.distanceKm || Infinity;
@@ -124,7 +127,7 @@ export function useGeoEnhancedJobs({
   const stats = useMemo(() => {
     const totalJobs = enhancedJobs.length;
     const jobsWithDistance = enhancedJobs.filter(job => job.distanceKm !== undefined).length;
-    const remoteJobs = enhancedJobs.filter(job => job.work_mode === 'remote').length;
+    const remoteJobs = enhancedJobs.filter(job => normalizeMode(job.work_mode) === 'remote').length;
     const nearbyJobs = enhancedJobs.filter(job => job.distanceKm && job.distanceKm <= 20).length;
 
     return {

@@ -16,12 +16,22 @@ export async function GET(request: NextRequest) {
     const sessionId = cookieStore.get('user_session')?.value
     const userEmail = cookieStore.get('user_email')?.value
     
-    // Strict mode: require a session or user email
-    if (!sessionId && !userEmail) {
-      return NextResponse.json(
-        { error: 'No active session' },
-        { status: 401 }
-      )
+    // Also try Supabase auth (Authorization header)
+    let authUserId: string | null = null
+    let authEmail: string | null = null
+    try {
+      const { data: authRes } = await (supabase as any).auth.getUser()
+      if (authRes?.user) {
+        authUserId = authRes.user.id || null
+        authEmail = (authRes.user.email as string) || null
+      }
+    } catch (e) {
+      console.log('🔍 LATEST PROFILE: auth.getUser() not available or failed')
+    }
+    
+    // If we have neither cookies nor auth, bail out
+    if (!sessionId && !userEmail && !authUserId && !authEmail) {
+      return NextResponse.json({ error: 'No active session' }, { status: 401 })
     }
     
     console.log('🔍 LATEST PROFILE: Using session:', sessionId, 'email:', userEmail);
@@ -29,28 +39,62 @@ export async function GET(request: NextRequest) {
     // First try to find a matching user profile to get the correct session_id
     let correctSessionId = sessionId;
     if (userEmail) {
-    const { data: userProfiles, error: userError } = await supabase
-      .from('user_profiles')
-      .select('session_id')
-      .eq('email', userEmail)
-      .order('updated_at', { ascending: false })
-      .limit(1);
-      
-      if (!userError && userProfiles && userProfiles.length > 0) {
-        correctSessionId = userProfiles[0].session_id;
-        console.log('🔍 LATEST PROFILE: Found user profile session:', correctSessionId);
+      const { data: userProfilesByEmail, error: userError } = await supabase
+        .from('user_profiles')
+        .select('session_id')
+        .eq('email', userEmail)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      if (!userError && userProfilesByEmail && userProfilesByEmail.length > 0) {
+        correctSessionId = userProfilesByEmail[0].session_id;
+        console.log('🔍 LATEST PROFILE: Found session via email:', correctSessionId);
+      }
+    }
+    
+    if (!correctSessionId && authUserId) {
+      // Try by user_id
+      const { data: userProfilesById } = await supabase
+        .from('user_profiles')
+        .select('session_id')
+        .eq('user_id', authUserId)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      if (userProfilesById && userProfilesById.length > 0) {
+        correctSessionId = userProfilesById[0].session_id;
+        console.log('🔍 LATEST PROFILE: Found session via user_id:', correctSessionId);
+      }
+    }
+    
+    // As a final fallback, if we have auth user, try to read resume_data directly by user_id
+    let resumeRecordByUser: any | null = null
+    if (authUserId && !correctSessionId) {
+      const { data: resumeByUser, error: resumeByUserErr } = await supabase
+        .from('resume_data')
+        .select('*')
+        .eq('user_id', authUserId)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      if (!resumeByUserErr && resumeByUser && resumeByUser.length > 0) {
+        resumeRecordByUser = resumeByUser[0]
+        console.log('🔍 LATEST PROFILE: Found resume by user_id');
       }
     }
     
     // Get resume data for the specific user session (resume_data table uses session_id, not user_email)
-    let resumeQuery = supabase
-      .from('resume_data')
-      .select('*')
-      .eq('session_id', correctSessionId || '')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-    
-    const { data: resumeDataList, error: resumeError } = await resumeQuery;
+    let resumeDataList: any[] | null = null
+    let resumeError: any = null
+    if (resumeRecordByUser) {
+      resumeDataList = [resumeRecordByUser]
+    } else if (correctSessionId) {
+      const { data, error } = await supabase
+        .from('resume_data')
+        .select('*')
+        .eq('session_id', correctSessionId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+      resumeDataList = data
+      resumeError = error
+    }
     
     console.log('🔍 LATEST PROFILE: Resume query result - error:', resumeError)
     console.log('🔍 LATEST PROFILE: Resume query result - data count:', resumeDataList?.length || 0)
@@ -82,11 +126,8 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // No resume found for this session
-    return NextResponse.json(
-      { error: 'No resume data for session' },
-      { status: 404 }
-    );
+    // No resume found for this session/user
+    return NextResponse.json({ error: 'No resume data found' }, { status: 404 });
     
   } catch (error) {
     console.error('🔍 LATEST PROFILE: Unexpected error:', error);

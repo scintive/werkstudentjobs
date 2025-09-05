@@ -55,6 +55,7 @@ const SKILL_SYNONYMS: Record<string, string[]> = {
   
   // Business Skills
   'project management': ['pm', 'scrum', 'agile', 'kanban', 'jira'],
+  'project lifecycle management': ['project management', 'plm'],
   'data analysis': ['analytics', 'data science', 'excel', 'powerbi', 'tableau'],
   'marketing': ['digital marketing', 'seo', 'sem', 'social media'],
   'sales': ['business development', 'lead generation'],
@@ -73,7 +74,81 @@ const SKILL_CATEGORIES = {
   data: ['analytics', 'data', 'sql', 'excel', 'powerbi', 'tableau', 'statistics', 'research']
 };
 
+// Canonicalize common skill variants to a stable key to prevent duplicates
+function canonicalKey(input: string): string {
+  const s = input.toLowerCase().trim().replace(/[^\w\s+#.-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (s === 'react.js' || s === 'reactjs') return 'react';
+  if (s === 'reactnative') return 'react native';
+  if (s === 'nodejs' || s === 'node') return 'node.js';
+  if (s === 'js' || s === 'es6' || s === 'ecmascript') return 'javascript';
+  if (s === 'ui') return 'ui design';
+  if (s === 'ux') return 'ux design';
+  if (s === 'rest api' || s === 'rest apis' || s === 'api') return 'api integration';
+  return s;
+}
+
 export class FastMatchingService {
+  /**
+   * Safely gather job skills from multiple possible fields
+   */
+  private getJobSkills(job: any): string[] {
+    const pools: Array<unknown> = [
+      job?.skills_original,
+      job?.skills_canonical_flat,
+      job?.skills_canonical,
+      // Some pipelines place both skills and tools into a single array
+      job?.named_skills_tools
+    ];
+    const result: string[] = [];
+    for (const pool of pools) {
+      if (Array.isArray(pool)) {
+        for (const item of pool) {
+          if (typeof item === 'string' && item.trim()) {
+            result.push(item.trim());
+          }
+        }
+      }
+    }
+    // De-duplicate
+    return Array.from(new Set(result));
+  }
+
+  /**
+   * Safely gather job tools from multiple possible fields
+   */
+  private getJobTools(job: any): string[] {
+    const pools: Array<unknown> = [
+      job?.tools_original,
+      job?.tools_canonical_flat,
+      job?.tools_canonical
+    ];
+    const result: string[] = [];
+    for (const pool of pools) {
+      if (Array.isArray(pool)) {
+        for (const item of pool) {
+          if (typeof item === 'string' && item.trim()) {
+            result.push(item.trim());
+          }
+        }
+      }
+    }
+    // If tools are still empty, fall back to a heuristic: extract obvious tools from skills
+    if (result.length === 0) {
+      const skills = this.getJobSkills(job);
+      const toolKeywords = [
+        'aws','azure','gcp','docker','kubernetes','jenkins','terraform','ansible',
+        'salesforce','hubspot','shopify','wordpress','figma','sketch','photoshop','illustrator',
+        'jira','confluence','tableau','power bi','excel','redis','mongodb','postgres','mysql'
+      ];
+      for (const s of skills) {
+        const lower = s.toLowerCase();
+        if (toolKeywords.some(k => lower.includes(k))) {
+          result.push(s);
+        }
+      }
+    }
+    return Array.from(new Set(result));
+  }
   
   /**
    * Normalize and expand skills using synonyms
@@ -97,12 +172,6 @@ export class FastMatchingService {
       // Add synonyms
       const synonyms = SKILL_SYNONYMS[cleanSkill] || [];
       synonyms.forEach(synonym => normalized.add(synonym.toLowerCase()));
-      
-      // Add partial matches for compound skills
-      if (cleanSkill.includes(' ')) {
-        const parts = cleanSkill.split(' ').filter(part => part.length > 2);
-        parts.forEach(part => normalized.add(part));
-      }
     }
     
     return Array.from(normalized);
@@ -161,6 +230,7 @@ export class FastMatchingService {
     
     const matches: Array<{userSkill: string, jobSkill: string, confidence: number}> = [];
     const matchedJobSkills = new Set<string>();
+    const matchedCanonicals = new Set<string>();
     
     let totalImportance = 0;
     let matchedImportance = 0;
@@ -175,7 +245,8 @@ export class FastMatchingService {
       let bestMatch = { jobSkill: '', confidence: 0 };
       
       for (const jobSkill of normalizedJob) {
-        if (matchedJobSkills.has(jobSkill)) continue;
+        const jobCanon = canonicalKey(jobSkill);
+        if (matchedJobSkills.has(jobSkill) || matchedCanonicals.has(jobCanon)) continue;
         
         let confidence = 0;
         
@@ -188,7 +259,7 @@ export class FastMatchingService {
           confidence = 0.8;
         }
         // Fuzzy match (similar words)
-        else if (this.calculateStringSimilarity(userSkill, jobSkill) > 0.7) {
+        else if (this.calculateStringSimilarity(userSkill, jobSkill) >= 0.88) {
           confidence = 0.6;
         }
         
@@ -204,6 +275,7 @@ export class FastMatchingService {
           confidence: bestMatch.confidence
         });
         matchedJobSkills.add(bestMatch.jobSkill);
+        matchedCanonicals.add(canonicalKey(bestMatch.jobSkill));
         matchedImportance += (importance.get(bestMatch.jobSkill) || 1) * bestMatch.confidence;
       }
     }
@@ -501,8 +573,8 @@ export class FastMatchingService {
   async calculateJobMatch(job: JobWithCompany, userProfile: LegacyUserProfile): Promise<{
     totalScore: number;
     breakdown: {
-      skills: { score: number; matches: number; matchedSkills: string[]; coverage: number; criticalMissing: string[] };
-      tools: { score: number; matches: number; matchedSkills: string[]; coverage: number; criticalMissing: string[] };
+      skills: { score: number; matches: number; matchedSkills: string[]; coverage: number; criticalMissing: string[]; onlyInResume: string[]; onlyInJob: string[] };
+      tools: { score: number; matches: number; matchedSkills: string[]; coverage: number; criticalMissing: string[]; onlyInResume: string[]; onlyInJob: string[] };
       experience: { score: number; explanation: string };
       language: { score: number; explanation: string };
       location: { score: number; explanation: string };
@@ -521,9 +593,9 @@ export class FastMatchingService {
       });
     }
     
-    // Extract job skills and tools
-    const jobSkills = (job.skills_original || []).filter(s => typeof s === 'string');
-    const jobTools = (job.tools_original || []).filter(s => typeof s === 'string');
+    // Extract job skills and tools with robust fallbacks
+    const jobSkills = this.getJobSkills(job);
+    const jobTools = this.getJobTools(job);
     
     console.log(`  User has ${userSkills.length} skills, job requires ${jobSkills.length} skills + ${jobTools.length} tools`);
     
@@ -564,22 +636,77 @@ export class FastMatchingService {
     console.log(`  Language: ${Math.round(languageMatch.score * 100)}%`);
     console.log(`  Location: ${Math.round(locationMatch.score * 100)}%`);
     
+    // Overlap diagnostics used by UI chips
+    const normUserSkills = this.normalizeSkills(userSkills);
+    const normJobSkills = this.normalizeSkills(jobSkills);
+    const onlyInResumeSkills = normUserSkills.filter(s => !normJobSkills.includes(s)).slice(0, 100);
+    const onlyInJobSkills = normJobSkills.filter(s => !normUserSkills.includes(s)).slice(0, 100);
+    const normUserTools = this.normalizeSkills(userSkills);
+    const normJobTools = this.normalizeSkills(jobTools);
+    const onlyInResumeTools = normUserTools.filter(s => !normJobTools.includes(s)).slice(0, 100);
+    const onlyInJobTools = normJobTools.filter(s => !normUserTools.includes(s)).slice(0, 100);
+
+    // Build display maps (normalized -> original job label)
+    const normalize = (s: string) => s.toLowerCase().trim().replace(/[^\w\s+#.-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const jobDisplayMap = new Map<string, string>();
+    const jobCanonicalDisplay = new Map<string, string>();
+    for (const s of jobSkills) {
+      const n = normalize(s);
+      jobDisplayMap.set(n, s);
+      const c = canonicalKey(n);
+      if (!jobCanonicalDisplay.has(c)) jobCanonicalDisplay.set(c, s);
+    }
+    const toolDisplayMap = new Map<string, string>();
+    const toolCanonicalDisplay = new Map<string, string>();
+    for (const s of jobTools) {
+      const n = normalize(s);
+      toolDisplayMap.set(n, s);
+      const c = canonicalKey(n);
+      if (!toolCanonicalDisplay.has(c)) toolCanonicalDisplay.set(c, s);
+    }
+
     return {
       totalScore: finalScore,
       breakdown: {
         skills: {
           score: skillMatch.score,
           matches: skillMatch.matches.length,
-          matchedSkills: skillMatch.matches.map(m => m.userSkill),
+          matchedSkills: (() => {
+            const out: string[] = [];
+            const seen = new Set<string>();
+            for (const m of skillMatch.matches) {
+              const canon = canonicalKey(m.jobSkill);
+              if (seen.has(canon)) continue;
+              seen.add(canon);
+              const label = jobCanonicalDisplay.get(canon) || jobDisplayMap.get(m.jobSkill) || m.jobSkill;
+              out.push(label);
+            }
+            return out;
+          })(),
           coverage: skillMatch.coverage,
-          criticalMissing: skillMatch.criticalMissing
+          criticalMissing: skillMatch.criticalMissing,
+          onlyInResume: onlyInResumeSkills,
+          onlyInJob: onlyInJobSkills
         },
         tools: {
           score: toolMatch.score,
           matches: toolMatch.matches.length,
-          matchedSkills: toolMatch.matches.map(m => m.userSkill),
+          matchedSkills: (() => {
+            const out: string[] = [];
+            const seen = new Set<string>();
+            for (const m of toolMatch.matches) {
+              const canon = canonicalKey(m.jobSkill);
+              if (seen.has(canon)) continue;
+              seen.add(canon);
+              const label = toolCanonicalDisplay.get(canon) || toolDisplayMap.get(m.jobSkill) || m.jobSkill;
+              out.push(label);
+            }
+            return out;
+          })(),
           coverage: toolMatch.coverage,
-          criticalMissing: toolMatch.criticalMissing
+          criticalMissing: toolMatch.criticalMissing,
+          onlyInResume: onlyInResumeTools,
+          onlyInJob: onlyInJobTools
         },
         experience: experienceMatch,
         language: languageMatch,
@@ -615,14 +742,18 @@ export class FastMatchingService {
             matched: matchResult.breakdown.skills.matchedSkills || [],
             missing: matchResult.breakdown.skills.criticalMissing || [],
             intersection: matchResult.breakdown.skills.matchedSkills || [],
-            union: []
+            union: [],
+            onlyInResume: matchResult.breakdown.skills.onlyInResume || [],
+            onlyInJob: matchResult.breakdown.skills.onlyInJob || []
           },
           toolsOverlap: {
             score: matchResult.breakdown.tools.score,
             matched: matchResult.breakdown.tools.matchedSkills || [],
             missing: matchResult.breakdown.tools.criticalMissing || [],
             intersection: matchResult.breakdown.tools.matchedSkills || [],
-            union: []
+            union: [],
+            onlyInResume: matchResult.breakdown.tools.onlyInResume || [],
+            onlyInJob: matchResult.breakdown.tools.onlyInJob || []
           },
           languageFit: {
             score: matchResult.breakdown.language.score,

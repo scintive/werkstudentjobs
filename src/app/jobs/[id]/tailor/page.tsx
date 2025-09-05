@@ -23,6 +23,7 @@ import { EditModeProvider } from '@/lib/contexts/EditModeContext';
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker';
 import { AlignmentCards } from '@/components/werkstudent/AlignmentCards';
 import { ComprehensiveJobAnalysis } from '@/components/werkstudent/ComprehensiveJobAnalysis';
+import StrategyOnePager from '@/components/enhanced-strategy/StrategyOnePager';
 import BulletRewriter from '@/components/werkstudent/BulletRewriter';
 import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveStrategy';
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
@@ -707,10 +708,22 @@ function StrategyTab({
   loading: boolean;
   onRetryStrategy: () => void;
 }) {
-  // Show ComprehensiveStrategy if available
-  if (enhancedStrategy && !loading) {
-    return <ComprehensiveStrategy strategy={enhancedStrategy} jobData={job} onRefresh={onRetryStrategy} />
+  // Render only the compact one‑pager (suppresses ATS/keywords/interview blocks)
+  if (!loading) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+        <StrategyOnePager
+          userProfile={userProfile}
+          jobData={job}
+          strategy={studentStrategy || strategy}
+          onTailorSkills={() => {}}
+        />
+      </motion.div>
+    );
   }
+  // Do not render the verbose comprehensive strategy; keep the one‑pager only
+  // (We keep the computed enhancedStrategy in state for future use but do not
+  //  render it here to avoid ATS/keywords/interview blocks.)
 
   if (loading) {
     return (
@@ -798,6 +811,7 @@ function StrategyTab({
   } : null;
   
   const isWerkstudent = job.is_werkstudent || job.title?.toLowerCase().includes('werkstudent');
+  const [showDetails, setShowDetails] = useState(false);
   
   return (
     <motion.div 
@@ -806,22 +820,32 @@ function StrategyTab({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Comprehensive Job Analysis - New Primary Component */}
+      {/* Compact, scroll-free Strategy Snapshot */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <ComprehensiveJobAnalysis
+        <StrategyOnePager
           userProfile={userProfile}
           jobData={job}
           strategy={studentStrategy || strategy}
-          onNavigateToSkills={() => setActiveTab('resume')}
+          onTailorSkills={() => setActiveTab('resume')}
         />
       </motion.div>
 
-      {/* Werkstudent Eligibility Section - Now Compact */}
-      {isWerkstudent && studentProfile && (
+      {/* Toggle for additional details */}
+      <div className="flex items-center justify-end -mt-4">
+        <button
+          onClick={() => setShowDetails(v => !v)}
+          className="text-xs font-semibold text-blue-700 hover:underline"
+        >
+          {showDetails ? 'Hide details' : 'Show details'}
+        </button>
+      </div>
+
+      {/* Werkstudent Eligibility Section - Collapsible */}
+      {showDetails && isWerkstudent && studentProfile && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -842,8 +866,8 @@ function StrategyTab({
         </motion.div>
       )}
       
-      {/* Student Alignment Cards - Analysis Focus */}
-      {studentStrategy && studentProfile && (
+      {/* Student Alignment Cards - Collapsible */}
+      {showDetails && studentStrategy && studentProfile && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -856,7 +880,8 @@ function StrategyTab({
         </motion.div>
       )}
 
-      {/* Positioning Section - Enhanced */}
+      {/* Positioning Section - Collapsible */}
+      {showDetails && (
       <motion.div 
         className="relative bg-gradient-to-br from-white via-blue-50/50 to-indigo-50/30 backdrop-blur-xl rounded-3xl border border-white/50 p-8 shadow-2xl overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
@@ -916,8 +941,10 @@ function StrategyTab({
           </div>
         </div>
       </motion.div>
+      )}
       
-      {/* Enhanced Fit Summary */}
+      {/* Enhanced Fit Summary - Collapsible */}
+      {showDetails && (
       <motion.div 
         className="relative bg-gradient-to-br from-white via-green-50/50 to-emerald-50/30 backdrop-blur-xl rounded-3xl border border-white/50 p-8 shadow-2xl overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
@@ -955,8 +982,10 @@ function StrategyTab({
           </div>
         </div>
       </motion.div>
+      )}
       
-      {/* Enhanced ATS Keywords */}
+      {/* Enhanced ATS Keywords - Collapsible */}
+      {showDetails && (
       <motion.div 
         className="relative bg-gradient-to-br from-white via-purple-50/50 to-pink-50/30 backdrop-blur-xl rounded-3xl border border-white/50 p-8 shadow-2xl overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
@@ -1040,6 +1069,7 @@ function StrategyTab({
           </motion.p>
         </div>
       </motion.div>
+      )}
       
       {/* Enhanced Skill Gaps */}
       {(studentStrategy?.must_have_gaps || strategy?.must_have_gaps || []).length > 0 && (
