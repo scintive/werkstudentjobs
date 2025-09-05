@@ -224,8 +224,11 @@ Authoring Rules (matching + strategy)
   - `POST /api/auth/admin/confirm`: (dev) confirm a newly registered user when service role is configured.
 - Jobs:
   - `GET /api/jobs/fetch?[refresh=true]`: ingest from Apify and return jobs (+companies).
-  - `POST /api/jobs/strategy-student`: generate Werkstudent job strategy (uses real job arrays).
-  - Additional: `analyze`, `analyze-student`, `cover-letter`, `match-scores`, `strategy`, `strategy-enhanced`, `strategy-cache`.
+  - `POST /api/jobs/strategy-student`: Werkstudent job strategy using real arrays — see Prompt Contracts for schema.
+  - `POST /api/jobs/strategy-enhanced`: long‑form strategy (not rendered on one‑pager).
+  - `POST /api/jobs/match-scores`: fast batch matching; returns `matchCalculation` with overlaps.
+  - `GET /api/debug/match?id=<jobId>`: debug normalized arrays + overlaps for a single job.
+  - Additional: `analyze`, `analyze-student`, `cover-letter`, `strategy`, `strategy-cache`.
 - Skills:
   - `POST /api/skills/{organize,enhance,category-suggest,suggest}`: skill organization/intelligence.
 - Location:
@@ -239,6 +242,65 @@ Authoring Rules (matching + strategy)
 - Env: `.env.local` uses `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BASE_URL`. OpenAI via `OPENAI_API_KEY`.
 - App config: `src/lib/config/app.ts` stores model names, feature flags (error handling, mock responses), dataset URL.
 - Supabase MCP server: `tools/mcp-supabase/server.js` uses management API `POST /v1/projects/{ref}/database/query` with `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_REF` (+ optional `SUPABASE_DB_HOST`).
+
+
+## Prompt Contracts (Strategy)
+
+Student Strategy (`POST /api/jobs/strategy-student`)
+- job_task_analysis[] item:
+  - `task`: exact responsibility from posting (no paraphrase)
+  - `task_explainer`: 1–2 sentence explainer of what doing this task means in this role/company
+  - `compatibility_score`: 0–100, grounded by actual resume evidence
+  - `user_alignment`: organic, specific alignment sentence; if none, say so explicitly
+  - `user_evidence`: concrete project/experience names backing the alignment
+  - `learning_paths`: `{ quick_wins: string[]; certifications: string[]; deepening: string[] }`
+
+Rules (strict relevance)
+- Never map unrelated evidence; only align when tech/domain/output truly overlap
+- If no evidence exists, focus `learning_paths` on the fastest ways to close the gap
+
+UI Consumption
+- The one‑pager reads `task_explainer`, `user_alignment`, and `learning_paths` and merges learn chips with curated links (max 3).
+- Chips on the Jobs list are server phrases only (no resume fragments), deduped by canonical keys.
+
+
+## One‑Pager Strategy (Design/UX)
+
+Principles
+- One glance, no scroll; premium dashboard aesthetic (thin rules, subtle shadows)
+- xl: 3 columns (two columns tasks + one evidence column)
+
+Tasks
+- Show `{task}` title, visual meter + `%`, `task_explainer` (line‑clamped), `user_alignment` or a single evidence line, and up to 3 learn chips.
+- No per‑task CTAs; keep it clean.
+
+Evidence
+- Three premium blocks (Experience, Projects, Certifications); sanitized text; tooltips via `title` attribute.
+- “relates: …” badges appear only for strong (>50%) overlap — never force a weak relation.
+
+Hard Do/Don’t
+- Do not render ATS keywords/interview/coursework on the one‑pager.
+- Do not render resume tokens as skill chips; always show job phrases, deduped.
+- Keep spacing/type scale consistent with global tokens.
+
+
+## Supabase MCP (Operations)
+
+Run: `node tools/mcp-supabase/server.js` with env `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`.
+- Tools: `list_tables`, `execute_sql`, `apply_migration`, `list_projects`.
+- Diagnostics examples:
+  - Latest resume structure (keys under `skills`), job skills counts, quick overlap probes; see `docs/dev-notes/matching-summary.md`.
+
+
+## Acceptance Checklists
+
+Matching
+- Server-first overlap; chips are job phrases; canonical de‑duplication; no HTML in evidence strings.
+
+One‑Pager
+- Six tasks max with meters, `task_explainer`, organic `user_alignment`, and curated learn chips.
+- Right column shows three blocks (Experience/Projects/Certifications) with hover micro‑interactions and strong‑only relations.
+- No ATS/Interview/Coursework content appears on this page.
 
 Auth & Security Settings
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (client)
