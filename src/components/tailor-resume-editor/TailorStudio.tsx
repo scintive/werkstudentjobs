@@ -211,7 +211,7 @@ const CleanInput = ({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn(
-            "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+            "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm",
             "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10",
             "transition-all duration-200 text-gray-900",
             icon && "pl-10",
@@ -1140,7 +1140,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-[13px]">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-6 py-3">
@@ -1150,8 +1150,8 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                 <PenTool className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Resume Studio - Tailor Mode</h1>
-                <p className="text-xs text-gray-500">AI-Powered Job Tailoring with Live Preview</p>
+                <h1 className="text-lg font-semibold text-gray-900">Resume Studio — Tailor Mode</h1>
+                <p className="text-[11px] text-gray-500">AI‑powered tailoring with live preview</p>
               </div>
             </div>
             
@@ -1165,9 +1165,9 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                 onClick={exportToPDF}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold text-base hover:shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 flex items-center gap-3 border-0"
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg font-medium text-sm hover:shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 flex items-center gap-2 border-0"
               >
-                <Download className="w-5 h-5" />
+                <Download className="w-4 h-4" />
                 Export PDF
               </motion.button>
             </div>
@@ -1198,6 +1198,34 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                       {aiSuggestions.length} suggestion{aiSuggestions.length > 1 ? 's' : ''} ready. Click highlighted text in preview to review.
                     </p>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        // Apply all non-skill suggestions at once
+                        const ids = aiSuggestions.filter(s => s.type !== 'skills').map(s => s.id)
+                        ids.forEach(id => handleSuggestionAccept(id))
+                      }}
+                      className="px-2.5 py-1.5 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700"
+                    >
+                      Apply All Rewrites
+                    </button>
+                  </div>
+                </div>
+                {/* Compact list of suggestions with accept/decline */}
+                <div className="mt-3 max-h-40 overflow-auto space-y-2">
+                  {aiSuggestions.map(s => (
+                    <div key={s.id} className="flex items-start justify-between gap-2 bg-white/60 rounded border border-blue-100 p-2">
+                      <div className="min-w-0">
+                        <div className="text-[11px] text-gray-600">{s.section}</div>
+                        <div className="text-sm font-medium text-gray-900 truncate" title={s.original}>{s.original?.slice(0,80)}</div>
+                        <div className="text-[11px] text-green-700 truncate" title={s.suggestion}>{s.suggestion?.slice(0,100)}</div>
+                      </div>
+                      <div className="shrink-0 flex gap-1">
+                        <button onClick={() => handleSuggestionAccept(s.id)} className="px-2 py-1 bg-green-600 text-white rounded text-[10px]">Accept</button>
+                        <button onClick={() => handleSuggestionReject(s.id)} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-[10px]">Dismiss</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -1584,12 +1612,12 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                     )}
                     {Object.keys(skillDiff.removed).length > 0 && (
                       <div>
-                        <div className="text-xs font-medium text-red-700">Remove</div>
+                        <div className="text-xs font-medium text-red-700">Remove (not relevant)</div>
                         {Object.entries(skillDiff.removed).map(([cat, arr]) => (
                           <div key={cat} className="mt-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="text-[11px] text-gray-600">{cat}</div>
-                              <button onClick={() => removeCategorySkills(cat, arr as string[])} className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px]">Apply category</button>
+                              <button onClick={() => removeCategorySkills(cat, arr as string[])} className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px]">Remove category</button>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {arr.map((s:string) => (

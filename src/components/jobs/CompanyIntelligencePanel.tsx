@@ -3,8 +3,9 @@
 import React from 'react';
 import { 
   Building2, Globe, Users, MapPin, Calendar, Star,
-  ExternalLink, Briefcase, Award, ChevronDown, ChevronUp
+  ExternalLink, Briefcase, Award, ChevronDown, ChevronUp, CheckCircle
 } from 'lucide-react';
+import React from 'react';
 
 interface CompanyIntelligencePanelProps {
   company: {
@@ -181,6 +182,33 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
     return null;
   }, [company.website_url]);
 
+  // Verify company website link
+  const [isVerifying, setIsVerifying] = React.useState(false);
+  const [isVerified, setIsVerified] = React.useState<boolean | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!fixedWebsiteUrl) { setIsVerified(null); return; }
+      try {
+        setIsVerifying(true);
+        const res = await fetch('/api/links/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links: [{ label: 'Company Website', url: fixedWebsiteUrl }] })
+        });
+        if (!res.ok) { setIsVerified(null); return; }
+        const data = await res.json();
+        const ok = !!data?.results?.[fixedWebsiteUrl]?.ok;
+        if (active) setIsVerified(ok);
+      } catch {
+        if (active) setIsVerified(null);
+      } finally {
+        if (active) setIsVerifying(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [fixedWebsiteUrl]);
+
   return (
     <div className="space-y-4">
       {/* Compact Company Intelligence Card */}
@@ -227,6 +255,8 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
               >
                 <Globe className="w-3 h-3" />
                 Visit
+                {isVerifying && <span className="ml-1 w-3 h-3 border-2 border-white/60 border-t-white rounded-full animate-spin" />}
+                {isVerified && !isVerifying && <CheckCircle className="w-3 h-3 ml-1 text-white" title="Verified" />}
               </a>
             )}
           </div>

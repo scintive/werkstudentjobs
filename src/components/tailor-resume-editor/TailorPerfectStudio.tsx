@@ -235,9 +235,16 @@ const TailorSectionCard = ({
 }: SectionCardProps) => {
   const [showingSuggestion, setShowingSuggestion] = React.useState<string | null>(null)
   
-  const relevantSuggestions = aiSuggestions.filter(s => 
-    s.section.toLowerCase() === title.toLowerCase()
-  )
+  const mapTitleToSection = (t: string) => {
+    const l = t.toLowerCase();
+    if (l.includes('skills')) return 'skills';
+    if (l.includes('summary')) return 'summary';
+    if (l.includes('experience')) return 'experience';
+    if (l.includes('personal')) return 'personal';
+    return l;
+  }
+  const sectionKey = mapTitleToSection(title);
+  const relevantSuggestions = aiSuggestions.filter(s => s.section.toLowerCase() === sectionKey)
   
   return (
     <div className={cn('bg-white border border-gray-200 rounded-lg card-hover', className)}>
@@ -271,17 +278,10 @@ const TailorSectionCard = ({
               </span>
             )}
             
-            {/* AI Suggestions Indicator */}
             {relevantSuggestions.length > 0 && (
-              <button
-                onClick={() => setShowingSuggestion(relevantSuggestions[0].id)}
-                className="relative w-5 h-5 bg-blue-600 rounded flex items-center justify-center hover:bg-blue-700 transition-colors"
-              >
-                <Brain className="w-3 h-3 text-white" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-white">{relevantSuggestions.length}</span>
-                </div>
-              </button>
+              <span className="ml-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]">
+                {relevantSuggestions.length} suggestion{relevantSuggestions.length>1?'s':''}
+              </span>
             )}
           </div>
           
@@ -351,7 +351,7 @@ export const TailorPerfectStudio = ({
     }
   }, [resumeData])
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
-  const [zoom, setZoom] = React.useState(0.8)
+  const [zoom, setZoom] = React.useState(0.75)
   const iframeRef = React.useRef<HTMLIFrameElement>(null)
   const savedScrollPosition = React.useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const debounceTimer = React.useRef<NodeJS.Timeout | null>(null)
@@ -555,27 +555,8 @@ export const TailorPerfectStudio = ({
     }
   }, [resumeData, loading, generatePreview])
   
-  // Restore scroll position after preview updates
-  React.useEffect(() => {
-    if (previewHtml && iframeRef.current) {
-      const iframe = iframeRef.current
-      const restoreScroll = () => {
-        if (iframe.contentWindow && savedScrollPosition.current) {
-          try {
-            iframe.contentWindow.scrollTo(
-              savedScrollPosition.current.x,
-              savedScrollPosition.current.y
-            )
-          } catch (error) {
-            // Ignore cross-origin errors
-          }
-        }
-      }
-      
-      iframe.onload = () => setTimeout(restoreScroll, 100)
-      setTimeout(restoreScroll, 100)
-    }
-  }, [previewHtml])
+  // Disable automatic scroll restoration to avoid jumpiness while editing
+  React.useEffect(() => {}, [previewHtml])
   
   const saveResume = async () => {
     console.log('Saving resume...', resumeData)
@@ -639,7 +620,35 @@ export const TailorPerfectStudio = ({
       </div>
     )
   }
-  
+
+  // Derived suggestion helpers
+  const summarySuggestion = React.useMemo(() => aiSuggestions.find(s => s.type === 'summary'), [aiSuggestions])
+  const skillsSuggestion = React.useMemo(() => aiSuggestions.find(s => s.type === 'skills'), [aiSuggestions])
+  const bulletSuggestions = React.useMemo(() => aiSuggestions.filter(s => s.type === 'bullet'), [aiSuggestions])
+  const suggestionCounts = React.useMemo(() => ({
+    bullet: bulletSuggestions.length,
+    summary: summarySuggestion ? 1 : 0,
+    skills: skillsSuggestion ? 1 : 0
+  }), [bulletSuggestions.length, !!summarySuggestion, !!skillsSuggestion])
+
+  // Compute skill diff when a skills suggestion exists
+  const skillDiff = React.useMemo(() => {
+    if (!skillsSuggestion || !skillsSuggestion.suggestion || !resumeData?.skills) return null
+    const proposed = skillsSuggestion.suggestion as Record<string, any[]>
+    const current = resumeData.skills as Record<string, any[]>
+    const result: { added: Record<string, string[]>; removed: Record<string, string[]> } = { added: {}, removed: {} }
+    const allCats = new Set([...Object.keys(proposed || {}), ...Object.keys(current || {})])
+    allCats.forEach(cat => {
+      const p = (proposed[cat] || []).map((x:any) => (typeof x === 'string' ? x : x.skill)).filter(Boolean)
+      const c = (current[cat] || []).map((x:any) => (typeof x === 'string' ? x : x.skill)).filter(Boolean)
+      const add = p.filter(x => !c.includes(x))
+      const rem = c.filter(x => !p.includes(x))
+      if (add.length) result.added[cat] = add
+      if (rem.length) result.removed[cat] = rem
+    })
+    return result
+  }, [skillsSuggestion, resumeData])
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Debug UI removed */}
@@ -682,34 +691,21 @@ export const TailorPerfectStudio = ({
             </button>
           </div>
         </div>
-        
         {aiSuggestions.length > 0 && aiMode && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+          <div className="mt-3 flex items-center gap-3 text-sm text-gray-700">
             <Sparkles className="w-4 h-4 text-blue-600" />
             <span>{aiSuggestions.length} suggestions</span>
-            <div className="flex gap-1 ml-2">
-              {aiSuggestions.slice(0, 3).map(suggestion => (
-                <span
-                  key={suggestion.id}
-                  className={cn(
-                    'px-2 py-0.5 rounded text-xs font-medium',
-                    suggestion.impact === 'high' ? 'bg-green-100 text-green-700' :
-                    suggestion.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-blue-100 text-blue-700'
-                  )}
-                >
-                  {suggestion.type}
-                </span>
-              ))}
-            </div>
+            <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">{suggestionCounts.bullet} experience</span>
+            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">{suggestionCounts.summary} summary</span>
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">{suggestionCounts.skills} skills</span>
           </div>
         )}
       </div>
       
       {/* Layout: Editor + Preview */}
       <div className={cn(
-        'px-6 grid gap-6',
-        showPreview ? 'grid-cols-1 xl:grid-cols-[400px_1fr]' : 'grid-cols-1'
+        'px-6 grid gap-6 text-[13px]',
+        showPreview ? 'grid-cols-1 xl:grid-cols-[520px_1fr]' : 'grid-cols-1'
       )}>
         {/* Editor Column */}
         <div className="space-y-4" key={`editor-${forceRender}`}>
@@ -996,21 +992,21 @@ export const TailorPerfectStudio = ({
                 multiline
                 className="min-h-[80px]"
               />
-              {aiMode && strategy?.positioning?.elevator_pitch && (
+              {aiMode && summarySuggestion && (
                 <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
-                  <div className="flex items-center gap-1 mb-1">
-                    <Lightbulb className="w-3 h-3 text-blue-600" />
-                    <span className="text-xs font-medium text-blue-800">AI Suggestion:</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1">
+                      <Lightbulb className="w-3 h-3 text-blue-600" />
+                      <span className="text-xs font-medium text-blue-800">AI Suggestion</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => onSuggestionAccept?.(summarySuggestion.id)} className="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px]">Accept</button>
+                      <button onClick={() => onSuggestionReject?.(summarySuggestion.id)} className="px-2 py-0.5 bg-gray-200 text-gray-800 rounded text-[10px]">Dismiss</button>
+                    </div>
                   </div>
-                  <p className="text-xs text-blue-700 mb-2">
-                    {strategy.positioning.elevator_pitch}
+                  <p className="text-xs text-blue-700 mb-1 line-clamp-3" title={summarySuggestion.suggestion}>
+                    {summarySuggestion.suggestion}
                   </p>
-                  <button
-                    onClick={() => updateResumeData({ professionalSummary: strategy.positioning.elevator_pitch })}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                  >
-                    Use suggestion
-                  </button>
                 </div>
               )}
             </div>
@@ -1041,6 +1037,39 @@ export const TailorPerfectStudio = ({
                 updateResumeData({ skills: { ...resumeData.skills, languages: asStrings } })
               }}
             />
+            {aiMode && skillsSuggestion && skillDiff && (
+              <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-indigo-800 text-sm">AI Skill Suggestions</div>
+                  <div className="flex gap-1">
+                    <button onClick={() => onSuggestionAccept?.(skillsSuggestion.id)} className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs hover:bg-indigo-700">Apply All</button>
+                    <button onClick={() => onSuggestionReject?.(skillsSuggestion.id)} className="px-2.5 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs hover:bg-gray-300">Dismiss</button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {Object.keys(skillDiff.added).length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-green-700">Add</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Object.entries(skillDiff.added).flatMap(([cat, arr]) => (arr as string[]).map(s => (
+                          <span key={`add-${cat}-${s}`} className="px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[11px]">{s}</span>
+                        )))}
+                      </div>
+                    </div>
+                  )}
+                  {Object.keys(skillDiff.removed).length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-red-700">Remove</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Object.entries(skillDiff.removed).flatMap(([cat, arr]) => (arr as string[]).map(s => (
+                          <span key={`rem-${cat}-${s}`} className="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[11px]">{s}</span>
+                        )))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </TailorSectionCard>
           
           {/* Experience */}
@@ -1071,6 +1100,26 @@ export const TailorPerfectStudio = ({
             <div className="space-y-4">
               {(resumeData.experience || []).map((exp: any, index: number) => (
                 <div key={exp.id || index} className="p-3 bg-gray-50 rounded border">
+                  {/* Inline bullet suggestions for this experience */}
+                  {aiMode && bulletSuggestions.some(s => (s as any).experienceIndex === index) && (
+                    <div className="mb-3 rounded border border-blue-200 bg-blue-50 p-2">
+                      <div className="text-xs font-medium text-blue-800 mb-1">AI Suggestions</div>
+                      <div className="space-y-2">
+                        {bulletSuggestions.filter(s => (s as any).experienceIndex === index).map(s => (
+                          <div key={s.id} className="bg-white rounded border p-2">
+                            <div className="text-[11px] text-gray-500">Original</div>
+                            <div className="text-sm text-gray-700 mb-1">{s.original}</div>
+                            <div className="text-[11px] text-gray-500">Suggested</div>
+                            <div className="text-sm text-gray-900 mb-2">{s.suggestion}</div>
+                            <div className="flex gap-1">
+                              <button onClick={() => onSuggestionAccept?.(s.id)} className="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px]">Accept</button>
+                              <button onClick={() => onSuggestionReject?.(s.id)} className="px-2 py-0.5 bg-gray-200 text-gray-800 rounded text-[10px]">Dismiss</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>

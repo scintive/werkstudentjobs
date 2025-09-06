@@ -11,12 +11,12 @@ This document is a comprehensive, implementation-level overview of the project�
 - Docs: Extensive in-repo documentation of GPT flows, matching, UI/UX, and status.
 
 Recent Enhancements (Sept 2025)
-- Auth: Traditional email/password via Supabase Auth; Upload is now gated for anonymous users. New Login, Register, Logout pages; header shows auth state.
-- Session Bridge: `/api/auth/session` maps Supabase user.id → `user_session` httpOnly cookie for server routes that still rely on session_id.
-- Security: RLS re-enabled with auth.uid() policies (plus a controlled session fallback for non-auth dev usage). New migration `06_enable_rls_auth_policies.sql`.
-- API JWT: Server routes accept Authorization: Bearer <supabase_jwt> and use a server-side Supabase client with forwarded headers.
-- Tailor Studio Parity: Editor’s left pane now matches Resume Studio UX (bullet-by-bullet experience, certifications, custom sections, languages under Skills) while preserving Tailor AI suggestion features.
-- UI/UX: Global header with Dashboard/Jobs/Login/Register/Logout; new Dashboard; live Preview zoom; skeleton loaders; card hover and focus polish.
+- Auth: Email/password via Supabase Auth; upload gated for anonymous users. Login/Register/Logout pages; header reflects auth.
+- Session Bridge: `/api/auth/session` maps Supabase `user.id` → `user_session` cookie so legacy session_id flows keep working.
+- Security: RLS on with `auth.uid()`; controlled session fallback only in dev. Migration: `06_enable_rls_auth_policies.sql`.
+- API Auth: Server routes accept `Authorization: Bearer <supabase_jwt>` via server-side Supabase client.
+- Tailor Studio Overhaul: Inline Accept/Dismiss for Summary, Experience bullets, Skills. Editor scales match Resume Studio; preview zoom 75%; wider editor; no bubble overlays; compact “N suggestions” badges.
+- Learning Links Hardening: No direct YouTube watch links; keyworded searches only + vetted provider links. Server verification with caching and YouTube availability sniff. Chips show spinner then verified check.
 
 Matching + Strategy Overhaul (Sept 2025)
 - Matching: server-first overlap used for chips; single‑label de‑duplication via canonical keys (react/react.js/reactjs → React; js/es6 → JavaScript, etc.). Fast TF‑IDF+fuzzy tightened (phrase‑level only), containment requires ratio ≥ 0.8, fuzzy ≥ 0.88; chips always show job phrases, never resume fragments. Strict relevance in evidence.
@@ -29,12 +29,13 @@ Matching + Strategy Overhaul (Sept 2025)
   - Pages: `src/app/**` (App Router). Core flows: upload → editor → jobs → strategy → finalize.
   - Components: `src/components/**` (UI, resume editor, job browser, onboarding, panels).
   - Styles: Tailwind + supplemental CSS in `src/styles/**`.
-- API routes: `src/app/api/**/route.ts` (resume preview/pdf, profile extract/latest, jobs fetch/analyze/strategy, skills organize/suggest, auth helpers, supabase admin, location/geocode).
+- API routes: `src/app/api/**/route.ts` (resume preview/pdf, profile extract/latest, jobs fetch/analyze/strategy, skills organize/suggest, link verification/keywords, auth helpers, supabase admin, location/geocode).
 - Core libs: `src/lib/**`
-  - `services/llmService.ts`: central AI pipeline (profile extraction, job parsing, skills org, company research, structured outputs, fallback logic).
+  - `services/llmService.ts`: central AI pipeline (profile extraction, job parsing, skills org, company research, structured outputs, fallbacks).
   - `services/matchingService.ts`, `fastMatchingService.ts`, `semanticMatchingService.ts`: matching algorithms (weighted Jaccard; TF‑IDF + fuzzy; semantic embeddings).
   - `services/resumeDataService.ts`: session‑based persistence to Supabase with auto‑save and profile sync.
-  - `services/aiCacheService.ts`: LLM response cache in `public.ai_cache`.
+  - `services/aiCacheService.ts`: response cache in `public.ai_cache` (also used by link verification/keywords).
+  - `services/linkVerifierService.ts`: strict link checks (HEAD/GET + YouTube HTML sniff) with TTL cache.
   - `supabase/*`: typed schema, client, SQL; migrations kept in `supabase_migrations/`.
 - Supabase MCP server: `tools/mcp-supabase/server.js` (management API via access token, list/exec/apply migration).
 
@@ -172,16 +173,16 @@ Persisted match scores: `src/lib/services/jobMatchingService.ts`
 - API: `/api/resume/pdf-download` (not detailed here) renders HTML to PDF.
 - Templates: `src/templates/{swiss,classic,professional,impact}.ts` generate HTML with consistent structure.
 
-Tailor Studio Parity (New)
-- Experience: Bullet-by-bullet editing (add/remove) in the editor; synced to both `achievements[]` and `description` (newline-joined) to keep Preview in sync.
-- Skills & Languages: Uses `TailorEnhancedSkillsManager` with job-aware hints; languages editable (mapped to `skills.languages` as “Name (Level)”).
-- Certifications: Add/edit name/issuer/date.
-- Custom Sections: Add/rename sections such as Volunteer, Awards, Publications; four-field item editor; saves to `customSections` for preview rendering.
+Tailor Studio (Overhauled)
+- Experience: Inline Accept/Dismiss for per-bullet rewrites under each experience. Supports `achievements[]`, `highlights[]`, or newline-split `description`. Accept updates the exact bullet.
+- Summary/Title: Inline suggestions with Accept/Dismiss; guided by job+profile style.
+- Skills & Languages: GPT returns a full `proposed_skills` object (adds/removes applied) plus `added_skills`/`removed_skills` arrays with reasons. Apply All replaces skills; manager still supports fine-grained edits.
+- UX: Compact 13px base text; section header badge (“N suggestions”) only; wider editor (≈560px); preview zoom 75%; no scroll jumps while editing.
 
 
 ## Job Browser & Strategy
 - Component: `src/components/jobs/JobBrowser.tsx` renders split‑pane UI; uses badges for EN/DE and intern/Werkstudent; integrates skills analysis and company intelligence panels.
-- Strategy (Student): `/api/jobs/strategy-student` builds compact contexts from real job fields (`responsibilities_original`, `skills_original`, etc.) and the student profile, then invokes LLM to produce detailed job strategy artifacts. Caching via `job_analysis_cache` keyed by `job_id` + profile hash exists but is selectively bypassed for “real data” freshness.
+- Strategy (Student): `/api/jobs/strategy-student` builds compact contexts from real job fields (`responsibilities_original`, `skills_original`, etc.) and the student profile, then invokes LLM to produce detailed job strategy artifacts. Strategy cache is stored in `resume_data.custom_sections` (section id `strategy_cache`) with a 7‑day TTL; bypass for freshness when needed.
 - Other strategy routes: `strategy`, `strategy-enhanced`, and cover letter routes exist for non-student flows.
 
 Authoring Rules (matching + strategy)
@@ -192,6 +193,12 @@ Authoring Rules (matching + strategy)
 - Per‑task content: render { task, % meter, task_explainer, user_alignment (truthful), learn chips }. Do not add unrelated evidence.
 - Evidence: show as three visual blocks (Experience, Projects, Certifications). Sanitize any HTML; clamp lines; add hover tooltips.
 - Regeneration: if strategy cache exists, allow a UI refresh control or cache-buster to fetch the latest GPT schema.
+
+### Learning Links (Hardened)
+- Policy: Never render deep YouTube video links; use keyworded search URLs only. Show vetted provider links (docs/certs) when available.
+- Keywords: `/api/links/keywords` returns concise 2–4 word phrases per task (fallback tokenizer used if GPT unavailable; never uses full task sentence).
+- Verification: `/api/links/verify` performs HEAD/GET with redirect follow + YouTube HTML sniff and caches results (12h) via `ai_cache`. UI shows spinner and verified check on chips.
+- Chips: At most one “Crash course: <keyword>”; second chip is a vetted provider or “Google: <keyword>”. Unique keys; deduped.
 
 
 ## Skills Intelligence
@@ -219,6 +226,7 @@ Authoring Rules (matching + strategy)
 - Resume:
   - `POST /api/resume/preview`: returns rendered HTML for chosen template (handles dynamic skills).
   - `POST /api/resume/pdf-download`: create PDF from HTML.
+  - `POST /api/jobs/resume/patches`: section‑specific rewriting (summary/title/experience/project) and full skills tailoring; returns strict JSON with `proposed_text` or `proposed_skills`.
 - Auth:
   - `POST /api/auth/session`: set/clear httpOnly cookies for server compatibility (maps Supabase user.id → `user_session`).
   - `POST /api/auth/admin/confirm`: (dev) confirm a newly registered user when service role is configured.
@@ -229,6 +237,7 @@ Authoring Rules (matching + strategy)
   - `POST /api/jobs/match-scores`: fast batch matching; returns `matchCalculation` with overlaps.
   - `GET /api/debug/match?id=<jobId>`: debug normalized arrays + overlaps for a single job.
   - Additional: `analyze`, `analyze-student`, `cover-letter`, `strategy`, `strategy-cache`.
+  - Links: `POST /api/links/verify` (batch verify URLs); `POST /api/links/keywords` (task keywords for crash‑course searches).
 - Skills:
   - `POST /api/skills/{organize,enhance,category-suggest,suggest}`: skill organization/intelligence.
 - Location:
@@ -377,4 +386,4 @@ Proposed E2E Specs
 
 
 ## Summary
-The system integrates a robust AI pipeline (structured prompts, schema‑validated outputs, caching, cost optimizations), a clear session‑based persistence model (resume_data + user_profiles), and multiple matching strategies. The UI/UX provides a professional, data‑dense experience with dynamic skill intelligence and comprehensive job/strategy content, backed by a typed Supabase schema and practical API boundaries for ingestion, analysis, and rendering.
+The system integrates a robust AI pipeline (structured prompts, schema‑validated outputs, caching), a clear session‑based persistence model (resume_data + user_profiles), and multiple matching strategies. The UX now includes inline resume tailoring (summary, experience bullets, full skills replacement) with simple Accept/Dismiss, plus hardened learning links (keyworded, verified). Everything is backed by a typed Supabase schema and practical API boundaries for ingestion, analysis, rendering, verification, and cache.

@@ -473,9 +473,9 @@ export function TailorEnhancedSkillsManager({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-[13px]">
       {/* AI Mode Header */}
-      {aiMode && jobData && (
+      {aiMode && jobData && jobOptimizedSkills.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -487,14 +487,14 @@ export function TailorEnhancedSkillsManager({
                 <Brain className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900">AI Skills Optimization Active</h4>
-                <p className="text-sm text-gray-600">
+                <h4 className="font-semibold text-gray-900">AI Skills Optimization Active</h4>
+                <p className="text-xs text-gray-600">
                   Skills are analyzed for relevance to: <span className="font-semibold">{jobData.title}</span>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-purple-600 font-medium">
+              <span className="text-xs text-purple-600 font-medium">
                 {jobOptimizedSkills.length} optimized skills
               </span>
               <TrendingUp className="w-4 h-4 text-purple-600" />

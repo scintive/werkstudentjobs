@@ -173,19 +173,34 @@ Context: Position at ${context?.current_experience?.company || 'Company'} as ${c
           return {
             systemPrompt: `You are a skills strategist for ${jobTitle} positions.
 
-RULES:
-- Analyze current skills vs. job requirements
-- Focus on TOP 3 most critical skills only
-- Suggest only missing skills that are essential
-- Keep categories minimal and focused
-- Output valid JSON only
-- BE VERY CONCISE
+LANGUAGE: Respond in clear, professional English only.
 
-Job requires: ${jobRequirements.slice(0, 5).join(', ')}`,
+INPUTS:
+- current_skills: JSON of user's skills grouped by categories (technical, tools, soft_skills, languages, plus any custom GPT categories)
+- job_requirements: key skills/technologies/methodologies from posting
+
+OUTPUT (STRICT, JSON only):
+{
+  "proposed_skills": { "<category>": ["skill", "skill"] },  // full skill set to use in resume after tailoring (adds and removes applied)
+  "removed_skills": [{ "skill": "name", "category": "...", "reason": "why it's not relevant" }],
+  "added_skills": [{ "skill": "name", "category": "...", "reason": "why it's critical for this job" }],
+  "reasoning": "short summary",
+  "used_keywords": ["keyword1","keyword2"]
+}
+
+RULES:
+- Remove skills that are not relevant to the job (list them with reasons)
+- Add at most 5 critical, job-relevant skills that are actually required
+- Keep categories minimal and consistent; preserve languages and custom GPT categories if present
+- Do NOT invent niche skills without support from job requirements
+- Return a complete proposed_skills object (to be saved), not a diff
+`,
             schema: `{
-  "critical_missing": ["skill1", "skill2"],
-  "reasoning": "Brief explanation",
-  "used_keywords": ["keyword1"]
+  "proposed_skills": { "*": ["string"] },
+  "removed_skills": [{ "skill": "string", "category": "string", "reason": "string" }],
+  "added_skills": [{ "skill": "string", "category": "string", "reason": "string" }],
+  "reasoning": "string",
+  "used_keywords": ["string"]
 }`
           };
 

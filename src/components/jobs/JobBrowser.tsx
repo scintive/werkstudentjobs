@@ -425,6 +425,10 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
           // Job already comes with the correct Supabase structure and company info
           return {
             ...job,
+            // Normalize/alias fields for UI expectations
+            work_mode: (job.work_mode ? String(job.work_mode) : 'unknown').toLowerCase(),
+            location_city: job.location_city || job.city || job.location_raw || null,
+            application_url: job.application_url || job.application_link || job.linkedin_url || null,
             // Ensure compatibility with existing component expectations
             company: job.companies || {
               id: job.company_id,
@@ -434,7 +438,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
               industry: null,
               size_category: null,
               headquarters: null,
-              website_url: null,
+              website_url: job.website || null,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }
@@ -909,6 +913,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     transition={{ delay: index * 0.02 }}
                   >
                     <motion.div 
+                      data-testid="job-card"
                       className={cn(
                         "p-1.5 border-b border-gray-100 cursor-pointer transition-all duration-200 group",
                         selectedJob?.id === job.id 
@@ -1433,30 +1438,41 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                             <h3 className="font-semibold text-green-900 text-sm">Matching Skills</h3>
                             <div className="ml-auto text-xs text-green-600 font-medium">
                               {(() => {
-                                // Get all user skills from all categories
+                                // Prefer server-calculated overlap if available
+                                const mc = (selectedJob as any).matchCalculation;
+                                if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
+                                  if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
+                                    // eslint-disable-next-line no-console
+                                    console.debug('[match.debug] server overlap', {
+                                      jobId: (selectedJob as any).id,
+                                      skillsMatched: mc.skillsOverlap.matched.slice(0, 5),
+                                      toolsMatched: (mc.toolsOverlap?.matched || []).slice(0, 5)
+                                    })
+                                  }
+                                  return `${mc.skillsOverlap.matched.length} matches`;
+                                }
+                                // Fallback: simple intersection
                                 const allUserSkills: string[] = [];
-                                if (userProfile.skills && typeof userProfile.skills === 'object') {
-                                  Object.values(userProfile.skills).forEach(skillArray => {
-                                    if (Array.isArray(skillArray)) {
-                                      allUserSkills.push(...skillArray);
+                                if ((userProfile as any).skills && typeof (userProfile as any).skills === 'object') {
+                                  Object.values((userProfile as any).skills).forEach(arr => {
+                                    if (Array.isArray(arr)) {
+                                      for (const s of arr) allUserSkills.push(String(s));
                                     }
                                   });
                                 }
-                                const normalizedUserSkills = allUserSkills.map(skill => skill.toLowerCase().trim());
-
-                                // Get job required skills
-                                const jobSkills = (selectedJob.skills_original || [])
-                                  .map(skill => skill.toLowerCase().trim());
-
-                                // Find intersection
-                                const matchingSkills = jobSkills.filter(jobSkill => 
-                                  normalizedUserSkills.some(userSkill => 
-                                    userSkill === jobSkill || 
-                                    userSkill.includes(jobSkill) || 
-                                    jobSkill.includes(userSkill)
-                                  )
-                                );
-
+                                const normalizedUserSkills = allUserSkills.map(s => s.toLowerCase().trim());
+                                const rawJobSkills = (selectedJob as any).skills_original || (selectedJob as any).skills_canonical_flat || (selectedJob as any).skills_canonical || [];
+                                const jobSkills = Array.isArray(rawJobSkills) ? rawJobSkills.map((s: any) => String(s).toLowerCase().trim()) : [];
+                                const matchingSkills = jobSkills.filter(jobSkill => normalizedUserSkills.some(userSkill => userSkill === jobSkill || userSkill.includes(jobSkill) || jobSkill.includes(userSkill)));
+                                if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
+                                  // eslint-disable-next-line no-console
+                                  console.debug('[match.debug] fallback overlap', {
+                                    jobId: (selectedJob as any).id,
+                                    userSkills: normalizedUserSkills.slice(0, 5),
+                                    jobSkills: jobSkills.slice(0, 5),
+                                    count: matchingSkills.length
+                                  })
+                                }
                                 return `${matchingSkills.length} matches`;
                               })()}
                             </div>
@@ -1464,16 +1480,69 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           
                           <div className="space-y-2">
                             {(() => {
-                              // Get all user skills with categories based on actual structure
+                              // Prefer server-calculated lists
+                              const mc = (selectedJob as any).matchCalculation;
+                              if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
+                                const matchingTechSkills: string[] = mc.skillsOverlap.matched || [];
+                                const matchingDesignSkills: string[] = (mc.toolsOverlap?.matched as string[]) || [];
+                                const matchingSoftSkills: string[] = [];
+                                return (
+                                  <>
+                                    {matchingTechSkills.length > 0 && (
+                                      <div>
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                          <span className="text-xs font-medium text-green-800">Technical</span>
+                                          <span className="text-xs text-green-600">({matchingTechSkills.length})</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: string, index: number) => (
+                                            <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">{skill}</span>
+                                          ))}
+                                          {matchingTechSkills.length > 6 && (
+                                            <button onClick={() => setExpandedSkillSections(prev => ({ ...prev, technical: !prev.technical }))} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors cursor-pointer">
+                                              {expandedSkillSections.technical ? 'Show less' : `+${matchingTechSkills.length - 6} more`}
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {matchingDesignSkills.length > 0 && (
+                                      <div>
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                          <span className="text-xs font-medium text-purple-800">Tools</span>
+                                          <span className="text-xs text-purple-600">({matchingDesignSkills.length})</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: string, index: number) => (
+                                            <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">{skill}</span>
+                                          ))}
+                                          {matchingDesignSkills.length > 4 && (
+                                            <button onClick={() => setExpandedSkillSections(prev => ({ ...prev, design: !prev.design }))} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer">
+                                              {expandedSkillSections.design ? 'Show less' : `+${matchingDesignSkills.length - 4} more`}
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {matchingTechSkills.length === 0 && matchingDesignSkills.length === 0 && (
+                                      <div className="text-center py-2">
+                                        <span className="text-xs text-gray-500">No matching skills found</span>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              }
+
+                              // Fallback: original client-side intersection by category
                               const userTechSkills: string[] = [];
                               const userSoftSkills: string[] = [];
                               const userDesignSkills: string[] = [];
-                              
-                              if (userProfile.skills && typeof userProfile.skills === 'object') {
-                                Object.entries(userProfile.skills).forEach(([category, skillArray]) => {
+                              if ((userProfile as any).skills && typeof (userProfile as any).skills === 'object') {
+                                Object.entries((userProfile as any).skills).forEach(([category, skillArray]) => {
                                   if (Array.isArray(skillArray)) {
-                                    const normalizedSkills = skillArray.map(s => s.toLowerCase().trim());
-                                    // Categorize based on category name
+                                    const normalizedSkills = skillArray.map(s => String(s).toLowerCase().trim());
                                     if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('tech')) {
                                       userTechSkills.push(...normalizedSkills);
                                     } else if (category.toLowerCase().includes('soft') || category.toLowerCase().includes('business')) {
@@ -1481,44 +1550,18 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                     } else if (category.toLowerCase().includes('design') || category.toLowerCase().includes('tools')) {
                                       userDesignSkills.push(...normalizedSkills);
                                     } else {
-                                      // Default to technical for unknown categories
                                       userTechSkills.push(...normalizedSkills);
                                     }
                                   }
                                 });
                               }
-                              
-                              // Get job required skills
-                              const jobSkills = (selectedJob.skills_original || []);
-                              
-                              // Find matches by category
-                              const matchingTechSkills = jobSkills.filter(jobSkill => 
-                                userTechSkills.some(userSkill => 
-                                  userSkill === jobSkill.toLowerCase().trim() || 
-                                  userSkill.includes(jobSkill.toLowerCase().trim()) || 
-                                  jobSkill.toLowerCase().trim().includes(userSkill)
-                                )
-                              );
-                              
-                              const matchingSoftSkills = jobSkills.filter(jobSkill => 
-                                userSoftSkills.some(userSkill => 
-                                  userSkill === jobSkill.toLowerCase().trim() || 
-                                  userSkill.includes(jobSkill.toLowerCase().trim()) || 
-                                  jobSkill.toLowerCase().trim().includes(userSkill)
-                                )
-                              );
-                              
-                              const matchingDesignSkills = jobSkills.filter(jobSkill => 
-                                userDesignSkills.some(userSkill => 
-                                  userSkill === jobSkill.toLowerCase().trim() || 
-                                  userSkill.includes(jobSkill.toLowerCase().trim()) || 
-                                  jobSkill.toLowerCase().trim().includes(userSkill)
-                                )
-                              );
+                              const jobSkills = (selectedJob as any).skills_original || (selectedJob as any).skills_canonical_flat || (selectedJob as any).skills_canonical || [];
+                              const matchingTechSkills = (jobSkills as any[]).filter(jobSkill => userTechSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
+                              const matchingSoftSkills = (jobSkills as any[]).filter(jobSkill => userSoftSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
+                              const matchingDesignSkills = (jobSkills as any[]).filter(jobSkill => userDesignSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
 
                               return (
                                 <>
-                                  {/* Technical Matches */}
                                   {matchingTechSkills.length > 0 && (
                                     <div>
                                       <div className="flex items-center gap-1 mb-1">
@@ -1528,26 +1571,16 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                       </div>
                                       <div className="flex flex-wrap gap-1">
                                         {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: string, index: number) => (
-                                          <span
-                                            key={index}
-                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
-                                          >
-                                            {skill}
-                                          </span>
+                                          <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">{String(skill)}</span>
                                         ))}
                                         {matchingTechSkills.length > 6 && (
-                                          <button
-                                            onClick={() => setExpandedSkillSections(prev => ({ ...prev, technical: !prev.technical }))}
-                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors cursor-pointer"
-                                          >
+                                          <button onClick={() => setExpandedSkillSections(prev => ({ ...prev, technical: !prev.technical }))} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors cursor-pointer">
                                             {expandedSkillSections.technical ? 'Show less' : `+${matchingTechSkills.length - 6} more`}
                                           </button>
                                         )}
                                       </div>
                                     </div>
                                   )}
-
-                                  {/* Soft Skills Matches */}
                                   {matchingSoftSkills.length > 0 && (
                                     <div>
                                       <div className="flex items-center gap-1 mb-1">
@@ -1557,26 +1590,16 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                       </div>
                                       <div className="flex flex-wrap gap-1">
                                         {(expandedSkillSections.soft ? matchingSoftSkills : matchingSoftSkills.slice(0, 4)).map((skill: string, index: number) => (
-                                          <span
-                                            key={index}
-                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                          >
-                                            {skill}
-                                          </span>
+                                          <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">{String(skill)}</span>
                                         ))}
                                         {matchingSoftSkills.length > 4 && (
-                                          <button
-                                            onClick={() => setExpandedSkillSections(prev => ({ ...prev, soft: !prev.soft }))}
-                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
-                                          >
+                                          <button onClick={() => setExpandedSkillSections(prev => ({ ...prev, soft: !prev.soft }))} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer">
                                             {expandedSkillSections.soft ? 'Show less' : `+${matchingSoftSkills.length - 4} more`}
                                           </button>
                                         )}
                                       </div>
                                     </div>
                                   )}
-
-                                  {/* Design & Tools Matches */}
                                   {matchingDesignSkills.length > 0 && (
                                     <div>
                                       <div className="flex items-center gap-1 mb-1">
@@ -1586,26 +1609,16 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                       </div>
                                       <div className="flex flex-wrap gap-1">
                                         {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: string, index: number) => (
-                                          <span
-                                            key={index}
-                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200"
-                                          >
-                                            {skill}
-                                          </span>
+                                          <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">{String(skill)}</span>
                                         ))}
                                         {matchingDesignSkills.length > 4 && (
-                                          <button
-                                            onClick={() => setExpandedSkillSections(prev => ({ ...prev, design: !prev.design }))}
-                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
-                                          >
+                                          <button onClick={() => setExpandedSkillSections(prev => ({ ...prev, design: !prev.design }))} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer">
                                             {expandedSkillSections.design ? 'Show less' : `+${matchingDesignSkills.length - 4} more`}
                                           </button>
                                         )}
                                       </div>
                                     </div>
                                   )}
-
-                                  {/* No matches message */}
                                   {matchingTechSkills.length === 0 && matchingSoftSkills.length === 0 && matchingDesignSkills.length === 0 && (
                                     <div className="text-center py-2">
                                       <span className="text-xs text-gray-500">No matching skills found</span>
@@ -1620,10 +1633,17 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     )}
 
                     {/* Skills Analysis Panel - Moved to top */}
-                    {selectedJob.skills_original && Array.isArray(selectedJob.skills_original) && selectedJob.skills_original.length > 0 && (
+                    {(() => {
+                      const skills = (selectedJob as any).skills_original
+                        || (selectedJob as any).skills_canonical_flat
+                        || (selectedJob as any).skills_canonical;
+                      return Array.isArray(skills) && skills.length > 0;
+                    })() && (
                       <div className="transform scale-90 origin-top">
                         <SkillsAnalysisPanel 
-                          jobSkills={selectedJob.skills_original}
+                          jobSkills={(selectedJob as any).skills_original
+                            || (selectedJob as any).skills_canonical_flat
+                            || (selectedJob as any).skills_canonical}
                           jobTitle={selectedJob.title}
                         />
                       </div>

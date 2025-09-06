@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, CheckCircle, Briefcase, FileText, Award, Info } from 'lucide-react';
+import { bestFallbackFor } from '@/lib/linkSources';
 
 type Props = {
   userProfile: any;
@@ -61,11 +62,34 @@ function jaccard(a: Set<string>, b: Set<string>) {
   return inter / uni;
 }
 
+// Fallback keyword generator for crash-course searches when GPT keywords are unavailable
+function fallbackKeywordFor(task: string): string {
+  const raw = (task || '').toLowerCase();
+  // Remove punctuation
+  const cleaned = raw.replace(/[^a-z0-9\s+.-]/g, ' ');
+  const stop = new Set(['the','and','for','with','to','of','on','in','into','using','through','by','a','an','as','that','this','these','those','across','including','such','as','over','new','key']);
+  const tokens = cleaned.split(/\s+/).filter(w => w && !stop.has(w) && w.length > 2);
+  // Pick up to 3 most meaningful tokens (prefer hyphenated or long tokens)
+  const scored = tokens.map(w => ({ w, s: (w.includes('-')?3:0) + (w.length>=8?2:w.length>=6?1:0) }));
+  scored.sort((a,b)=>b.s-a.s);
+  const pick = Array.from(new Set(scored.map(x=>x.w))).slice(0,3);
+  const kw = pick.join(' ') || tokens.slice(0,3).join(' ');
+  return kw || 'fundamentals';
+}
+
+function sanitizeKeyword(keyword?: string): string | undefined {
+  if (!keyword || typeof keyword !== 'string') return undefined;
+  const cleaned = keyword.toLowerCase().replace(/[^a-z0-9\s+.-]/g, ' ');
+  const parts = cleaned.trim().split(/\s+/).filter(Boolean).slice(0,4);
+  if (parts.length === 0) return undefined;
+  return parts.join(' ');
+}
+
 // Suggest quick learning resources (URLs are generic search queries; no external calls)
 function quickLearnLinks(task: string): { label: string; url: string }[] {
   const t = norm(task);
   const q = encodeURIComponent(task);
-  const YT = (label = 'YouTube crash course') => ({ label, url: `https://www.youtube.com/results?search_query=${q}+crash+course` });
+  const YT = (label = 'Crash course') => ({ label, url: `https://www.youtube.com/results?search_query=${q}+crash+course` });
   const links: { label: string; url: string }[] = [];
 
   const push = (...items: { label: string; url: string }[]) => items.forEach(it => links.push(it));
@@ -256,23 +280,146 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
       findEv(certs, 'Cert')
     ].filter(Boolean) as string[];
 
-    // Learning paths: heuristic + AI recommendation if present
-    // Merge AI learning paths with curated chips (limit total to 3)
-    const aiQuick = (aiTasks[idx]?.learning_paths?.quick_wins || []).map((label: string) => ({ label, url: `https://www.google.com/search?q=${encodeURIComponent(label)}` }));
-    const aiCerts = (aiTasks[idx]?.learning_paths?.certifications || []).map((label: string) => ({ label, url: `https://www.google.com/search?q=${encodeURIComponent(label)}` }));
-    const aiDeep = (aiTasks[idx]?.learning_paths?.deepening || []).map((label: string) => ({ label, url: `https://www.google.com/search?q=${encodeURIComponent(label)}` }));
+    // Learning paths: prefer AI-provided direct links if available; otherwise fall back to meaningful searches
+    const normalizeItems = (arr: any[]): { label: string; url: string }[] => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map((item) => {
+        if (!item) return null;
+        if (typeof item === 'object' && (item.label || item.name) && item.url) {
+          return { label: String(item.label || item.name), url: String(item.url) };
+        }
+        const label = typeof item === 'string' ? item : String(item);
+        // Prefer direct docs/cert vendors when the label matches known providers
+        return bestFallbackFor(label, task);
+      }).filter(Boolean) as { label: string; url: string }[];
+    };
+
+    const aiQuick = normalizeItems(aiTasks[idx]?.learning_paths?.quick_wins || []);
+    const aiCerts = normalizeItems(aiTasks[idx]?.learning_paths?.certifications || []);
+    const aiDeep = normalizeItems(aiTasks[idx]?.learning_paths?.deepening || []);
     let learn = [...aiQuick, ...aiCerts, ...aiDeep];
     if (learn.length < 2) {
       learn = [...learn, ...quickLearnLinks(task)];
     }
     if (aiTasks[idx]?.certification_recommendation) {
-      learn.unshift({ label: aiTasks[idx]!.certification_recommendation, url: `https://www.google.com/search?q=${encodeURIComponent(aiTasks[idx]!.certification_recommendation)}` });
+      const cf = bestFallbackFor(aiTasks[idx]!.certification_recommendation, task);
+      learn.unshift(cf);
     }
 
     return { task, pct, evidence, learn };
   });
 
-  const matchScore = Math.round(Number(jobData?.match_score || 0));
+  // Verified links state (per card index)
+  const [verifiedLinks, setVerifiedLinks] = React.useState<Record<number, { label: string; url: string }[]>>({});
+  const [verifyOk, setVerifyOk] = React.useState<Record<string, boolean>>({});
+  const [isVerifying, setIsVerifying] = React.useState<boolean>(false);
+  const [crashKw, setCrashKw] = React.useState<Record<number, string>>({});
+
+  // Get optimized crash-course keywords for each task (once)
+  React.useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch('/api/links/keywords', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tasks: taskCards.map(t => t.task) }),
+          signal: controller.signal
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.success && data?.keywords) setCrashKw(data.keywords);
+      } catch {}
+    })();
+    return () => controller.abort();
+  }, [JSON.stringify(taskCards.map(t => t.task))]);
+
+  React.useEffect(() => {
+    // Collect all visible links and verify via API; if any invalid, swap for crash-course/search fallback
+    const all = taskCards.flatMap((c) => c.learn).filter(Boolean);
+    if (all.length === 0) return;
+    const unique = Array.from(new Map(all.map(l => [l.url, l])).values());
+    const controller = new AbortController();
+    (async () => {
+      try {
+        setIsVerifying(true);
+        const res = await fetch('/api/links/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links: unique }),
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const results: Record<string, { ok: boolean }> = data?.results || {};
+        setVerifyOk(Object.fromEntries(Object.entries(results).map(([u, r]: any) => [u, !!r.ok])));
+        // Build per-card arrays with fallbacks for broken links
+        const next: Record<number, { label: string; url: string }[]> = {};
+        taskCards.forEach((c, i) => {
+          const kw = sanitizeKeyword(crashKw[i]) || fallbackKeywordFor(c.task);
+          const crashForTask = { label: `Crash course: ${kw}`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(kw + ' crash course')}` };
+          const googleForTask = { label: `Google: ${kw}`, url: `https://www.google.com/search?q=${encodeURIComponent(kw)}` };
+          const isCrash = (lab: string, url: string) => /crash course/i.test(lab) || /youtube\.com\/results\?search_query=/i.test(url);
+          let items = c.learn.map((l) => {
+            const vr = results[l.url];
+            // Normalize any crash-course item to our optimized keyword version
+            if (isCrash(l.label || '', l.url || '')) return crashForTask;
+            // If a deep YouTube video, convert to search for stability
+            if (/youtube\.com\/watch\?v=|youtu\.be\//i.test(l.url || '')) {
+              return crashForTask;
+            }
+            if (vr && vr.ok) return l;
+            // Smarter fallback based on label/task
+            return bestFallbackFor(l.label, c.task);
+          });
+          // De‑duplicate by URL and avoid duplicate 'Quick Crash Course'
+          const seen = new Set<string>();
+          let hasCrash = false;
+          const dedup: { label: string; url: string }[] = [];
+          for (const it of items) {
+            const key = (it.url || '').toLowerCase();
+            const nowCrash = isCrash(it.label || '', it.url || '');
+            if (seen.has(key)) continue;
+            if (nowCrash && hasCrash) continue;
+            seen.add(key);
+            if (nowCrash) hasCrash = true;
+            dedup.push(it);
+          }
+          items = dedup;
+          // Guarantee at least one crash course and one non‑crash if possible
+          if (!items.some(it => isCrash(it.label || '', it.url || ''))) {
+            items.unshift(crashForTask);
+          }
+          if (items.filter(it => !isCrash(it.label || '', it.url || '')).length === 0) {
+            items.push(googleForTask);
+          }
+          next[i] = items;
+        });
+        setVerifiedLinks(next);
+      } catch {
+      } finally {
+        setIsVerifying(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [JSON.stringify(taskCards.map(c => c.learn)), JSON.stringify(crashKw)]);
+
+  // Effective match score: prefer server match_score; otherwise derive from AI task compat or local pct average
+  const serverScore = (typeof jobData?.match_score === 'number') ? Number(jobData.match_score) : NaN;
+  const aiCompatAvg = (() => {
+    const vals = (strategy?.job_task_analysis || [])
+      .map((t: any) => typeof t?.compatibility_score === 'number' ? t.compatibility_score : null)
+      .filter((v: number | null) => typeof v === 'number') as number[];
+    if (!vals.length) return NaN;
+    return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  })();
+  const cardPctAvg = taskCards.length ? Math.round(taskCards.reduce((a, b) => a + (b.pct || 0), 0) / taskCards.length) : NaN;
+  const matchScore = Number.isFinite(serverScore) && serverScore > 0
+    ? Math.round(serverScore)
+    : Number.isFinite(aiCompatAvg)
+      ? aiCompatAvg
+      : Number.isFinite(cardPctAvg) ? cardPctAvg : 0;
+  const isEstimated = !(Number.isFinite(serverScore) && serverScore > 0);
 
   return (
     <div className="bg-white/90 border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -287,8 +434,8 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
             <div className="text-sm font-semibold text-gray-900 leading-tight line-clamp-1">{jobData?.title}</div>
           </div>
         </div>
-        <div className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">
-          {matchScore}% match
+        <div className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200" title={isEstimated ? 'Estimated from task analysis' : 'Server match score'}>
+          {matchScore}% match{isEstimated ? '' : ''}
         </div>
       </div>
 
@@ -302,10 +449,10 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
-              className="border border-gray-200 rounded-lg p-2.5 hover:shadow-sm transition-shadow group"
+              className="border border-gray-200 rounded-lg p-2.5 hover:shadow-sm transition-shadow group min-w-0 overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="text-[12px] text-gray-900 font-medium leading-snug line-clamp-2">{c.task}</div>
+              <div className="flex items-center justify-between gap-2 mb-1 min-w-0">
+                <div className="text-[12px] text-gray-900 font-medium leading-snug line-clamp-2 break-words overflow-hidden flex-1 w-0">{c.task}</div>
                 <div className="text-[11px] font-bold text-gray-700">{c.pct}%</div>
               </div>
               <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -315,23 +462,26 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
                 />
               </div>
               {aiTasks[i]?.task_explainer && (
-                <div className="mt-1 text-[11px] text-gray-600 leading-snug line-clamp-2">{aiTasks[i]!.task_explainer}</div>
+                <div className="mt-1 text-[11px] text-gray-600 leading-snug line-clamp-3 break-words overflow-hidden">{aiTasks[i]!.task_explainer}</div>
               )}
               <div className="mt-1.5 flex items-center justify-between">
-                <div className="flex flex-wrap gap-1">
-                  {c.learn.slice(0,2).map(l => (
-                    <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] border border-amber-200 hover:bg-amber-100">
-                      {l.label.replace(' crash course','')}
+                <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                  {(verifiedLinks[i] || c.learn).slice(0,2).map((l, idx2) => (
+                    <a key={`${l.url}-${i}-${idx2}`} href={l.url} target="_blank" rel="noopener noreferrer" title={verifyOk[l.url] ? 'Verified link' : undefined} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border break-words max-w-[12rem] truncate whitespace-nowrap align-middle ${verifyOk[l.url] ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                      {l.label}
+                      {verifyOk[l.url] && <CheckCircle className="w-3 h-3 text-emerald-500" />}
                     </a>
                   ))}
+                  {isVerifying && (
+                    <div className="ml-1 w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" aria-label="Verifying links" />
+                  )}
                 </div>
-                {/* Intentionally no per‑task Tailor button for a cleaner design */}
               </div>
               {/* Evidence tooltip on hover */}
               {(aiTasks[i]?.user_alignment || c.evidence.length > 0) && (
-                <div className="mt-1.5 text-[10px] text-gray-500 flex items-center gap-1">
-                  <Info className="w-3 h-3 text-gray-400" />
-                  <span className="truncate" title={aiTasks[i]?.user_alignment || c.evidence[0]}>
+                <div className="mt-1.5 text-[10px] text-gray-500 flex items-center gap-1 min-w-0 overflow-hidden">
+                  <Info className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <span className="block w-full break-words overflow-hidden line-clamp-2" title={aiTasks[i]?.user_alignment || c.evidence[0]}>
                     {aiTasks[i]?.user_alignment || c.evidence[0]}
                   </span>
                 </div>

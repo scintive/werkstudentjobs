@@ -18,7 +18,7 @@ import type { JobStrategy, CoverLetter, ResumePatch } from '@/lib/types/jobStrat
 import type { JobWithCompany } from '@/lib/supabase/types';
 import type { StudentProfile, StudentJobStrategy } from '@/lib/types/studentProfile';
 import { ResumeDataService } from '@/lib/services/resumeDataService';
-import { useSupabaseResumeContext, SupabaseResumeProvider } from '@/lib/contexts/SupabaseResumeContext';
+import { useSupabaseResumeContext, SupabaseResumeProvider, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext';
 import { EditModeProvider } from '@/lib/contexts/EditModeContext';
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker';
 import { AlignmentCards } from '@/components/werkstudent/AlignmentCards';
@@ -64,6 +64,7 @@ function TailorApplicationPage() {
   
   // Get resume data from Supabase context
   const { resumeData, isLoading: resumeLoading } = useSupabaseResumeContext();
+  const supabaseActions = useSupabaseResumeActions();
   
   // Debug logs removed
   
@@ -1271,13 +1272,23 @@ function ResumeStudioTab({
       const atsKeywords = (studentStrategy?.ats_keywords || strategy?.ats_keywords || []);
       const mustHaves = (studentStrategy?.must_have_gaps || strategy?.must_have_gaps || []).map((gap: any) => gap.skill);
       
-      // Generate suggestions for experience bullets
+      // Generate suggestions for experience bullets (supports achievements/highlights/description lines)
       if (resumeData.experience && resumeData.experience.length > 0) {
         for (let expIndex = 0; expIndex < resumeData.experience.length; expIndex++) {
           const experience = resumeData.experience[expIndex];
-          if (experience.bullets && experience.bullets.length > 0) {
-            for (let bulletIndex = 0; bulletIndex < Math.min(experience.bullets.length, 3); bulletIndex++) {
-              const bullet = experience.bullets[bulletIndex];
+          const sourceArray: { field: 'achievements'|'highlights'|'bullets'|'description'; items: string[] } | null = (() => {
+            if (Array.isArray(experience.achievements) && experience.achievements.length) return { field: 'achievements', items: experience.achievements };
+            if (Array.isArray(experience.highlights) && experience.highlights.length) return { field: 'highlights', items: experience.highlights };
+            if (Array.isArray((experience as any).bullets) && (experience as any).bullets.length) return { field: 'bullets', items: (experience as any).bullets };
+            if (typeof experience.description === 'string' && experience.description.trim()) {
+              const items = experience.description.split(/\n+/).map(s => s.trim()).filter(Boolean);
+              if (items.length) return { field: 'description', items };
+            }
+            return null;
+          })();
+          if (sourceArray && sourceArray.items.length > 0) {
+            for (let bulletIndex = 0; bulletIndex < Math.min(sourceArray.items.length, 3); bulletIndex++) {
+              const bullet = sourceArray.items[bulletIndex];
               if (bullet && bullet.trim()) {
                 try {
                   const response = await fetch('/api/jobs/resume/patches', {
@@ -1286,11 +1297,7 @@ function ResumeStudioTab({
                     body: JSON.stringify({
                       job_id: job.id,
                       user_profile_id: userProfileId,
-                      target: {
-                        section: 'experience',
-                        target_id: `exp_${expIndex}_bullet_${bulletIndex}`,
-                        text: bullet
-                      },
+                      target: { section: 'experience', target_id: `exp_${expIndex}_bullet_${bulletIndex}`, text: bullet },
                       ats_keywords: atsKeywords,
                       must_haves: mustHaves
                     })
@@ -1310,7 +1317,8 @@ function ResumeStudioTab({
                         impact: 'high',
                         reason: data.patch.reasoning,
                         experienceIndex: expIndex,
-                        bulletIndex: bulletIndex
+                        bulletIndex: bulletIndex,
+                        fieldName: sourceArray.field
                       });
                     }
                   }
@@ -1363,23 +1371,36 @@ function ResumeStudioTab({
         }
       }
       
-      // Generate suggestions for skills (recommend missing must-have skills)
-      if (strategy || studentStrategy) {
-        const missingSkills = (studentStrategy?.must_have_gaps || strategy?.must_have_gaps || []);
-        if (missingSkills.length > 0) {
-          suggestions.push({
-            id: 'skills_missing',
-            type: 'skills',
-            section: 'skills',
-            original: 'Current skills',
-            suggestion: `Add these critical skills: ${missingSkills.slice(0, 3).map((gap: any) => gap.skill).join(', ')}`,
-            confidence: 95,
-            keywords: missingSkills.map((gap: any) => gap.skill),
-            impact: 'high',
-            reason: 'These skills are required by the job and will significantly improve your match score'
-          });
+      // Generate suggestions for skills using GPT (proposed_skills + adds/removes)
+      try {
+        const response = await fetch('/api/jobs/resume/patches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_id: job.id,
+            user_profile_id: userProfileId,
+            target: { section: 'skills', target_id: 'all_skills', text: JSON.stringify(resumeData.skills || {}) },
+            ats_keywords: atsKeywords,
+            must_haves: mustHaves
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.patch?.proposed_skills) {
+            suggestions.push({
+              id: 'skills_full',
+              type: 'skills',
+              section: 'skills',
+              original: resumeData.skills,
+              suggestion: data.patch.proposed_skills,
+              confidence: 92,
+              keywords: data.patch.used_keywords || [],
+              impact: 'high',
+              reason: data.patch.reasoning
+            });
+          }
         }
-      }
+      } catch (e) { console.error('Skills suggestion failed', e); }
       
       setAiSuggestions(suggestions);
       console.log(`🤖 Generated ${suggestions.length} AI suggestions`);
@@ -1393,11 +1414,24 @@ function ResumeStudioTab({
   
   // Handle suggestion acceptance
   const handleSuggestionAccept = (suggestionId: string) => {
-    const suggestion = aiSuggestions.find(s => s.id === suggestionId);
-    if (suggestion) {
-      console.log('✅ Accepted suggestion:', suggestion.original, '→', suggestion.suggestion);
-      // The TailorPerfectStudio will handle applying the suggestion to the resume data
+    const s = aiSuggestions.find(s => s.id === suggestionId);
+    if (!s || !resumeData) return;
+    const updated = JSON.parse(JSON.stringify(resumeData));
+    if (s.type === 'summary') {
+      updated.professionalSummary = s.suggestion;
+    } else if (s.type === 'bullet' && typeof s.experienceIndex === 'number' && typeof s.bulletIndex === 'number') {
+      const field = s.fieldName || 'achievements';
+      const arr = updated.experience?.[s.experienceIndex]?.[field] || [];
+      if (Array.isArray(arr)) {
+        arr[s.bulletIndex] = s.suggestion;
+        updated.experience[s.experienceIndex][field] = arr;
+      }
+    } else if (s.type === 'skills' && s.suggestion && typeof s.suggestion === 'object') {
+      updated.skills = s.suggestion;
     }
+    supabaseActions.setResumeData?.(updated);
+    supabaseActions.saveNow?.();
+    setAiSuggestions(prev => prev.filter(x => x.id !== suggestionId));
   };
   
   // Handle suggestion rejection
