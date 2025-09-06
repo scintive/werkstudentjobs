@@ -4,12 +4,6 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Lock, LogIn } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
-import type { Viewport } from 'next'
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-}
 
 export default function LoginPage() {
   const [email, setEmail] = React.useState('')
@@ -44,7 +38,8 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: data.session.user.id, email: data.session.user.email })
         })
-        router.push('/jobs')
+        // Route to Home for onboarding logic; Home redirects to Jobs when profile exists
+        router.push('/')
       } else {
       setErrorMsg('Check your email to confirm your account, then log in.')
       }
@@ -129,6 +124,40 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-600">
           New here? <a href="/register" className="text-blue-600 hover:underline">Create an account</a>
+        </div>
+
+        <div className="mt-3 text-center text-sm text-gray-600">
+          Trouble signing in?{' '}
+          <button
+            onClick={async () => {
+              try {
+                setErrorMsg(null)
+                await supabase.auth.resend({ type: 'signup', email })
+                setErrorMsg('Confirmation email resent. Please check your inbox.')
+              } catch (e: any) {
+                setErrorMsg(e?.message || 'Failed to resend confirmation email')
+              }
+            }}
+            className="text-blue-600 hover:underline mr-2"
+            type="button"
+          >
+            Resend confirmation
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                setErrorMsg(null)
+                await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` })
+                setErrorMsg('Password reset email sent. Follow the link to set a new password.')
+              } catch (e: any) {
+                setErrorMsg(e?.message || 'Failed to send password reset email')
+              }
+            }}
+            className="text-blue-600 hover:underline"
+            type="button"
+          >
+            Forgot password
+          </button>
         </div>
       </div>
     </div>

@@ -27,18 +27,19 @@ export default function RegisterPage() {
       })
       if (signUpError) throw signUpError
 
-      // If confirmation required (no session), try dev auto-confirm via service role route
+      // If confirmation required (no session), either auto-confirm in dev or trigger resend
       if (!signUpData.session) {
-        try {
-          const userId = signUpData.user?.id
-          if (userId) {
+        const enableAutoConfirm = process.env.NEXT_PUBLIC_DEV_AUTOCONFIRM === 'true'
+        const userId = signUpData.user?.id
+
+        if (enableAutoConfirm && userId) {
+          try {
             const res = await fetch('/api/auth/admin/confirm', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId })
             })
             if (res.ok) {
-              // Now sign in
               const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
               if (loginErr) throw loginErr
               if (loginData.session?.user) {
@@ -47,14 +48,19 @@ export default function RegisterPage() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ sessionId: loginData.session.user.id, email: loginData.session.user.email })
                 })
-                router.push('/jobs')
+                // After auto-confirm + login, send to Home so onboarding runs first
+                router.push('/')
                 return
               }
             }
+          } catch {
+            // fall through to email path
           }
-        } catch {}
-        // Fallback: require email confirmation
-        alert('Your project requires email confirmation. Please check your inbox to confirm before logging in.')
+        }
+
+        // Resend signup confirmation email as a helpful fallback
+        try { await supabase.auth.resend({ type: 'signup', email }) } catch {}
+        alert('Please check your email to confirm your account, then log in.')
         router.push('/login')
         return
       }
@@ -65,7 +71,8 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: user.id, email: user.email })
       })
-      router.push('/jobs')
+      // After direct signup with session, send to Home so onboarding runs first
+      router.push('/')
     } catch (err: any) {
       setError(err.message || 'Registration failed')
     } finally {

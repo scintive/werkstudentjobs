@@ -8,13 +8,16 @@ import { cookies } from 'next/headers';
  */
 export async function GET(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization') || ''
     console.log('🔍 LATEST PROFILE: Fetching profile for authenticated user');
+    console.log('🔍 LATEST PROFILE: Has Authorization header:', !!authHeader, 'length:', authHeader.length)
     const supabase = createServerSupabase(request)
     
     // Get session from cookies (optional for demo mode)
     const cookieStore = await cookies()
     const sessionId = cookieStore.get('user_session')?.value
     const userEmail = cookieStore.get('user_email')?.value
+    console.log('🔍 LATEST PROFILE: Cookie session present:', !!sessionId, 'cookie email present:', !!userEmail)
     
     // Also try Supabase auth (Authorization header)
     let authUserId: string | null = null
@@ -48,6 +51,8 @@ export async function GET(request: NextRequest) {
       if (!userError && userProfilesByEmail && userProfilesByEmail.length > 0) {
         correctSessionId = userProfilesByEmail[0].session_id;
         console.log('🔍 LATEST PROFILE: Found session via email:', correctSessionId);
+      } else {
+        console.log('🔍 LATEST PROFILE: No user_profile found by email; error:', userError?.message)
       }
     }
     
@@ -62,6 +67,8 @@ export async function GET(request: NextRequest) {
       if (userProfilesById && userProfilesById.length > 0) {
         correctSessionId = userProfilesById[0].session_id;
         console.log('🔍 LATEST PROFILE: Found session via user_id:', correctSessionId);
+      } else {
+        console.log('🔍 LATEST PROFILE: No user_profile found by auth user id')
       }
     }
     
@@ -127,6 +134,7 @@ export async function GET(request: NextRequest) {
     }
     
     // No resume found for this session/user
+    console.log('🔍 LATEST PROFILE: No resume data found for session/user');
     return NextResponse.json({ error: 'No resume data found' }, { status: 404 });
     
   } catch (error) {

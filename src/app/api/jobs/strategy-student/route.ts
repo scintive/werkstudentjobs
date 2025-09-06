@@ -273,10 +273,10 @@ For each job responsibility, provide:
 1) task_explainer: a crisp 1–2 sentence explanation of what the task actually entails in this role/company (no fluff, no generic definitions)
 2) compatibility_score: realistic 0–100, based ONLY on resume/portfolio evidence
 3) user_alignment: a specific, organic sentence tying user’s best relevant project/experience to this task (reference the exact item name). If nothing truly relevant exists, say so clearly (e.g., "No direct WordPress experience")
-4) learning_paths: concrete actions grouped as { quick_wins: [2–3 items], certifications: [0–2 items], deepening: [1–2 items] }
-   - quick_wins: short actions doable this week (tutorials, docs sections)
-   - certifications: named certificates that matter for THIS task (not generic)
-   - deepening: a medium project or course to close the gap
+4) learning_paths: concrete actions grouped as { quick_wins, certifications, deepening } with DIRECT LINKS
+   - Shape for each list: [{ label: string, url: string }]
+   - Provide working URLs to OFFICIAL or reputable sources: vendor docs, vendor certification pages, Coursera/edX/Udacity/Google/AWS/Azure/Meta, or a single high‑quality YouTube crash course.
+   - Avoid generic Google searches. Use the most relevant, specific link for THIS task.
 
 STRICT RELEVANCE RULES:
 - Do NOT include unrelated evidence (e.g., prompt‑engineering project is NOT relevant to WordPress site building)
@@ -301,9 +301,9 @@ OUTPUT SCHEMA:
       "user_alignment": "organic, specific sentence tying best related project/experience; or state 'no direct experience'",
       "user_evidence": "SPECIFIC project/coursework/experience names that support the alignment (or empty)",
       "learning_paths": {
-        "quick_wins": ["short actions this week"],
-        "certifications": ["named certificates, 0–2"],
-        "deepening": ["project/course for deeper skill"]
+        "quick_wins": [{ "label": "resource name", "url": "https://..." }],
+        "certifications": [{ "label": "certificate/course name", "url": "https://..." }],
+        "deepening": [{ "label": "course/project", "url": "https://..." }]
       }
     }
   ],
