@@ -107,9 +107,24 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        // First try to find the correct session ID by email (like in profile/latest)
+        let correctSessionId = sessionId;
+        if (userEmail) {
+          const { data: userProfilesByEmail, error: userError } = await supabase
+            .from('user_profiles')
+            .select('session_id')
+            .eq('email', userEmail)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          if (!userError && userProfilesByEmail && userProfilesByEmail.length > 0) {
+            correctSessionId = userProfilesByEmail[0].session_id;
+            console.log('🎓 COVER LETTER: Found session via email:', correctSessionId);
+          }
+        }
+
         let query = supabase.from('user_profiles').select('*');
-        if (sessionId) {
-          query = query.eq('session_id', sessionId);
+        if (correctSessionId) {
+          query = query.eq('session_id', correctSessionId);
         } else if (userEmail) {
           query = query.eq('email', userEmail);
         }

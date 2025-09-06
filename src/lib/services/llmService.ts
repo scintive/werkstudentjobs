@@ -100,7 +100,7 @@ const ProfileExtractionSchema = {
           year: { type: "string" },
           location: { type: "string" }
         },
-        required: ["degree", "field_of_study", "institution", "duration", "location"]
+        required: ["degree", "field_of_study", "institution", "duration", "year", "location"]
       }
     },
     certifications: {
@@ -215,7 +215,7 @@ const SkillsOrganizationSchema = {
       additionalProperties: { type: "string" }
     }
   },
-  required: ["organized_categories", "profile_assessment"],
+  required: ["organized_categories", "profile_assessment", "category_mapping"],
   additionalProperties: false
 };
 

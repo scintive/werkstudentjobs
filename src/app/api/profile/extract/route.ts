@@ -21,7 +21,9 @@ async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   try {
-    const pdfParse = (await import('pdf-parse')).default as any;
+    // Import pdf-parse safely
+    const pdfParseModule = await import('pdf-parse/lib/pdf-parse.js');
+    const pdfParse = pdfParseModule.default || pdfParseModule;
     const data = await pdfParse(buffer);
     if (data?.text && data.text.trim().length > 50) {
       return data.text as string;
