@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '@/lib/supabase/client'
 import { 
   Plus, 
   X, 

@@ -21,6 +21,7 @@ import { ResumeDataService } from '@/lib/services/resumeDataService';
 import { useSupabaseResumeContext, SupabaseResumeProvider, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext';
 import { EditModeProvider } from '@/lib/contexts/EditModeContext';
 import { getConfig, APP_CONFIG } from '@/lib/config/app';
+import { supabase } from '@/lib/supabase/client';
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker';
 import { AlignmentCards } from '@/components/werkstudent/AlignmentCards';
 import { ComprehensiveJobAnalysis } from '@/components/werkstudent/ComprehensiveJobAnalysis';
@@ -1845,7 +1846,8 @@ function CoverLetterStudioTab({
 export default function TailorApplicationPageWrapper() {
   return (
     <RequireAuth>
-      <SupabaseResumeProvider autoSaveInterval={2000}>
+      {/* Avoid hitting /api/profile/latest repeatedly on Tailor page */}
+      <SupabaseResumeProvider autoSaveInterval={2000} skipProfileApiFetch>
         <EditModeProvider>
           <TailorApplicationPage />
         </EditModeProvider>

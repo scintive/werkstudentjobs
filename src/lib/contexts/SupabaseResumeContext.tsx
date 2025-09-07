@@ -26,12 +26,15 @@ interface SupabaseResumeProviderProps {
   children: React.ReactNode
   initialData?: ResumeData
   autoSaveInterval?: number // Auto-save interval in ms (default: 2000ms)
+  // When true, do not call /api/profile/latest on mount (use local service fallback)
+  skipProfileApiFetch?: boolean
 }
 
 export function SupabaseResumeProvider({ 
   children, 
   initialData,
-  autoSaveInterval = 2000 
+  autoSaveInterval = 2000,
+  skipProfileApiFetch = false,
 }: SupabaseResumeProviderProps) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSaving, setIsSaving] = React.useState(false)
@@ -56,58 +59,50 @@ export function SupabaseResumeProvider({
         // Refresh session from cookies in case user logged in
         refreshSessionFromCookies()
         
-        console.log('🔄 SUPABASE CONTEXT: Fetching profile from /api/profile/latest')
+        console.log('🔄 SUPABASE CONTEXT: Initializing resume context')
         
-        // Use the working /api/profile/latest endpoint with Supabase JWT
-        const { data: session } = await supabase.auth.getSession()
-        const token = session.session?.access_token
-        const profileResponse = await fetch('/api/profile/latest', {
-          method: 'GET',
-          credentials: 'include',
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined
-        })
-        
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json()
-          console.log('🔄 SUPABASE CONTEXT: Profile API response:', profileData.success)
-          
-          if (profileData.success && profileData.resumeData) {
-            console.log('🔄 SUPABASE CONTEXT: Found resume data from API')
+        if (!skipProfileApiFetch) {
+          console.log('🔄 SUPABASE CONTEXT: Fetching profile from /api/profile/latest')
+          // Use the working /api/profile/latest endpoint with Supabase JWT
+          const { data: session } = await supabase.auth.getSession()
+          const token = session.session?.access_token
+          if (token) {
+            const profileResponse = await fetch('/api/profile/latest', {
+              method: 'GET',
+              credentials: 'include',
+              headers: { Authorization: `Bearer ${token}` }
+            })
             
-            if (isMounted) {
-              console.log('🔄 CONTEXT: Setting resumeData with keys:', Object.keys(profileData.resumeData || {}))
-              console.log('🔄 CONTEXT: personalInfo:', profileData.resumeData?.personalInfo)
-              console.log('🔄 CONTEXT: experience count:', profileData.resumeData?.experience?.length || 0)
-              console.log('🔄 CONTEXT: skills keys:', profileData.resumeData?.skills ? Object.keys(profileData.resumeData.skills) : 'none')
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json()
+              console.log('🔄 SUPABASE CONTEXT: Profile API response:', profileData.success)
               
-              setResumeId(profileData.profile?.id || 'unknown')
-              setResumeDataFromDB(profileData.resumeData)
-              setLastSaved(new Date())
-              lastSavedDataRef.current = JSON.stringify(profileData.resumeData)
+              if (profileData.success && profileData.resumeData) {
+                if (isMounted) {
+                  setResumeId(profileData.profile?.id || 'unknown')
+                  setResumeDataFromDB(profileData.resumeData)
+                  setLastSaved(new Date())
+                  lastSavedDataRef.current = JSON.stringify(profileData.resumeData)
+                }
+                return
+              }
+            } else {
+              console.log('🔄 SUPABASE CONTEXT: Profile API not available (status:', profileResponse.status, ')')
             }
           } else {
-            console.log('🔄 SUPABASE CONTEXT: No resume data in API response, using service fallback')
-            // Fallback to original service method
-            const result = await resumeService.current.getOrCreateResumeData()
-            
-            if (isMounted) {
-              setResumeId(result.id)
-              setResumeDataFromDB(result.data)
-              setLastSaved(new Date())
-              lastSavedDataRef.current = JSON.stringify(result.data)
-            }
+            console.log('🔒 SUPABASE CONTEXT: No auth token; skipping /api/profile/latest')
           }
         } else {
-          // No session-bound profile; create or fetch a fresh record for this browser session
-          console.log('🔄 SUPABASE CONTEXT: No API profile; creating fresh session resume record')
-          const result = await resumeService.current.getOrCreateResumeData()
-          
-          if (isMounted) {
-            setResumeId(result.id)
-            setResumeDataFromDB(result.data)
-            setLastSaved(new Date())
-            lastSavedDataRef.current = JSON.stringify(result.data)
-          }
+          console.log('⏭️ SUPABASE CONTEXT: skipProfileApiFetch=true — skipping /api/profile/latest')
+        }
+
+        // Fallback to local session-backed record
+        const result = await resumeService.current.getOrCreateResumeData()
+        if (isMounted) {
+          setResumeId(result.id)
+          setResumeDataFromDB(result.data)
+          setLastSaved(new Date())
+          lastSavedDataRef.current = JSON.stringify(result.data)
         }
         
       } catch (error) {
