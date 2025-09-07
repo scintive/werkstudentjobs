@@ -1,3 +1,5 @@
+// Ensure URL.canParse exists before importing OpenAI SDK (which relies on it in Node)
+import '@/lib/polyfills/url-canparse';
 /**
  * LLM Service - Abstraction layer for AI model interactions
  * Web application version with client/server support
