@@ -463,12 +463,17 @@ export const TailorPerfectStudio = ({
         // ALWAYS fetch from API to ensure fresh data (not checking currentData)
         // This prevents stale/cached data issues
         try {
-          
           const { data: s } = await supabase.auth.getSession()
           const token = s.session?.access_token
+          if (!token) {
+            console.warn('🔒 TailorPerfectStudio: Skipping /api/profile/latest — no auth token');
+            setResumeData(null);
+            setLoading(false);
+            return;
+          }
           const response = await fetch('/api/profile/latest', {
             credentials: 'include',
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined
+            headers: { Authorization: `Bearer ${token}` }
           });
           
           if (response.ok) {

@@ -150,6 +150,9 @@ export const APP_CONFIG = {
 
   // Feature Flags
   FEATURES: {
+    // Unified tailoring (strategy + variant + atomic suggestions)
+    // Preview-first with inline chips - enabled via env var
+    ENABLE_TAILORING_UNIFIED: process.env.NEXT_PUBLIC_ENABLE_TAILORING_UNIFIED === 'true',
     ENABLE_PDF_GENERATION: true,
     ENABLE_TEMPLATE_SELECTION: true,
     ENABLE_PROFILE_REVIEW: true,

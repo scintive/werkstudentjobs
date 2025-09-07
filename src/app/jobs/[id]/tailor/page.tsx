@@ -20,6 +20,7 @@ import type { StudentProfile, StudentJobStrategy } from '@/lib/types/studentProf
 import { ResumeDataService } from '@/lib/services/resumeDataService';
 import { useSupabaseResumeContext, SupabaseResumeProvider, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext';
 import { EditModeProvider } from '@/lib/contexts/EditModeContext';
+import { getConfig, APP_CONFIG } from '@/lib/config/app';
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker';
 import { AlignmentCards } from '@/components/werkstudent/AlignmentCards';
 import { ComprehensiveJobAnalysis } from '@/components/werkstudent/ComprehensiveJobAnalysis';
@@ -27,7 +28,8 @@ import StrategyOnePager from '@/components/enhanced-strategy/StrategyOnePager';
 import BulletRewriter from '@/components/werkstudent/BulletRewriter';
 import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveStrategy';
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
-import { TailorPerfectStudio } from '@/components/tailor-resume-editor/TailorPerfectStudio';
+import { PerfectStudio } from '@/components/resume-editor/PerfectStudio';
+import { TailoredResumePreview } from '@/components/tailor-resume-editor/TailoredResumePreview';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 
 // Enhanced Tab configuration with visual elements
@@ -63,7 +65,7 @@ function TailorApplicationPage() {
   const jobId = params.id as string;
   
   // Get resume data from Supabase context
-  const { resumeData, isLoading: resumeLoading } = useSupabaseResumeContext();
+  const { resumeData, isLoading: resumeLoading, resumeId } = useSupabaseResumeContext();
   const supabaseActions = useSupabaseResumeActions();
   
   // Debug logs removed
@@ -72,9 +74,9 @@ function TailorApplicationPage() {
   const [job, setJob] = useState<JobWithCompany | null>(null);
   const [strategy, setStrategy] = useState<JobStrategy | null>(null);
   const [studentStrategy, setStudentStrategy] = useState<StudentJobStrategy | null>(null);
-  const [enhancedStrategy, setEnhancedStrategy] = useState<any>(null);
+  // Removed enhancedStrategy - not needed
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [patches, setPatches] = useState<ResumePatch[]>([]);
+  const [patches, setPatches] = useState<any[]>([]);
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [loading, setLoading] = useState({
@@ -166,26 +168,6 @@ function TailorApplicationPage() {
     setLoading(prev => ({ ...prev, strategy: true }));
     
     try {
-      
-      
-      // FIRST: Check if we already have cached strategy for this job
-      const cacheResponse = await fetch(`/api/jobs/strategy-cache?job_id=${jobId}`)
-      if (cacheResponse.ok) {
-        const cacheData = await cacheResponse.json()
-        if (cacheData.cached) {
-          
-          
-          // Use cached strategy
-          if (cacheData.strategy) {
-            setStudentStrategy(cacheData.strategy)
-            setLoading(prev => ({ ...prev, strategy: false }));
-            return; // Exit early - no GPT call needed!
-          }
-        }
-      }
-      
-      
-      
       // Convert resume data to profile format for strategy generation
       const profileForStrategy = {
         id: 'latest', // Use latest for student endpoints
@@ -244,51 +226,6 @@ function TailorApplicationPage() {
           setStrategy(data.strategy);
         }
         console.log('🎯 Strategy generated successfully');
-        
-        // SAVE TO CACHE to avoid future GPT calls
-        console.log('🎯 STEP 4: Saving strategy to cache to save future credits 💰');
-        try {
-          await fetch('/api/jobs/strategy-cache', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              job_id: jobId,
-              strategy_data: data.strategy
-            })
-          });
-          console.log('🎯 Strategy cached successfully! Next time will load instantly.');
-        } catch (cacheError) {
-          console.warn('🎯 Failed to cache strategy (but analysis still worked):', cacheError);
-        }
-        
-        // Also load the enhanced comprehensive strategy
-        try {
-          console.log('🎯 Loading enhanced comprehensive strategy...');
-          const enhancedRequestBody = endpoint.includes('student') 
-            ? {
-                job_id: jobId,
-                student_profile: profileForStrategy
-              }
-            : {
-                job_id: jobId,
-                user_profile_id: userProfileId
-              };
-
-          const enhancedResponse = await fetch('/api/jobs/strategy-enhanced', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(enhancedRequestBody)
-          });
-          
-          const enhancedData = await enhancedResponse.json();
-          if (enhancedData.success) {
-            setEnhancedStrategy(enhancedData.strategy);
-            console.log('🎯 Enhanced strategy loaded successfully');
-          }
-        } catch (enhancedError) {
-          console.error('Enhanced strategy failed:', enhancedError);
-          // Don't fail the main strategy if enhanced fails
-        }
       }
     } catch (error) {
       console.error('Strategy generation failed:', error);
@@ -301,8 +238,18 @@ function TailorApplicationPage() {
     setLoading(prev => ({ ...prev, letter: true }));
     
     try {
-      // Get profile using the same method as the resume studio
-      const profileResponse = await fetch('/api/profile/latest');
+      // Get profile using authenticated request; block until JWT exists
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        console.warn('🔒 Cover letter generation blocked: user not signed in');
+        setLoading(prev => ({ ...prev, letter: false }));
+        return;
+      }
+      const profileResponse = await fetch('/api/profile/latest', {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include'
+      });
       if (!profileResponse.ok) {
         console.error('Failed to load profile for cover letter');
         setLoading(prev => ({ ...prev, letter: false }));
@@ -651,7 +598,6 @@ function TailorApplicationPage() {
                   job={job}
                   strategy={strategy}
                   studentStrategy={studentStrategy}
-                  enhancedStrategy={enhancedStrategy}
                   userProfile={userProfile}
                   loading={loading.strategy}
                   onRetryStrategy={loadStrategy}
@@ -665,6 +611,7 @@ function TailorApplicationPage() {
                   studentStrategy={studentStrategy}
                   userProfile={userProfile}
                   resumeData={resumeData}
+                  resumeId={resumeId}
                   patches={patches}
                   onPatchesChange={setPatches}
                   loading={loading.patches}
@@ -696,7 +643,6 @@ function StrategyTab({
   job, 
   strategy, 
   studentStrategy,
-  enhancedStrategy,
   userProfile,
   loading, 
   onRetryStrategy 
@@ -1217,245 +1163,92 @@ function StrategyTab({
   );
 }
 
-// Revolutionary Resume Studio Tab with integrated editor
+// Resume Studio Tab with unified preview-first approach (Single Editor)
 function ResumeStudioTab({ 
   job, 
   strategy, 
   studentStrategy,
   userProfile,
-  resumeData, // Now passed as prop from parent
+  resumeData,
+  resumeId,
   patches, 
   onPatchesChange, 
   loading 
 }: any) {
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  // Removed local resumeData state - now using prop
-  const [isLoadingResume, setIsLoadingResume] = useState(false); // Set to false since parent handles loading
+  // Feature flag - read from centralized config
+  const ENABLE_TAILORING_UNIFIED = APP_CONFIG.FEATURES.ENABLE_TAILORING_UNIFIED;
   
-  const studentProfile: Partial<StudentProfile> | null = userProfile && (
-    userProfile.degree_program ||
-    userProfile.university ||
-    userProfile.enrollment_status
-  ) ? {
-    degree_program: userProfile.degree_program,
-    university: userProfile.university,
-    current_year: userProfile.current_year,
-    expected_graduation: userProfile.expected_graduation,
-    weekly_availability: userProfile.weekly_availability,
-    academic_projects: userProfile.academic_projects,
-    relevant_coursework: userProfile.relevant_coursework
-  } : null;
+  // Editor state - NEVER true on initial load
+  const [showEditor, setShowEditor] = useState(false);
+  const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
+  const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
+  const supabaseActions = useSupabaseResumeActions();
   
-  const isStudent = !!studentProfile;
-  
-  // Generate AI suggestions when resume data is available
-  React.useEffect(() => {
-    if (resumeData && job) {
-      console.log('📝 Resume data available for AI suggestions:', resumeData.personalInfo?.name);
-      generateComprehensiveSuggestions(resumeData);
+  // Log feature flag status for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('🚀 RESUME STUDIO TAB - Feature Flag Check:');
+      console.log('  - Raw env value:', process.env.NEXT_PUBLIC_ENABLE_TAILORING_UNIFIED);
+      console.log('  - Parsed boolean:', ENABLE_TAILORING_UNIFIED);
+      console.log('  - showEditor state:', showEditor);
+      console.log('  - resumeData exists:', !!resumeData);
+      console.log('  - resumeId:', resumeId);
     }
-  }, [resumeData, job]);
+  }, [ENABLE_TAILORING_UNIFIED, showEditor, resumeData, resumeId]);
   
-  // Generate comprehensive AI suggestions from actual resume data
-  const generateComprehensiveSuggestions = async (resumeData: any) => {
-    if (!job || !resumeData || suggestionsLoading) return;
-    
-    setSuggestionsLoading(true);
-    const suggestions: any[] = [];
-    
+  // Handle opening resume in the single Resume Studio editor
+  // ONLY called from Open in Editor button
+  const handleOpenInEditor = (tailoredData: any, variantId?: string) => {
+    console.log('Opening editor with variant:', variantId);
+    if (tailoredData) setTailoredResumeData(tailoredData);
+    if (variantId) setActiveVariantId(variantId);
+    setShowEditor(true);
+  };
+
+  // Handle returning from editor to preview
+  const handleBackToPreview = () => {
+    setShowEditor(false);
+    // Restore base resume data
+    if (resumeData) {
+      supabaseActions.setResumeData?.(resumeData);
+    }
+  };
+  
+  // Handle PDF export
+  const handleExportPDF = async (tailoredData: any) => {
     try {
-      const resumeService = ResumeDataService.getInstance();
-      const userProfileId = resumeService.getUserProfileId() || 'demo';
+      // Use the existing PDF generation API with selected template
+      const template = localStorage.getItem('selectedTemplate') || 'swiss';
+      const response = await fetch('/api/resume/pdf-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeData: tailoredData,
+          template
+        })
+      });
       
-      // Get ATS keywords from strategy
-      const atsKeywords = (studentStrategy?.ats_keywords || strategy?.ats_keywords || []);
-      const mustHaves = (studentStrategy?.must_have_gaps || strategy?.must_have_gaps || []).map((gap: any) => gap.skill);
-      
-      // Generate suggestions for experience bullets (supports achievements/highlights/description lines)
-      if (resumeData.experience && resumeData.experience.length > 0) {
-        for (let expIndex = 0; expIndex < resumeData.experience.length; expIndex++) {
-          const experience = resumeData.experience[expIndex];
-          const sourceArray: { field: 'achievements'|'highlights'|'bullets'|'description'; items: string[] } | null = (() => {
-            if (Array.isArray(experience.achievements) && experience.achievements.length) return { field: 'achievements', items: experience.achievements };
-            if (Array.isArray(experience.highlights) && experience.highlights.length) return { field: 'highlights', items: experience.highlights };
-            if (Array.isArray((experience as any).bullets) && (experience as any).bullets.length) return { field: 'bullets', items: (experience as any).bullets };
-            if (typeof experience.description === 'string' && experience.description.trim()) {
-              const items = experience.description.split(/\n+/).map(s => s.trim()).filter(Boolean);
-              if (items.length) return { field: 'description', items };
-            }
-            return null;
-          })();
-          if (sourceArray && sourceArray.items.length > 0) {
-            for (let bulletIndex = 0; bulletIndex < Math.min(sourceArray.items.length, 3); bulletIndex++) {
-              const bullet = sourceArray.items[bulletIndex];
-              if (bullet && bullet.trim()) {
-                try {
-                  const response = await fetch('/api/jobs/resume/patches', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      job_id: job.id,
-                      user_profile_id: userProfileId,
-                      target: { section: 'experience', target_id: `exp_${expIndex}_bullet_${bulletIndex}`, text: bullet },
-                      ats_keywords: atsKeywords,
-                      must_haves: mustHaves
-                    })
-                  });
-                  
-                  if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                      suggestions.push({
-                        id: `exp_${expIndex}_${bulletIndex}`,
-                        type: 'bullet',
-                        section: 'experience',
-                        original: bullet,
-                        suggestion: data.patch.proposed_text,
-                        confidence: 85,
-                        keywords: data.patch.used_keywords || [],
-                        impact: 'high',
-                        reason: data.patch.reasoning,
-                        experienceIndex: expIndex,
-                        bulletIndex: bulletIndex,
-                        fieldName: sourceArray.field
-                      });
-                    }
-                  }
-                } catch (error) {
-                  console.error(`Failed to generate suggestion for experience ${expIndex} bullet ${bulletIndex}:`, error);
-                }
-              }
-            }
-          }
-        }
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Tailored_Resume_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('PDF generation failed');
+        alert('PDF generation failed. Please try again.');
       }
-      
-      // Generate suggestions for professional summary
-      if (resumeData.professionalSummary && resumeData.professionalSummary.trim()) {
-        try {
-          const response = await fetch('/api/jobs/resume/patches', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              job_id: job.id,
-              user_profile_id: userProfileId,
-              target: {
-                section: 'summary',
-                target_id: 'professional_summary',
-                text: resumeData.professionalSummary
-              },
-              ats_keywords: atsKeywords,
-              must_haves: mustHaves
-            })
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              suggestions.push({
-                id: 'summary_main',
-                type: 'summary',
-                section: 'summary',
-                original: resumeData.professionalSummary,
-                suggestion: data.patch.proposed_text,
-                confidence: 90,
-                keywords: data.patch.used_keywords || [],
-                impact: 'high',
-                reason: data.patch.reasoning
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Failed to generate summary suggestion:', error);
-        }
-      }
-      
-      // Generate suggestions for skills using GPT (proposed_skills + adds/removes)
-      try {
-        const response = await fetch('/api/jobs/resume/patches', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            job_id: job.id,
-            user_profile_id: userProfileId,
-            target: { section: 'skills', target_id: 'all_skills', text: JSON.stringify(resumeData.skills || {}) },
-            ats_keywords: atsKeywords,
-            must_haves: mustHaves
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.patch?.proposed_skills) {
-            suggestions.push({
-              id: 'skills_full',
-              type: 'skills',
-              section: 'skills',
-              original: resumeData.skills,
-              suggestion: data.patch.proposed_skills,
-              confidence: 92,
-              keywords: data.patch.used_keywords || [],
-              impact: 'high',
-              reason: data.patch.reasoning
-            });
-          }
-        }
-      } catch (e) { console.error('Skills suggestion failed', e); }
-      
-      setAiSuggestions(suggestions);
-      console.log(`🤖 Generated ${suggestions.length} AI suggestions`);
-      
     } catch (error) {
-      console.error('Failed to generate comprehensive suggestions:', error);
-    } finally {
-      setSuggestionsLoading(false);
+      console.error('PDF export error:', error);
+      alert('PDF export failed. Please try again.');
     }
   };
   
-  // Handle suggestion acceptance
-  const handleSuggestionAccept = (suggestionId: string) => {
-    const s = aiSuggestions.find(s => s.id === suggestionId);
-    if (!s || !resumeData) return;
-    const updated = JSON.parse(JSON.stringify(resumeData));
-    if (s.type === 'summary') {
-      updated.professionalSummary = s.suggestion;
-    } else if (s.type === 'bullet' && typeof s.experienceIndex === 'number' && typeof s.bulletIndex === 'number') {
-      const field = s.fieldName || 'achievements';
-      const arr = updated.experience?.[s.experienceIndex]?.[field] || [];
-      if (Array.isArray(arr)) {
-        arr[s.bulletIndex] = s.suggestion;
-        updated.experience[s.experienceIndex][field] = arr;
-      }
-    } else if (s.type === 'skills' && s.suggestion && typeof s.suggestion === 'object') {
-      updated.skills = s.suggestion;
-    }
-    supabaseActions.setResumeData?.(updated);
-    supabaseActions.saveNow?.();
-    setAiSuggestions(prev => prev.filter(x => x.id !== suggestionId));
-  };
-  
-  // Handle suggestion rejection
-  const handleSuggestionReject = (suggestionId: string) => {
-    const suggestion = aiSuggestions.find(s => s.id === suggestionId);
-    if (suggestion) {
-      console.log('❌ Rejected suggestion:', suggestion.original);
-      // Remove from suggestions list
-      setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-    }
-  };
-  
-  // Don't render until resume is loaded
-  if (isLoadingResume) {
-    return (
-      <div className="flex items-center justify-center min-h-[600px]">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-600">Loading your resume...</p>
-        </div>
-      </div>
-    );
-  }
-  
+  // Check if we have resume data
   if (!resumeData) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
@@ -1465,83 +1258,76 @@ function ResumeStudioTab({
       </div>
     );
   }
+
+  console.log('🎯 RESUME STUDIO RENDER DECISION:');
+  console.log('  - ENABLE_TAILORING_UNIFIED:', ENABLE_TAILORING_UNIFIED);
+  console.log('  - showEditor:', showEditor);
+  console.log('  - Should show preview:', ENABLE_TAILORING_UNIFIED && !showEditor);
   
   return (
     <div>
-      {/* Revolutionary AI-Powered Resume Editor with Inline Suggestions */}
-      <div className="space-y-6">
-        {/* AI Suggestions Control Bar */}
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-xl border border-purple-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
-                <Sparkles className="w-5 h-5 text-white" />
+      {ENABLE_TAILORING_UNIFIED && showEditor ? (
+        // Single Resume Studio editor when user clicks "Open in Editor"
+        <div className="space-y-6">
+          {/* Header with back button */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleBackToPreview}
+                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-blue-600" />
+                </button>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Resume Studio</h3>
+                  <p className="text-sm text-gray-600">
+                    Editing tailored version for {job.title}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">AI Tailoring Engine</h3>
-                <p className="text-sm text-gray-600">
-                  {aiSuggestions.length > 0 
-                    ? `${aiSuggestions.length} suggestions ready` 
-                    : 'Generate AI-powered suggestions to tailor your resume'}
-                </p>
-              </div>
+
+              {/* Save button rendered inside nested editor provider below */}
             </div>
-            <button
-              onClick={() => generateComprehensiveSuggestions(resumeData)}
-              disabled={!resumeData || suggestionsLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {suggestionsLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4" />
-                  {aiSuggestions.length > 0 ? 'Refresh Suggestions' : 'Generate Suggestions'}
-                </>
-              )}
-            </button>
           </div>
-          {aiSuggestions.length > 0 && (
-            <div className="mt-3 flex items-center gap-4 text-sm">
-              <span className="text-green-600 flex items-center gap-1">
-                <CheckCircle className="w-4 h-4" />
-                {aiSuggestions.filter(s => s.type === 'experience').length} Experience
-              </span>
-              <span className="text-blue-600 flex items-center gap-1">
-                <Target className="w-4 h-4" />
-                {aiSuggestions.filter(s => s.type === 'summary').length} Summary
-              </span>
-              <span className="text-purple-600 flex items-center gap-1">
-                <Star className="w-4 h-4" />
-                {aiSuggestions.filter(s => s.type === 'skills').length} Skills
-              </span>
-            </div>
+
+          {/* The Single Resume Studio Editor wrapped to avoid baseline autosave */}
+          {activeVariantId ? (
+            <SupabaseResumeProvider initialData={tailoredResumeData} autoSaveInterval={0}>
+              <SaveVariantButton variantId={activeVariantId} />
+              <PerfectStudio />
+            </SupabaseResumeProvider>
+          ) : (
+            <PerfectStudio />
           )}
         </div>
-
-        <TailorPerfectStudio
+      ) : ENABLE_TAILORING_UNIFIED ? (
+        // Preview-first tailoring experience with real templates
+        <TailoredResumePreview
           jobData={job}
+          baseResumeData={resumeData}
+          baseResumeId={resumeId || ''}
           strategy={strategy || studentStrategy}
-          resumeData={resumeData}
-          patches={patches}
-          onPatchesChange={onPatchesChange}
-          aiSuggestions={aiSuggestions}
-          onSuggestionAccept={handleSuggestionAccept}
-          onSuggestionReject={handleSuggestionReject}
-          onResumeDataLoaded={(data) => {
-            // Resume data is managed by SupabaseResumeContext, no need to set it locally
-            
-            // Auto-generate suggestions when resume loads
-            if (data && aiSuggestions.length === 0 && !suggestionsLoading) {
-              setTimeout(() => generateComprehensiveSuggestions(data), 1000);
-            }
-          }}
-          suggestionsLoading={suggestionsLoading}
+          onOpenInEditor={handleOpenInEditor}
+          onExportPDF={handleExportPDF}
+          className="space-y-6"
         />
-      </div>
+      ) : (
+        // Feature flag disabled: fall back to classic editor only
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Resume Studio</h3>
+                  <p className="text-sm text-gray-600">Editing your baseline resume</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <PerfectStudio />
+        </div>
+      )}
     </div>
   );
 }
@@ -2065,5 +1851,48 @@ export default function TailorApplicationPageWrapper() {
         </EditModeProvider>
       </SupabaseResumeProvider>
     </RequireAuth>
+  );
+}
+
+function SaveVariantButton({ variantId }: { variantId: string }) {
+  const { resumeData: editorData } = useSupabaseResumeContext();
+  const prevRef = React.useRef<string>('');
+  // Lightweight autosave loop for variant only
+  React.useEffect(() => {
+    const tick = async () => {
+      try {
+        const json = JSON.stringify(editorData);
+        if (json !== prevRef.current) {
+          const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
+          await resumeVariantService.updateVariant(variantId, editorData);
+          prevRef.current = json;
+        }
+      } catch (e) {
+        // Log once per failure path only
+        console.warn('Variant autosave failed (non-blocking).');
+      }
+    };
+    const id = setInterval(tick, 2000);
+    return () => clearInterval(id);
+  }, [variantId, editorData]);
+
+  return (
+    <div className="flex items-center justify-end pb-2">
+      <button
+        onClick={async () => {
+          try {
+            const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
+            await resumeVariantService.updateVariant(variantId, editorData);
+          } catch (e) {
+            console.error('Failed to save tailored variant:', e);
+            alert('Failed to save tailored variant');
+          }
+        }}
+        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+        title="Save changes to tailored variant (does not modify your baseline resume)"
+      >
+        Save Tailored Variant
+      </button>
+    </div>
   );
 }

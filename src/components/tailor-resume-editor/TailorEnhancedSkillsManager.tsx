@@ -235,8 +235,14 @@ export function TailorEnhancedSkillsManager({
     
     try {
       // Get user profile data for intelligent organization
+      const { data: s } = await supabase.auth.getSession()
+      const token = s.session?.access_token
+      if (!token) {
+        console.warn('🔒 TailorSkills: Skipping /api/profile/latest — no auth token')
+      }
       const profileResponse = await fetch('/api/profile/latest', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
       })
       
       let profileData = null
@@ -388,8 +394,11 @@ export function TailorEnhancedSkillsManager({
       console.log(`🎯 TailorSkills: Generating GPT suggestions for ${categoryKey}...`)
       
       // Get user profile data for context
+      const { data: s } = await supabase.auth.getSession()
+      const token = s.session?.access_token
       const profileResponse = await fetch('/api/profile/latest', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
       })
       
       let profileData = null
