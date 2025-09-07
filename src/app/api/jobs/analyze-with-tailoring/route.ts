@@ -1,4 +1,5 @@
 import '@/lib/polyfills/url-canparse';
+export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { llmService } from '@/lib/services/llmService';
@@ -245,27 +246,46 @@ export async function POST(request: NextRequest) {
     // 7. PREPARE LLM CALL
     logContext.stage = 'llm_preparation';
     
+    // Trim input context deterministically to avoid token overruns without changing semantics
+    const trimText = (s: any, max = 300) => typeof s === 'string' ? (s.length > max ? s.slice(0, max) + '…' : s) : s;
+    const trimArray = (arr: any[] | null | undefined, max = 8, maxItemLen = 300) =>
+      (Array.isArray(arr) ? arr.slice(0, max).map(v => trimText(v, maxItemLen)) : []);
+
+    const trimmedJob = {
+      title: trimText(jobData.title, 140),
+      company: trimText(((jobData as any).companies?.name || jobData.company_name) || '', 140),
+      description: trimText(jobData.description, 1200),
+      responsibilities: trimArray(jobData.responsibilities_original, 10, 240),
+      requirements: trimArray(jobData.skills_original, 12, 120),
+      who_looking_for: trimArray((jobData as any).who_we_are_looking_for_original, 8, 200),
+      location: trimText(jobData.city, 80),
+      work_mode: jobData.work_mode,
+      is_werkstudent: !!(jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent'))
+    };
+
+    const trimmedExperience = Array.isArray(baseResume.experience) ? baseResume.experience.slice(0, 4).map((e: any) => ({
+      company: trimText(e.company, 140),
+      position: trimText(e.position, 140),
+      duration: trimText(e.duration, 80),
+      achievements: trimArray(e.achievements || e.highlights || (e.description ? String(e.description).split('\n') : []), 5, 220)
+    })) : [];
+
     const analysisContext = {
-      job: {
-        title: jobData.title,
-        company: (jobData as any).companies?.name || jobData.company_name,
-        description: jobData.description,
-        responsibilities: jobData.responsibilities_original || [],
-        requirements: jobData.skills_original || [],
-        who_looking_for: (jobData as any).who_we_are_looking_for_original || [],
-        location: jobData.city,
-        work_mode: jobData.work_mode,
-        is_werkstudent: jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent')
-      },
+      job: trimmedJob,
       resume: {
-        personalInfo: baseResume.personal_info,
-        professionalTitle: baseResume.professional_title,
-        professionalSummary: baseResume.professional_summary,
+        personalInfo: {
+          name: trimText(baseResume.personal_info?.name, 140),
+          email: baseResume.personal_info?.email,
+          phone: baseResume.personal_info?.phone,
+          location: trimText(baseResume.personal_info?.location, 140)
+        },
+        professionalTitle: trimText(baseResume.professional_title, 140),
+        professionalSummary: trimText(baseResume.professional_summary, 1000),
         skills: baseResume.skills || {},
-        experience: baseResume.experience || [],
-        education: baseResume.education || [],
-        projects: baseResume.projects || [],
-        certifications: baseResume.certifications || [],
+        experience: trimmedExperience,
+        education: Array.isArray(baseResume.education) ? baseResume.education.slice(0, 3) : [],
+        projects: Array.isArray(baseResume.projects) ? baseResume.projects.slice(0, 3) : [],
+        certifications: Array.isArray(baseResume.certifications) ? baseResume.certifications.slice(0, 5) : [],
         languages: (baseResume as any).languages || []
       }
     };
@@ -337,12 +357,53 @@ OUTPUT FORMAT (JSON):
     logContext.stage = 'llm_call';
     
     try {
-      const aiResponse = await llmService.createJsonCompletion({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { 
-            role: 'user', 
-            content: `Analyze this job and resume. Return your response in valid JSON format.
+      // Use schema-validated JSON mode to prevent malformed outputs
+      const schema: any = {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          strategy: { type: 'object', additionalProperties: true },
+          tailored_resume: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              personalInfo: { type: 'object', additionalProperties: true },
+              professionalTitle: { type: 'string' },
+              professionalSummary: { type: 'string' },
+              skills: { type: 'object' },
+              experience: { type: 'array' },
+              education: { type: 'array' },
+              projects: { type: 'array' },
+              certifications: { type: 'array' },
+              languages: { type: 'array' },
+              customSections: { type: 'array' }
+            }
+          },
+          atomic_suggestions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom_sections','custom'] },
+                suggestion_type: { enum: ['text','bullet','skill_addition','skill_removal','reorder','language_addition'] },
+                target_id: { type: ['string','null'] },
+                original_content: { type: 'string' },
+                suggested_content: { type: 'string' },
+                rationale: { type: 'string' },
+                ats_relevance: { type: ['string','null'] },
+                keywords: { type: 'array', items: { type: 'string' } },
+                confidence: { type: 'number' },
+                impact: { enum: ['high','medium','low'] },
+              },
+              required: ['section','suggestion_type','original_content','suggested_content','confidence']
+            }
+          }
+        },
+        required: ['strategy','tailored_resume','atomic_suggestions']
+      };
+
+      const userPrompt = `Analyze this job and resume. Return your response in valid JSON format.
 
 JOB DATA:
 ${JSON.stringify(analysisContext.job, null, 2)}
@@ -358,16 +419,32 @@ REMEMBER:
 - Relevance first: Only suggest changes that materially improve job match
 - User strengths up front: Prioritize what they're already strong at that the role values
 - Output must be valid JSON matching the schema above
-- Response format: JSON object with strategy, tailored_resume, and atomic_suggestions keys`
-          }
+- Response format: JSON object with strategy, tailored_resume, and atomic_suggestions keys`;
+
+      const aiResponse = await llmService.createJsonCompletion({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
         model: 'gpt-4o-mini',
         temperature: 0.3,
-        // Align with Strategy route configuration for stability
         max_tokens: 1000
       });
-      
-      const analysisData = JSON.parse(aiResponse.choices?.[0]?.message?.content || '{}');
+
+      // Strict JSON parsing with minimal cleanup in case the model includes extra text
+      const raw = aiResponse.choices?.[0]?.message?.content || '{}';
+      let analysisData: any;
+      try {
+        analysisData = JSON.parse(raw);
+      } catch (e) {
+        const start = raw.indexOf('{');
+        const end = raw.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+          analysisData = JSON.parse(raw.slice(start, end + 1));
+        } else {
+          throw e;
+        }
+      }
       
       // 9. PERSIST SUGGESTIONS (atomic replace with auth client)
       logContext.stage = 'persist_suggestions';
@@ -508,13 +585,19 @@ REMEMBER:
         cached: false
       });
       
-    } catch (aiError) {
+    } catch (aiError: any) {
+      // Log upstream details for operator debugging (dev only)
+      const upstream = {
+        status: aiError?.status || aiError?.code || null,
+        message: aiError?.message || null,
+        type: aiError?.name || null
+      };
       console.error("UNIFIED_ANALYSIS_ERROR", {
         ...logContext,
         stage: 'llm_call',
         code: 'upstream_failed',
         message: 'LLM service failed',
-        error: aiError
+        error: upstream
       });
       
       // Return partial success with variant (502 but with fallback data)
