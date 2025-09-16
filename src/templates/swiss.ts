@@ -306,8 +306,8 @@ export function generateSwissResumeHTML(data: any): string {
     <div class="resume-container">
         <aside class="sidebar">
             <header>
-                <h1 class="name">${personalInfo.name || ''}</h1>
-                <div class="title">${professionalTitle || 'Professional'}</div>
+                <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
+                <div class="title" data-section="title">${professionalTitle || 'Professional'}</div>
                 ${personalInfo.customHeader ? `<div style="font-size: 8px; color: var(--text-secondary); margin-top: 2mm; font-style: italic;">${personalInfo.customHeader}</div>` : ''}
             </header>
             
@@ -321,23 +321,23 @@ export function generateSwissResumeHTML(data: any): string {
             </section>
             
             ${Object.keys(skills).length > 0 ? `
-            <section>
+            <section data-section="skills">
                 <h2 class="section-header">Skills</h2>
                 ${Object.entries(skills).map(([category, skillList]) => `
-                    <div class="skills-category">
+                    <div class="skills-category" data-category="${category}">
                         <div class="skills-category-title">${category}</div>
-                        <div>${skillList.map(skill => {
+                        <div>${skillList.map((skill, i) => {
                             // Handle both string skills and skill objects with proficiency
                             if (typeof skill === 'string') {
-                                return `<span class="skill-chip">${skill}</span>`;
+                                return `<span class="skill-chip" data-section="skills" data-category="${category}" data-index="${i}">${skill}</span>`;
                             } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
                                 // Show proficiency as text
                                 const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' : 
                                                  skill.proficiency === 'Advanced' ? 'ADV' : 
                                                  skill.proficiency === 'Intermediate' ? 'INT' : 'BEG';
-                                return `<span class="skill-chip with-proficiency">${skill.skill} <span class="skill-level">${levelAbbr}</span></span>`;
+                                return `<span class="skill-chip with-proficiency" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill} <span class="skill-level">${levelAbbr}</span></span>`;
                             } else if (skill.skill) {
-                                return `<span class="skill-chip">${skill.skill}</span>`;
+                                return `<span class="skill-chip" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill}</span>`;
                             }
                             return '';
                         }).join('')}</div>
@@ -369,13 +369,32 @@ export function generateSwissResumeHTML(data: any): string {
                 `).join('')}
             </section>
             ` : ''}
+            
+            ${customSections && customSections.length > 0 ? customSections.map(section => `
+            <section>
+                <h2 class="section-header">${section.title}</h2>
+                ${section.items.map(item => `
+                    <div style="margin-bottom: 4mm;">
+                        <div style="font-size: 10px; font-weight: 600; color: var(--text-primary);">${item.title || ''}</div>
+                        ${item.subtitle ? `<div style="font-size: 9px; color: var(--text-secondary); margin-top: 1mm;">${item.subtitle}</div>` : ''}
+                        ${item.date ? `<div style="font-size: 8px; color: var(--primary-color); margin-top: 1mm;">${item.date}</div>` : ''}
+                        ${item.description ? `<div style="font-size: 9px; color: var(--text-primary); margin-top: 2mm; line-height: 1.4;">${item.description}</div>` : ''}
+                        ${item.details && item.details.length > 0 ? `
+                            <div style="font-size: 9px; color: var(--text-primary); margin-top: 2mm;">
+                                ${item.details.map(detail => `• ${detail}`).join('<br>')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </section>
+            `).join('') : ''}
         </aside>
         
         <div class="swiss-gutter"></div>
         
         <main class="main-content">
             ${enableProfessionalSummary && professionalSummary ? `
-            <section class="summary-section">
+            <section class="summary-section" data-section="summary">
                 <div class="summary-text">${professionalSummary}</div>
             </section>
             ` : ''}
@@ -383,8 +402,8 @@ export function generateSwissResumeHTML(data: any): string {
             ${experience.length > 0 ? `
             <section>
                 <h2 class="section-header">Experience</h2>
-                ${experience.map(job => `
-                    <article class="experience-item">
+                ${experience.map((job, jIndex) => `
+                    <article class="experience-item" data-section="experience" data-exp-index="${jIndex}">
                         <div class="job-header">
                             <div>
                                 <h3 class="job-title">${job.position}</h3>
@@ -394,7 +413,7 @@ export function generateSwissResumeHTML(data: any): string {
                         </div>
                         ${job.achievements && job.achievements.length > 0 ? `
                             <ul class="achievements">
-                                ${job.achievements.map(achievement => `<li>${achievement}</li>`).join('')}
+                                ${job.achievements.map((achievement, aIndex) => `<li data-section="experience" data-path="experience[${jIndex}].achievements[${aIndex}]">${achievement}</li>`).join('')}
                             </ul>
                         ` : ''}
                     </article>
@@ -403,17 +422,17 @@ export function generateSwissResumeHTML(data: any): string {
             ` : ''}
 
             ${projects.length > 0 ? `
-            <section>
+            <section data-section="projects">
                 <h2 class="section-header">Projects</h2>
-                ${projects.map(project => `
-                    <article class="project-item">
+                ${projects.map((project, pIndex) => `
+                    <article class="project-item" data-section="projects" data-proj-index="${pIndex}">
                         <div class="project-header">
                             <h3 class="project-title">${project.name}</h3>
                             ${project.date ? `<span class="project-date">${project.date}</span>` : ''}
                         </div>
-                        <p class="project-description">${project.description}</p>
+                        <p class="project-description" data-path="projects[${pIndex}].description">${project.description}</p>
                         ${project.technologies && project.technologies.length > 0 ? `
-                            <div>${project.technologies.map(tech => `<span class="skill-chip">${tech}</span>`).join('')}</div>
+                            <div>${project.technologies.map((tech, tIndex) => `<span class="skill-chip" data-section="skills" data-category="Technologies" data-index="${tIndex}">${tech}</span>`).join('')}</div>
                         ` : ''}
                     </article>
                 `).join('')}
@@ -421,10 +440,10 @@ export function generateSwissResumeHTML(data: any): string {
             ` : ''}
 
             ${education.length > 0 ? `
-            <section class="education-section">
+            <section class="education-section" data-section="education">
                 <h2 class="section-header">Education</h2>
-                ${education.map(edu => `
-                    <article class="experience-item">
+                ${education.map((edu, eIndex) => `
+                    <article class="experience-item" data-section="education" data-edu-index="${eIndex}">
                         <div class="job-header">
                             <div>
                                 <h3 class="job-title" style="font-size: 11px;">${edu.degree}</h3>
@@ -438,30 +457,6 @@ export function generateSwissResumeHTML(data: any): string {
             </section>
             ` : ''}
 
-            ${customSections && customSections.length > 0 ? `
-                ${customSections.map(section => `
-                <section>
-                    <h2 class="section-header">${section.title}</h2>
-                    <div style="margin-bottom: 6mm;">
-                        ${section.items.map(item => `
-                            <div style="margin-bottom: 4mm;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 2mm;">
-                                    <h4 style="font-size: 10px; font-weight: 600;">${item.field1 || item.title || ''}</h4>
-                                    ${item.field3 || item.date ? `<span style="font-size: 8px; color: var(--primary-color);">${item.field3 || item.date || ''}</span>` : ''}
-                                </div>
-                                ${item.field2 || item.subtitle ? `<div style="font-size: 9px; color: var(--text-secondary); margin-bottom: 2mm;">${item.field2 || item.subtitle || ''}</div>` : ''}
-                                ${item.field4 || item.description ? `<p style="font-size: 9px; line-height: 1.5; margin-bottom: 2mm;">${item.field4 || item.description || ''}</p>` : ''}
-                                ${item.details && item.details.length > 0 ? `
-                                    <ul class="achievements">
-                                        ${item.details.map(detail => `<li>${detail}</li>`).join('')}
-                                    </ul>
-                                ` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('')}
-            </section>
-            ` : ''}
         </main>
     </div>
 </body>

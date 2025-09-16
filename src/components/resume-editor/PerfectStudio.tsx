@@ -68,6 +68,21 @@ const CUSTOM_SECTION_TEMPLATES = {
     fields: ['Organization Name', 'Membership Type', 'Since', 'Benefits/Activities'],
     color: 'from-purple-500 to-violet-500'
   },
+  'Leadership Experience': {
+    icon: <Users className="w-4 h-4" />,
+    fields: ['Position', 'Organization', 'Duration', 'Achievement'],
+    color: 'from-indigo-500 to-purple-500'
+  },
+  'Community Involvement': {
+    icon: <Heart className="w-4 h-4" />,
+    fields: ['Role', 'Organization', 'Duration', 'Contribution'],
+    color: 'from-green-500 to-teal-500'
+  },
+  'Research Experience': {
+    icon: <BookOpen className="w-4 h-4" />,
+    fields: ['Title', 'Institution', 'Duration', 'Description'],
+    color: 'from-purple-500 to-pink-500'
+  },
   'Speaking Engagements': {
     icon: <Megaphone className="w-4 h-4" />,
     fields: ['Event/Conference', 'Topic', 'Date', 'Audience Size'],
@@ -1239,7 +1254,11 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
             </div>
 
             {/* Render Custom Sections */}
-            {localData.customSections?.map((section, sectionIndex) => {
+            {localData.customSections?.filter(section => {
+              // Filter out Academic Projects - they should be in the main projects section
+              const lowerTitle = section.title?.toLowerCase() || '';
+              return !(lowerTitle.includes('academic') && lowerTitle.includes('project'));
+            }).map((section, sectionIndex) => {
               // Smart template matching for extracted sections
               const findMatchingTemplate = (sectionTitle: string) => {
                 // Direct match first
@@ -1248,26 +1267,49 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
                 }
                 
                 // Fuzzy matching for common variations
-                if (sectionTitle.includes('Volunteer') || sectionTitle.includes('Leadership')) {
+                const lowerTitle = sectionTitle.toLowerCase();
+                
+                if (lowerTitle.includes('volunteer')) {
                   return CUSTOM_SECTION_TEMPLATES['Volunteer Experience'];
                 }
-                if (sectionTitle.includes('Award') || sectionTitle.includes('Recognition')) {
+                if (lowerTitle.includes('leadership')) {
+                  return CUSTOM_SECTION_TEMPLATES['Leadership Experience'];
+                }
+                if (lowerTitle.includes('award') || lowerTitle.includes('honor') || lowerTitle.includes('recognition')) {
                   return CUSTOM_SECTION_TEMPLATES['Awards & Recognition'];
                 }
-                if (sectionTitle.includes('Publication')) {
+                if (lowerTitle.includes('publication')) {
                   return CUSTOM_SECTION_TEMPLATES['Publications'];
                 }
-                if (sectionTitle.includes('Hobbies') || sectionTitle.includes('Interest')) {
+                if (lowerTitle.includes('community')) {
+                  return CUSTOM_SECTION_TEMPLATES['Community Involvement'];
+                }
+                // Skip Academic Projects - they should be in the main projects section
+                if (lowerTitle.includes('academic') && lowerTitle.includes('project')) {
+                  return null; // Don't create a custom section for academic projects
+                }
+                if (lowerTitle.includes('research')) {
+                  return CUSTOM_SECTION_TEMPLATES['Research Experience'];
+                }
+                if (lowerTitle.includes('member') || lowerTitle.includes('association')) {
+                  return CUSTOM_SECTION_TEMPLATES['Professional Memberships'];
+                }
+                if (lowerTitle.includes('hobbies') || lowerTitle.includes('interest')) {
                   return CUSTOM_SECTION_TEMPLATES['Hobbies & Interests'];
                 }
                 
-                return null;
+                // Default template for unrecognized sections
+                return {
+                  icon: <Star className="w-4 h-4" />,
+                  fields: ['Title/Name', 'Organization/Context', 'Date/Duration', 'Description/Details'],
+                  color: 'from-gray-500 to-gray-600'
+                };
               };
               
               const template = findMatchingTemplate(section.title);
               return (
                 <SectionCard
-                  key={section.id}
+                  key={section.id || `custom-section-${sectionIndex}-${section.title}`}
                   title={section.title}
                   icon={template?.icon || <Star className="w-4 h-4" />}
                   badge={section.items?.length || 0}

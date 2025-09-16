@@ -224,6 +224,8 @@ export async function POST(request: NextRequest) {
         skills: profileData.skills || [],
         tools: profileData.tools || [],
         languages: profileData.language_proficiencies || profileData.preferred_languages || [],
+        certifications: profileData.certifications || [],
+        experience: profileData.experience || [],
         availability: profileData.weekly_availability || null,
         start_date: profileData.earliest_start_date || null,
         duration: profileData.preferred_duration || null
@@ -262,17 +264,21 @@ export async function POST(request: NextRequest) {
 - Give targeted learning recommendations for gaps
 
 🎓 STUDENT PROFILE MAPPING:
-- Use ONLY the student's actual education, projects, and experience
-- Reference SPECIFIC coursework, project names, technologies used
-- Connect academic work to professional requirements
-- Highlight relevant internships, part-time work, or volunteer experience
-- Show progression and growth in their academic journey
+- Use ONLY the student's actual education, projects, certifications, and experience
+- CRITICAL: Check certifications FIRST - they often directly match job requirements (e.g., "AI Business Development" certificate for AI BD role)
+- Reference SPECIFIC coursework, project names, technologies used, and certification titles
+- Connect academic work and certifications to professional requirements
+- Highlight ALL relevant experience including internships, part-time work, sales/outreach roles
+- Show progression and growth in their academic and professional journey
 
 💡 TASK-BY-TASK ANALYSIS (RICH OUTPUT):
 For each job responsibility, provide:
 1) task_explainer: a crisp 1–2 sentence explanation of what the task actually entails in this role/company (no fluff, no generic definitions)
-2) compatibility_score: realistic 0–100, based ONLY on resume/portfolio evidence
-3) user_alignment: a specific, organic sentence tying user’s best relevant project/experience to this task (reference the exact item name). If nothing truly relevant exists, say so clearly (e.g., "No direct WordPress experience")
+2) compatibility_score: realistic 0–100, based on:
+   - Certifications (weight: 40% if directly relevant)
+   - Experience (weight: 35% for relevant roles/tasks)
+   - Projects/Skills (weight: 25% for demonstrated abilities)
+3) user_alignment: a specific, organic sentence tying user's best relevant certification/experience/project to this task (reference the exact item name). If nothing truly relevant exists, say so clearly (e.g., "No direct WordPress experience")
 4) learning_paths: concrete actions grouped as { quick_wins, certifications, deepening } with DIRECT LINKS
    - Shape for each list: [{ label: string, url: string }]
    - Provide working URLs to OFFICIAL or reputable sources: vendor docs, vendor certification pages, Coursera/edX/Udacity/Google/AWS/Azure/Meta, or a single high‑quality YouTube crash course.
@@ -401,46 +407,51 @@ ${JSON.stringify(compactContext.student)}
 
 Return your analysis in valid JSON format matching the schema provided. Make sure EACH job responsibility above gets analyzed in the job_task_analysis array.` }
         ],
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // Using GPT-4o-mini for better analysis
         temperature: 0.3,
-        max_tokens: 4500
+        max_tokens: 8000  // Increased to ensure complete response with all task details
       });
       
       const rawContent = aiResponse.choices?.[0]?.message?.content || '{}';
       console.log('🎓 STUDENT STRATEGY: Raw AI response length:', rawContent.length);
       
-      // Check if response was truncated and try to fix
+      // Clean and validate JSON response
       let cleanedContent = rawContent.trim();
+      
+      // If response seems truncated, try to salvage what we can
       if (!cleanedContent.endsWith('}')) {
-        console.log('🎓 STUDENT STRATEGY: Detected truncated JSON, attempting to fix');
+        console.log('🎓 STUDENT STRATEGY: Detected truncated JSON, attempting recovery');
         
-        // Handle unterminated strings by finding the last complete field
-        const lastQuoteIndex = cleanedContent.lastIndexOf('"');
-        if (lastQuoteIndex > 0) {
-          // Check if we're in the middle of a string value
-          const beforeQuote = cleanedContent.substring(0, lastQuoteIndex);
-          const afterQuote = cleanedContent.substring(lastQuoteIndex + 1);
-          
-          // If there's content after the last quote that looks like an incomplete string
-          if (afterQuote && !afterQuote.includes('"') && !afterQuote.trim().endsWith('}')) {
-            // Truncate at the last complete field
-            cleanedContent = beforeQuote + '"';
+        // Find the last complete task object
+        const lastCompleteTask = cleanedContent.lastIndexOf('},{');
+        if (lastCompleteTask > 0) {
+          // Truncate to last complete task and close the array
+          cleanedContent = cleanedContent.substring(0, lastCompleteTask + 1);
+        }
+        
+        // Close any unterminated strings
+        const quoteCount = (cleanedContent.match(/"/g) || []).length;
+        if (quoteCount % 2 !== 0) {
+          cleanedContent += '"';
+        }
+        
+        // Ensure arrays are closed
+        if (cleanedContent.includes('"job_task_analysis":[') && !cleanedContent.includes('"job_task_analysis":[]')) {
+          if (!cleanedContent.endsWith(']')) {
+            cleanedContent += ']';
           }
         }
         
-        // Count and add missing closing braces
+        // Count and balance brackets/braces
         const openBraces = (cleanedContent.match(/\{/g) || []).length;
         const closeBraces = (cleanedContent.match(/\}/g) || []).length;
         const openBrackets = (cleanedContent.match(/\[/g) || []).length;
         const closeBrackets = (cleanedContent.match(/\]/g) || []).length;
         
-        const missingBrackets = openBrackets - closeBrackets;
-        const missingBraces = openBraces - closeBraces;
+        cleanedContent += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
+        cleanedContent += '}'.repeat(Math.max(0, openBraces - closeBraces));
         
-        // Add missing closing brackets and braces
-        cleanedContent += ']'.repeat(Math.max(0, missingBrackets));
-        cleanedContent += '}'.repeat(Math.max(0, missingBraces));
-        console.log('🎓 STUDENT STRATEGY: Added', missingBrackets, 'closing brackets and', missingBraces, 'closing braces');
+        console.log('🎓 STUDENT STRATEGY: Recovery complete, final length:', cleanedContent.length);
       }
       
       let strategyData;

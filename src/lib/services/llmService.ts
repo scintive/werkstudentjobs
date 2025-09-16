@@ -292,10 +292,10 @@ class LLMService {
 
   /**
    * Create JSON response with schema validation using Chat Completions API
-   * Supports both GPT-5 models and fallback models with structured outputs
+   * Supports OpenAI models with structured outputs and fallback
    */
   async createJsonResponse<T>({
-    model = 'gpt-5-mini',
+    model = 'gpt-4o-mini',
     system,
     user,
     schema,
@@ -320,12 +320,14 @@ class LLMService {
     // Try cache first
     const cached = await AICacheService.get(model, payload)
     if (cached) {
+      console.log('📦 Using cached response for model:', model);
       return cached as T
     }
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`🚀 Using chat.completions API with structured outputs: ${model}`);
+        console.log(`🚀 Using chat.completions API with structured outputs: ${model} (attempt ${attempt}/${retries})`);
+        console.log('📊 Request details - maxTokens:', maxTokens, 'temperature:', temperature);
         
         const response = await client.chat.completions.create({
           model,
@@ -337,30 +339,57 @@ class LLMService {
             type: 'json_schema',
             json_schema: { name: 'Result', schema, strict: true },
           },
-          // GPT-5 quirk: use max_completion_tokens and no custom temperature; other models use max_tokens
-          ...(model.startsWith('gpt-5')
+          // Standard OpenAI models configuration
+          ...(model === 'gpt-4o'
             ? {
-                max_completion_tokens: maxTokens,
-                // GPT-5 models only support default temperature (1.0)
+                max_tokens: maxTokens,
+                temperature
               }
             : { max_tokens: maxTokens, temperature }),
         });
 
         const content = response.choices?.[0]?.message?.content || '{}';
-        const parsed = JSON.parse(content) as T
+        
+        if (!content || content.trim() === '{}') {
+          console.error('🔴 createJsonResponse got empty content from API');
+          throw new Error('API returned empty JSON content');
+        }
+        
+        console.log('✅ Got valid response from API, content length:', content.length);
+        
+        // Attempt JSON parsing with repair fallback
+        let parsed: T;
+        try {
+          parsed = JSON.parse(content) as T;
+        } catch (parseError) {
+          console.log('🔧 JSON parse failed, attempting repair...');
+          try {
+            const repairedData = await this.repairMalformedJson(content, 'JOB_EXTRACTION');
+            parsed = repairedData as T;
+            console.log('✅ JSON repair successful');
+          } catch (repairError) {
+            console.error('🔴 JSON repair also failed:', repairError);
+            throw parseError; // Throw original parse error
+          }
+        }
+        
         // Save to cache
         await AICacheService.set(model, payload, parsed)
+        console.log('💾 Saved response to cache');
         return parsed
       } catch (e) {
         lastErr = e;
-        console.warn(`Attempt ${attempt}/${retries} failed:`, (e as Error).message);
+        console.error(`🔴 Attempt ${attempt}/${retries} failed for model ${model}:`, (e as Error).message);
+        console.error('🔴 Full error:', e);
         
         if (attempt < retries) {
           const delay = 250 * attempt + Math.floor(Math.random() * 100);
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
           await new Promise(r => setTimeout(r, delay));
         }
       }
     }
+    console.error('🔴 All attempts exhausted, throwing final error');
     throw lastErr ?? new Error('All attempts failed');
   }
 
@@ -382,10 +411,8 @@ class LLMService {
       allowArray = false
     } = options;
 
-    // Set temperature based on model type - GPT-5 models only support default (1.0)
-    const effectiveTemperature = model?.startsWith('gpt-5') 
-      ? undefined 
-      : (temperature ?? getConfig('OPENAI.DEFAULT_TEMPERATURE'));
+    // Set temperature based on options
+    const effectiveTemperature = temperature ?? getConfig('OPENAI.DEFAULT_TEMPERATURE');
 
     const modelConfig = getModelConfig(model);
     const fallbackModels = getConfig('OPENAI.FALLBACK_MODELS');
@@ -410,15 +437,9 @@ class LLMService {
             model: modelName,
             ...(allowArray ? {} : { response_format: { type: 'json_object' } }),
             messages,
-            // GPT-5 models only support default temperature (1.0)
-            ...(effectiveTemperature !== undefined ? { temperature: effectiveTemperature } : {}),
-            ...(modelName.startsWith('gpt-5') 
-              ? { 
-                  max_completion_tokens: Math.min(max_tokens, modelConfig?.max_tokens || max_tokens),
-                  reasoning_effort: 'minimal' // Turn off most reasoning for faster, cheaper responses
-                }
-              : { max_tokens: Math.min(max_tokens, modelConfig?.max_tokens || max_tokens) }
-            )
+            // Standard OpenAI models configuration
+            temperature: effectiveTemperature,
+            max_tokens: Math.min(max_tokens, modelConfig?.max_tokens || max_tokens)
           });
           
           return response;
@@ -452,7 +473,7 @@ class LLMService {
     try {
       // Use new responses.create API with schema validation
       return await this.createJsonResponse<ExtractedJob>({
-        model: 'gpt-5-mini', // Using gpt-5-mini for job extraction
+        model: 'gpt-4o-mini', // Using gpt-4o-mini for job extraction
         system: systemPrompt,
         user: userPrompt,
         schema: JobExtractionSchema,
@@ -604,7 +625,7 @@ Focus on skills that would be valuable for vector database matching with user pr
       ],
       temperature: 0.2, // Lower temperature for more consistent extraction
       max_tokens: 1500, // Reduced from 2500 to save costs
-      model: 'gpt-5-mini' // Use cost-effective model
+      model: 'gpt-4o-mini' // Use cost-effective model
     });
 
     const content = response.choices?.[0]?.message?.content || '{}';
@@ -737,7 +758,7 @@ Please return the response as a valid JSON object following the schema above.`;
       ],
       temperature: 0.3, // Slightly higher for creative research
       max_tokens: 2500, // More tokens for comprehensive research
-      model: 'gpt-4o-mini' // Use fallback for main extraction, GPT-5 nano for smart research
+      model: 'gpt-4o-mini' // Use gpt-4o-mini for main extraction
     });
 
     const content = response.choices?.[0]?.message?.content || '{}';
@@ -788,7 +809,7 @@ Please return the response as a valid JSON object following the schema above.`;
     try {
       // Use new responses.create API with schema validation
       return await this.createJsonResponse<UserProfile>({
-        model: 'gpt-5-mini', // Using gpt-5-mini for profile extraction
+        model: 'gpt-4o-mini', // Using gpt-4o-mini for profile extraction
         system: systemPrompt,
         user: userPrompt,
         schema: ProfileExtractionSchema,
@@ -800,19 +821,62 @@ Please return the response as a valid JSON object following the schema above.`;
       // Fallback to original method if new API fails
       console.warn('🔄 Responses API failed, falling back to original method:', (error as Error).message);
       
-      const response = await this.createJsonCompletion({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 3500
-      });
+      try {
+        const response = await this.createJsonCompletion({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 3500,
+          model: 'gpt-4o-mini' // Use stable model for fallback
+        });
 
-      const content = response.choices?.[0]?.message?.content || '{}';
-      const parsed = JSON.parse(content);
-      // Note: Cache is not used in fallback mode since we don't have the modelName context
-      return parsed
+        const content = response.choices?.[0]?.message?.content;
+        
+        if (!content || content.trim() === '' || content.trim() === '{}') {
+          console.error('🔴 Profile extraction returned empty content from LLM');
+          throw new Error('LLM returned empty profile content');
+        }
+        
+        console.log('📝 Raw LLM response content length:', content.length);
+        console.log('📝 First 200 chars of response:', content.substring(0, 200));
+        
+        const parsed = JSON.parse(content);
+        
+        // Validate the parsed profile has required fields
+        if (!parsed || typeof parsed !== 'object' || !parsed.personal_details) {
+          console.error('🔴 Parsed profile missing required fields:', parsed);
+          throw new Error('Parsed profile is invalid or missing personal_details');
+        }
+        
+        console.log('✅ Successfully parsed profile in fallback mode');
+        return parsed;
+      } catch (fallbackError) {
+        console.error('🔴 Fallback profile extraction failed:', fallbackError);
+        // Return a minimal valid profile structure to prevent crashes
+        return {
+          personal_details: {
+            name: 'Unknown',
+            email: '',
+            phone: '',
+            linkedin: '',
+            github: '',
+            location: ''
+          },
+          professional_summary: '',
+          experience: [],
+          education: [],
+          skills: {
+            technical: [],
+            tools: [],
+            soft_skills: [],
+            languages: []
+          },
+          projects: [],
+          custom_sections: []
+        } as UserProfile;
+      }
     }
   }
 
@@ -977,7 +1041,7 @@ Return ONLY a JSON array of skill names (no explanations, no other text):
       try {
         // Use new responses.create API with schema validation
         const result = await this.createJsonResponse<{suggestions: string[]}>({
-          model: 'gpt-5-nano', // Using gpt-5-nano for cheap/simple skill suggestions as per ChatGPT
+          model: 'gpt-3.5-turbo', // Using gpt-3.5-turbo for cheap/simple skill suggestions
           system: 'You are a career consultant. Generate skill suggestions for the specified category.',
           user: categoryPrompt,
           schema: CategorySuggestionsSchema,
@@ -1104,7 +1168,7 @@ Return ONLY a JSON array of skill names (no explanations, no other text):
       try {
         // Use new responses.create API with schema validation
         organization = await this.createJsonResponse<any>({
-          model: 'gpt-5-mini', // Using gpt-5-mini for skills organization
+          model: 'gpt-4o-mini', // Using gpt-4o-mini for skills organization
           system: systemPrompt,
           user: userPrompt,
           schema: SkillsOrganizationSchema,
@@ -1491,11 +1555,11 @@ Rules:
       const confidenceResponse = await this.createJsonCompletion({
         messages: [{ role: 'user', content: confidencePrompt }],
         max_tokens: 200,
-        model: 'gpt-5-mini'
+        model: 'gpt-4o-mini'
       });
 
       const confidence = confidenceResponse.confidence || 0.0;
-      const threshold = getModelConfig('gpt-5-mini')?.confidence_threshold || 0.7;
+      const threshold = getModelConfig('gpt-4o-mini')?.confidence_threshold || 0.7;
 
       console.log(`🧠 Confidence: ${confidence}/1.0 (threshold: ${threshold})`);
       console.log(`🧠 Reasoning: ${confidenceResponse.reasoning}`);
@@ -1565,7 +1629,7 @@ Rules:
     return await this.createJsonCompletion({
       messages: [{ role: 'user', content: researchPrompt }],
       max_tokens: 800,
-      model: 'gpt-5-mini'
+      model: 'gpt-4o-mini'
     });
   }
 
@@ -2181,10 +2245,10 @@ Only include information that is explicitly mentioned in the content. Use null f
    * Estimate API cost for different research types
    */
   private estimateAPICost(type: 'internal' | 'web_search'): string {
-    // GPT-5 mini: $0.25/1M input, $2.00/1M output + web search tool costs
+    // GPT-4o-mini: approx costs + web search tool costs
     const costs = {
-      internal: '$0.0015', // ~500 input + 300 output tokens with GPT-5 mini
-      web_search: '$0.0125' // ~1500 input + 3000 output tokens with GPT-5 mini + web search tool fees
+      internal: '$0.0015', // ~500 input + 300 output tokens with GPT-4o-mini
+      web_search: '$0.0125' // ~1500 input + 3000 output tokens with GPT-4o-mini + web search tool fees
     };
     return costs[type];
   }

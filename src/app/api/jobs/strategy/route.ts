@@ -138,7 +138,7 @@ OUTPUT SCHEMA:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(strategyPrompt) }
         ],
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // Using GPT-4o-mini for better analysis
         temperature: 0.3,
         max_tokens: 1000
       });

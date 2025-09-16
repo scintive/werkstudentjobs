@@ -526,8 +526,8 @@ export function generateImpactResumeHTML(data: any): string {
         <div class="hero-header">
             <div class="header-content">
                 <div class="name-section">
-                    <h1 class="name">${personalInfo.name || ''}</h1>
-                    ${professionalTitle ? `<div class="title">${professionalTitle}</div>` : ''}
+                    <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
+                    ${professionalTitle ? `<div class="title" data-section="title">${professionalTitle}</div>` : ''}
                 </div>
                 <div class="contact-grid">
                     ${personalInfo.email ? `
@@ -582,7 +582,7 @@ export function generateImpactResumeHTML(data: any): string {
         <div class="content-grid">
             ${enableProfessionalSummary && professionalSummary ? `
             <!-- Summary - Full Width -->
-            <section class="full-width">
+            <section class="full-width" data-section="summary">
                 <div class="summary-box">
                     <div class="summary-text">${professionalSummary}</div>
                 </div>
@@ -593,7 +593,7 @@ export function generateImpactResumeHTML(data: any): string {
             <div class="left-column">
                 ${experience.length > 0 ? `
                 <!-- Experience Section -->
-                <section class="section experience-section">
+                <section class="section experience-section" data-section="experience">
                     <div class="section-header">
                         <div class="section-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -603,8 +603,8 @@ export function generateImpactResumeHTML(data: any): string {
                         </div>
                         <h2 class="section-title">Experience</h2>
                     </div>
-                    ${experience.map(job => `
-                        <div class="experience-item">
+                    ${experience.map((job, jIndex) => `
+                        <div class="experience-item" data-exp-index="${jIndex}">
                             <div class="job-header">
                                 <div class="job-info">
                                     <div class="job-title">${job.position}</div>
@@ -614,7 +614,7 @@ export function generateImpactResumeHTML(data: any): string {
                             </div>
                             ${job.achievements && job.achievements.length > 0 ? `
                                 <ul class="achievements">
-                                    ${job.achievements.map(achievement => `<li>${achievement}</li>`).join('')}
+                                    ${job.achievements.map((achievement, aIndex) => `<li data-section=\"experience\" data-path=\"experience[${jIndex}].achievements[${aIndex}]\">${achievement}</li>`).join('')}
                                 </ul>
                             ` : ''}
                         </div>
@@ -656,7 +656,7 @@ export function generateImpactResumeHTML(data: any): string {
             <div class="right-column">
                 ${Object.keys(skills).length > 0 ? `
                 <!-- Skills Section -->
-                <section class="section skills-section">
+                <section class="section skills-section" data-section="skills">
                     <div class="section-header">
                         <div class="section-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -667,19 +667,19 @@ export function generateImpactResumeHTML(data: any): string {
                     </div>
                     <div class="skills-grid">
                         ${Object.entries(skills).map(([category, skillList]) => `
-                            <div class="skill-category">
+                            <div class="skill-category" data-category="${category}">
                                 <div class="skill-category-title">${category}</div>
                                 <div class="skill-pills">
-                                    ${skillList.map(skill => {
+                                    ${skillList.map((skill, i) => {
                                         if (typeof skill === 'string') {
-                                            return `<span class="skill-pill">${skill}</span>`;
+                                            return `<span class=\"skill-pill\" data-section=\"skills\" data-category=\"${category}\" data-index=\"${i}\">${skill}</span>`;
                                         } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
                                             const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' : 
                                                              skill.proficiency === 'Advanced' ? 'ADV' : 
                                                              skill.proficiency === 'Intermediate' ? 'INT' : 'BEG';
-                                            return `<span class="skill-pill with-proficiency">${skill.skill} <span class="skill-level">${levelAbbr}</span></span>`;
+                                            return `<span class=\"skill-pill with-proficiency\" data-section=\"skills\" data-category=\"${category}\" data-index=\"${i}\">${skill.skill} <span class=\"skill-level\">${levelAbbr}</span></span>`;
                                         } else if (skill.skill) {
-                                            return `<span class="skill-pill">${skill.skill}</span>`;
+                                            return `<span class=\"skill-pill\" data-section=\"skills\" data-category=\"${category}\" data-index=\"${i}\">${skill.skill}</span>`;
                                         }
                                         return '';
                                     }).join('')}

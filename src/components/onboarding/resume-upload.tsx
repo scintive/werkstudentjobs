@@ -104,13 +104,13 @@ export function ResumeUpload({ onProfileExtracted, onNext, className }: ResumeUp
         <div className="w-full max-w-md space-y-2 text-left bg-muted/30 rounded-lg p-4 mb-6">
           <div className="flex items-center space-x-2">
             <FileText className="w-4 h-4 text-primary" />
-            <span className="font-medium">{extractedProfile.personal_details.name}</span>
+            <span className="font-medium">{extractedProfile.personal_details?.name || 'Unknown'}</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {extractedProfile.experience.length} work experiences • {extractedProfile.education.length} education entries
+            {(extractedProfile.experience || []).length} work experiences • {(extractedProfile.education || []).length} education entries
           </p>
           <p className="text-sm text-muted-foreground">
-            {extractedProfile.skills.technology.length + extractedProfile.skills.soft_skills.length + extractedProfile.skills.design.length} skills identified
+            {((extractedProfile.skills?.technology || []).length + (extractedProfile.skills?.soft_skills || []).length + (extractedProfile.skills?.design || []).length)} skills identified
           </p>
         </div>
       )}
@@ -230,23 +230,23 @@ export function ResumeUpload({ onProfileExtracted, onNext, className }: ResumeUp
                         <FileText className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-lg text-gray-900">{extractedProfile.personal_details.name}</h4>
+                        <h4 className="font-bold text-lg text-gray-900">{extractedProfile.personal_details?.name || 'Unknown'}</h4>
                         <p className="text-sm text-gray-500">Profile Successfully Extracted</p>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="bg-blue-50 rounded-xl p-3">
-                        <div className="text-2xl font-bold text-blue-600">{extractedProfile.experience.length}</div>
+                        <div className="text-2xl font-bold text-blue-600">{(extractedProfile.experience || []).length}</div>
                         <div className="text-xs text-blue-600">Experience</div>
                       </div>
                       <div className="bg-purple-50 rounded-xl p-3">
-                        <div className="text-2xl font-bold text-purple-600">{extractedProfile.education.length}</div>
+                        <div className="text-2xl font-bold text-purple-600">{(extractedProfile.education || []).length}</div>
                         <div className="text-xs text-purple-600">Education</div>
                       </div>
                       <div className="bg-green-50 rounded-xl p-3">
                         <div className="text-2xl font-bold text-green-600">
-                          {extractedProfile.skills.technology.length + extractedProfile.skills.soft_skills.length + extractedProfile.skills.design.length}
+                          {((extractedProfile.skills?.technology || []).length + (extractedProfile.skills?.soft_skills || []).length + (extractedProfile.skills?.design || []).length)}
                         </div>
                         <div className="text-xs text-green-600">Skills</div>
                       </div>

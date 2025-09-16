@@ -111,9 +111,18 @@ export async function POST(request: NextRequest) {
     console.log('API: Generated HTML length:', html.length);
     console.log('API: HTML preview (first 500 chars):', html.substring(0, 500));
 
+    // Defensive sanitize: strip any script tags before returning
+    // Sanitize: strip scripts, inline handlers, and javascript: URLs
+    let sanitizedHtml = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove inline event handlers like onload="..."
+    sanitizedHtml = sanitizedHtml.replace(/\son[a-zA-Z]+\s*=\s*"[^"]*"/g, '')
+    sanitizedHtml = sanitizedHtml.replace(/\son[a-zA-Z]+\s*=\s*'[^']*'/g, '')
+    // Neutralize javascript: URLs
+    sanitizedHtml = sanitizedHtml.replace(/(href|src)\s*=\s*"\s*javascript:[^"]*"/gi, '$1="#"')
+    sanitizedHtml = sanitizedHtml.replace(/(href|src)\s*=\s*'\s*javascript:[^']*'/gi, "$1='#'")
     return NextResponse.json({ 
       success: true,
-      html,
+      html: sanitizedHtml,
       template 
     });
 
@@ -238,13 +247,13 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
     professionalSummary: resumeData.professionalSummary,
     enableProfessionalSummary: resumeData.enableProfessionalSummary !== undefined ? resumeData.enableProfessionalSummary : false,
     skills,
-    experience: resumeData.experience.map(exp => ({
+    experience: (resumeData.experience || []).map(exp => ({
       position: exp.position,
       company: exp.company,
       duration: exp.duration || (exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || ''),
       achievements: exp.achievements || []
     })),
-    education: resumeData.education.map(edu => ({
+    education: (resumeData.education || []).map(edu => ({
       degree: edu.degree || '',
       field_of_study: edu.field_of_study || edu.field || '',
       institution: edu.institution || '',

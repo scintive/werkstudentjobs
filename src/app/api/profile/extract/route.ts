@@ -102,6 +102,18 @@ export async function POST(request: NextRequest) {
     let profile: any;
     try {
       profile = await llmService.extractProfileFromText(extractedText);
+      
+      // Validate that we got a proper profile back
+      if (!profile || typeof profile !== 'object' || Object.keys(profile).length === 0) {
+        console.error('🧠 Profile extraction returned empty or invalid object:', profile);
+        throw new Error('Profile extraction returned empty or invalid data');
+      }
+      
+      // Check for required fields
+      if (!profile.personal_details) {
+        console.error('🧠 Profile missing personal_details:', profile);
+        throw new Error('Profile extraction missing required personal details');
+      }
     } catch (aiErr) {
       console.error('🧠 Profile extraction LLM failed:', aiErr);
       return NextResponse.json({ error: 'Profile extraction failed', details: aiErr instanceof Error ? aiErr.message : 'AI error' }, { status: 500 });

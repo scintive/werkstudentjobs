@@ -77,14 +77,19 @@ function MainApp() {
   React.useEffect(() => {
     const checkExistingProfile = async () => {
       try {
-        // Check if user has any session/email cookie
-        const sessionCookie = document.cookie.split('; ').find(row => row.startsWith('user_session='))
-        const emailCookie = document.cookie.split('; ').find(row => row.startsWith('user_email='))
-        
-        // Check API for actual profile data (not just cookies)
+        // Check if user is authenticated
         const { data: session } = await supabase.auth.getSession()
-        setIsAuthed(!!session.session?.user)
+        const isAuthenticated = !!session.session?.user
+        setIsAuthed(isAuthenticated)
         setCheckedAuth(true)
+        
+        // Redirect to login if not authenticated
+        if (!isAuthenticated) {
+          console.log('User not authenticated, redirecting to login')
+          window.location.href = '/login'
+          return
+        }
+        
         const token = session.session?.access_token
         const response = await fetch('/api/profile/latest', {
           credentials: 'include',
@@ -102,10 +107,18 @@ function MainApp() {
                               Object.keys(result.resumeData.skills || {}).length > 0)
             
             if (hasContent) {
-              // User has a complete profile - redirect to jobs page
-              console.log('Complete profile found, redirecting to jobs')
-              window.location.href = '/jobs'
-              return
+              // Check if user explicitly wants to upload a new resume
+              const urlParams = new URLSearchParams(window.location.search)
+              const forceUpload = urlParams.get('upload') === 'new'
+              
+              if (!forceUpload) {
+                // User has a complete profile - redirect to jobs page
+                console.log('Complete profile found, redirecting to jobs')
+                window.location.href = '/jobs'
+                return
+              } else {
+                console.log('Force upload mode - allowing new resume upload')
+              }
             } else {
               console.log('Profile exists but incomplete, staying on upload page')
             }
@@ -144,30 +157,36 @@ function MainApp() {
     // Only update ResumeContext if we're currently on the upload step
     // This prevents overwriting edits when user re-uploads the same file
     if (currentStep === 'upload') {
+      // Add safety checks for profile structure
+      if (!profile || !profile.personal_details) {
+        console.error('Invalid profile structure:', profile)
+        return
+      }
+      
       // Convert profile to resume data format and update context
       const newResumeData: ResumeData = {
         personalInfo: {
-          name: profile.personal_details.name,
-          email: profile.personal_details.contact.email,
-          phone: profile.personal_details.contact.phone,
-          location: profile.personal_details.contact.address,
-          linkedin: profile.personal_details.contact.linkedin
+          name: profile.personal_details?.name || 'Unknown',
+          email: profile.personal_details?.contact?.email || '',
+          phone: profile.personal_details?.contact?.phone || '',
+          location: profile.personal_details?.contact?.address || '',
+          linkedin: profile.personal_details?.contact?.linkedin || ''
         },
         professionalTitle: profile.professional_title || "Professional",
         professionalSummary: profile.professional_summary || "Detail-oriented professional with extensive experience and proven ability to drive results.",
         skills: {
-          technical: profile.skills.technology,
-          soft_skills: profile.skills.soft_skills,
-          tools: profile.skills.design, // Reusing design as tools for demo
-          languages: profile.languages.map(lang => `${lang.language} (${lang.proficiency})`)
+          technical: profile.skills?.technology || [],
+          soft_skills: profile.skills?.soft_skills || [],
+          tools: profile.skills?.design || [], // Reusing design as tools for demo
+          languages: profile.languages?.map(lang => `${lang.language} (${lang.proficiency})`) || []
         },
-        experience: profile.experience.map(exp => ({
+        experience: (profile.experience || []).map(exp => ({
           company: exp.company,
           position: exp.position,
           duration: exp.duration,
           achievements: exp.responsibilities
         })),
-        education: profile.education.map(edu => ({
+        education: (profile.education || []).map(edu => ({
           degree: edu.degree,
           field_of_study: edu.field_of_study,
           institution: edu.institution,
@@ -175,13 +194,13 @@ function MainApp() {
           duration: edu.duration,
           location: edu.location
         })),
-        projects: profile.projects.map(proj => ({
+        projects: (profile.projects || []).map(proj => ({
           name: proj.title,
           description: proj.description,
           technologies: [],
           date: "2023" // Default date
         })),
-        languages: profile.languages.map((lang: any) => {
+        languages: (profile.languages || []).map((lang: any) => {
           if (typeof lang === 'string') {
             // Parse string format like "English (Fluent (Native-level))"
             const match = lang.match(/^([^(]+)\s*\(([^)]+)\)$/);
@@ -214,39 +233,70 @@ function MainApp() {
           
           // Helper function to intelligently parse custom section items based on title
           const parseCustomSectionItem = (item: string, sectionTitle: string) => {
-            // For Volunteer Experience: Try to extract Organization, Role, Duration, Impact
-            if (sectionTitle.includes('Volunteer') || sectionTitle.includes('Leadership')) {
-              // Handle format: "Role, Organization (Duration) — Description"
-              const match = item.match(/^(.*?),\s*(.*?)\s*\(([^)]+)\)\s*[—-]\s*(.*)$/);
-              if (match) {
-                return {
-                  field1: match[1].trim(), // Role/Position
-                  field2: match[2].trim(), // Organization  
-                  field3: match[3].trim(), // Duration
-                  field4: match[4].trim()  // Impact/Description
-                };
-              }
+            const lowerTitle = sectionTitle.toLowerCase();
+            
+            // Try multiple parsing patterns
+            // Pattern 1: "Title/Role, Organization (Date/Duration) — Description"
+            const pattern1 = item.match(/^(.*?),\s*(.*?)\s*\(([^)]+)\)\s*[—–-]\s*(.*)$/);
+            if (pattern1) {
+              return {
+                field1: pattern1[1].trim(),
+                field2: pattern1[2].trim(),
+                field3: pattern1[3].trim(),
+                field4: pattern1[4].trim()
+              };
             }
             
-            // For Awards: Try to extract Award, Organization, Date, Description
-            if (sectionTitle.includes('Award')) {
-              const match = item.match(/^(.*?),\s*(.*?)\s*\(([^)]+)\)\s*-\s*(.*)$/);
-              if (match) {
-                return {
-                  field1: match[1].trim(), // Award Title
-                  field2: match[2].trim(), // Organization
-                  field3: match[3].trim(), // Date
-                  field4: match[4].trim()  // Description
-                };
-              }
+            // Pattern 2: "Title/Role at Organization (Date/Duration)"
+            const pattern2 = item.match(/^(.*?)\s+at\s+(.*?)\s*\(([^)]+)\)(.*)$/);
+            if (pattern2) {
+              return {
+                field1: pattern2[1].trim(),
+                field2: pattern2[2].trim(),
+                field3: pattern2[3].trim(),
+                field4: pattern2[4].trim()
+              };
             }
             
-            // Default: Put entire item in field1
+            // Pattern 3: "Title - Organization, Date"
+            const pattern3 = item.match(/^(.*?)\s*[-–]\s*(.*?),\s*(.*)$/);
+            if (pattern3) {
+              return {
+                field1: pattern3[1].trim(),
+                field2: pattern3[2].trim(),
+                field3: pattern3[3].trim(),
+                field4: ''
+              };
+            }
+            
+            // Pattern 4: Simple comma separation "Title, Organization, Date, Description"
+            const parts = item.split(',').map(p => p.trim());
+            if (parts.length >= 2) {
+              return {
+                field1: parts[0] || '',
+                field2: parts[1] || '',
+                field3: parts[2] || '',
+                field4: parts.slice(3).join(', ') || ''
+              };
+            }
+            
+            // Default: Put entire item in appropriate field based on section type
+            if (lowerTitle.includes('publication') || lowerTitle.includes('course')) {
+              // For publications/courses, the item is likely a title
+              return {
+                field1: item,
+                field2: '',
+                field3: '',
+                field4: ''
+              };
+            }
+            
+            // For other sections, treat as a description
             return {
-              field1: item,
+              field1: '',
               field2: '',
               field3: '',
-              field4: ''
+              field4: item
             };
           };
           

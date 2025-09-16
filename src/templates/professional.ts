@@ -305,8 +305,8 @@ export function generateProfessionalResumeHTML(data: any): string {
     <div class="resume-container">
         <aside class="sidebar">
             <div class="profile-section">
-                <h1 class="name">${personalInfo.name || ''}</h1>
-                <div class="title">${professionalTitle || 'Professional'}</div>
+                <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
+                <div class="title" data-section="title">${professionalTitle || 'Professional'}</div>
                 ${personalInfo.phone ? `<div class="contact-item">📱 ${personalInfo.phone}</div>` : ''}
                 ${personalInfo.email ? `<div class="contact-item">📧 ${personalInfo.email}</div>` : ''}
                 ${personalInfo.location ? `<div class="contact-item">📍 ${personalInfo.location}</div>` : ''}
@@ -315,21 +315,21 @@ export function generateProfessionalResumeHTML(data: any): string {
             </div>
             
             ${Object.keys(skills).length > 0 ? `
-            <section class="sidebar-section">
+            <section class="sidebar-section" data-section="skills">
                 <h2 class="sidebar-header">Skills</h2>
                 ${Object.entries(skills).map(([category, skillList]) => `
-                    <div class="skill-category">
+                    <div class="skill-category" data-category="${category}">
                         <div class="skill-category-title">${category}</div>
                         <div style="margin-bottom: 3mm;">
-                            ${skillList.map(skill => {
+                            ${skillList.map((skill, i) => {
                                 // Handle both string skills and skill objects with proficiency
                                 if (typeof skill === 'string') {
-                                    return `<span class="skill-pill">${skill}</span>`;
+                                    return `<span class="skill-pill" data-section="skills" data-category="${category}" data-index="${i}">${skill}</span>`;
                                 } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
                                     // Clean proficiency indicator with subtle dot
-                                    return `<span class="skill-pill with-proficiency" data-level="${skill.proficiency}" title="${skill.proficiency}">${skill.skill}</span>`;
+                                    return `<span class="skill-pill with-proficiency" data-level="${skill.proficiency}" title="${skill.proficiency}" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill}</span>`;
                                 } else if (skill.skill) {
-                                    return `<span class="skill-pill">${skill.skill}</span>`;
+                                    return `<span class="skill-pill" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill}</span>`;
                                 }
                                 return '';
                             }).join('')}
@@ -377,6 +377,25 @@ export function generateProfessionalResumeHTML(data: any): string {
                 `).join('')}
             </section>
             ` : ''}
+            
+            ${customSections && customSections.length > 0 ? customSections.map(section => `
+            <section class="sidebar-section">
+                <h2 class="sidebar-header">${section.title}</h2>
+                ${section.items.map(item => `
+                    <div class="education-item">
+                        <div class="education-title">${item.title || ''}</div>
+                        ${item.subtitle ? `<div class="education-details">${item.subtitle}</div>` : ''}
+                        ${item.date ? `<div class="education-details">${item.date}</div>` : ''}
+                        ${item.description ? `<div class="education-details" style="margin-top: 2mm; line-height: 1.3;">${item.description}</div>` : ''}
+                        ${item.details && item.details.length > 0 ? `
+                            <div class="education-details" style="margin-top: 2mm;">
+                                ${item.details.map(detail => `• ${detail}`).join('<br>')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </section>
+            `).join('') : ''}
         </aside>
         
         <main class="main-content">
@@ -388,10 +407,10 @@ export function generateProfessionalResumeHTML(data: any): string {
             ` : ''}
 
             ${experience.length > 0 ? `
-            <section class="main-section">
+            <section class="main-section" data-section="experience">
                 <h2 class="main-header">Professional Experience</h2>
-                ${experience.map(job => `
-                    <div class="experience-item">
+                ${experience.map((job, jIndex) => `
+                    <div class="experience-item" data-section="experience" data-exp-index="${jIndex}">
                         <div class="job-header">
                             <div>
                                 <div class="job-title">${job.position}</div>
@@ -401,7 +420,7 @@ export function generateProfessionalResumeHTML(data: any): string {
                         </div>
                         ${job.achievements && job.achievements.length > 0 ? `
                             <ul class="achievements">
-                                ${job.achievements.map(achievement => `<li>${achievement}</li>`).join('')}
+                                ${job.achievements.map((achievement, aIndex) => `<li data-section=\"experience\" data-path=\"experience[${jIndex}].achievements[${aIndex}]\">${achievement}</li>`).join('')}
                             </ul>
                         ` : ''}
                     </div>
@@ -410,47 +429,20 @@ export function generateProfessionalResumeHTML(data: any): string {
             ` : ''}
 
             ${projects.length > 0 ? `
-            <section class="main-section">
+            <section class="main-section" data-section="projects">
                 <h2 class="main-header">Projects</h2>
-                ${projects.map(project => `
-                    <div class="experience-item">
+                ${projects.map((project, pIndex) => `
+                    <div class="experience-item" data-section="projects" data-proj-index="${pIndex}">
                         <div class="job-header">
                             <div class="job-title">${project.name}</div>
                             ${project.date ? `<div class="job-duration">${project.date}</div>` : ''}
                         </div>
-                        <div style="font-size: 9px; line-height: 1.4; margin-bottom: 2mm;">${project.description}</div>
+                        <div style="font-size: 9px; line-height: 1.4; margin-bottom: 2mm;" data-path="projects[${pIndex}].description">${project.description}</div>
                         ${project.technologies && project.technologies.length > 0 ? `
                             <div style="font-size: 8px; color: var(--text-secondary);">
                                 <strong>Technologies:</strong> ${project.technologies.join(', ')}
                             </div>
                         ` : ''}
-                    </div>
-                `).join('')}
-            </section>
-            ` : ''}
-
-            ${customSections && customSections.length > 0 ? `
-                ${customSections.map(section => `
-                <section class="main-section">
-                    <h2 class="main-header">${section.title}</h2>
-                    <div style="margin-bottom: 6mm;">
-                        ${section.items.map(item => `
-                            <div class="experience-item">
-                                <div class="job-header">
-                                    <div>
-                                        <div class="job-title">${item.title || ''}</div>
-                                        ${item.subtitle ? `<div class="job-company">${item.subtitle}</div>` : ''}
-                                    </div>
-                                    ${item.date ? `<div class="job-duration">${item.date}</div>` : ''}
-                                </div>
-                                ${item.description ? `<div style="font-size: 9px; line-height: 1.4; margin-bottom: 2mm;">${item.description}</div>` : ''}
-                                ${item.details && item.details.length > 0 ? `
-                                    <ul class="achievements">
-                                        ${item.details.map(detail => `<li>${detail}</li>`).join('')}
-                                    </ul>
-                                ` : ''}
-                            </div>
-                        `).join('')}
                     </div>
                 `).join('')}
             </section>

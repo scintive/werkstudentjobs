@@ -31,6 +31,7 @@ import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveS
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
 import { PerfectStudio } from '@/components/resume-editor/PerfectStudio';
 import { TailoredResumePreview } from '@/components/tailor-resume-editor/TailoredResumePreview';
+import { SimpleTailoredPreview } from '@/components/tailor-preview/SimpleTailoredPreview';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 
 // Enhanced Tab configuration with visual elements
@@ -64,6 +65,23 @@ function TailorApplicationPage() {
   const params = useParams();
   const router = useRouter();
   const jobId = params.id as string;
+
+  // Single source of truth for current variant ID
+  const [currentVariantId, setCurrentVariantId] = useState<string | null>(null);
+  const [isEditorMode, setIsEditorMode] = useState(false);
+
+  useEffect(() => {
+    // Parse URL parameters on client-side only
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const variantId = urlParams.get('variant_id');
+      if (variantId) {
+        setCurrentVariantId(variantId);
+        // If we have a variant_id in URL, we're in editor mode
+        setIsEditorMode(true);
+      }
+    }
+  }, []);
   
   // Get resume data from Supabase context
   const { resumeData, isLoading: resumeLoading, resumeId } = useSupabaseResumeContext();
@@ -585,7 +603,11 @@ function TailorApplicationPage() {
       
       {/* Full Width Tab Content */}
       <div className="w-full">
-        <div className="px-8 py-8">
+        <div className={cn(
+          "px-8 py-8",
+          // Add height for resume tab when using SimpleTailoredPreview
+          activeTab === 'resume' ? "h-[calc(100vh-100px)]" : ""
+        )}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -593,6 +615,10 @@ function TailorApplicationPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className={cn(
+                // Ensure resume tab content takes full height
+                activeTab === 'resume' ? "h-full" : ""
+              )}
             >
               {activeTab === 'strategy' && (
                 <StrategyTab
@@ -616,6 +642,9 @@ function TailorApplicationPage() {
                   patches={patches}
                   onPatchesChange={setPatches}
                   loading={loading.patches}
+                  isEditorMode={isEditorMode}
+                  currentVariantId={currentVariantId}
+                  onVariantIdChange={setCurrentVariantId}
                 />
               )}
               
@@ -1165,17 +1194,26 @@ function StrategyTab({
 }
 
 // Resume Studio Tab with unified preview-first approach (Single Editor)
-function ResumeStudioTab({ 
-  job, 
-  strategy, 
+function ResumeStudioTab({
+  job,
+  strategy,
   studentStrategy,
   userProfile,
   resumeData,
   resumeId,
-  patches, 
-  onPatchesChange, 
-  loading 
+  patches,
+  onPatchesChange,
+  loading,
+  isEditorMode,
+  currentVariantId,
+  onVariantIdChange
 }: any) {
+  // Optional stats callback - parent can provide this if it needs suggestion counts
+  const [stats, setStats] = React.useState({pending: 0, applied: 0, declined: 0})
+
+  const handleStatsChange = React.useCallback((newStats: {pending: number, applied: number, declined: number}) => {
+    setStats(newStats)
+  }, [])
   // Feature flag - read from centralized config
   const ENABLE_TAILORING_UNIFIED = APP_CONFIG.FEATURES.ENABLE_TAILORING_UNIFIED;
   
@@ -1185,6 +1223,44 @@ function ResumeStudioTab({
   const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
   const supabaseActions = useSupabaseResumeActions();
   
+  // Load variant data when in editor mode
+  useEffect(() => {
+    const loadVariantForEditor = async () => {
+      if (isEditorMode && currentVariantId && (!tailoredResumeData || activeVariantId !== currentVariantId)) {
+        try {
+          console.log('🎯 LOADING VARIANT FOR EDITOR:', currentVariantId);
+
+          // Load variant data from Supabase
+          const { data: variantData, error } = await supabase
+            .from('resume_variants')
+            .select('*')
+            .eq('id', currentVariantId)
+            .single();
+
+          if (error) {
+            console.error('Failed to load variant:', error);
+            return;
+          }
+
+          if (variantData) {
+            console.log('🎯 LOADED VARIANT DATA:', {
+              variantId: currentVariantId,
+              hasTailoredData: !!variantData.tailored_data,
+              tailoredDataKeys: variantData.tailored_data ? Object.keys(variantData.tailored_data) : []
+            });
+            setTailoredResumeData(variantData.tailored_data);
+            setActiveVariantId(currentVariantId);
+            console.log('✅ Loaded variant data for editor');
+          }
+        } catch (error) {
+          console.error('Error loading variant for editor:', error);
+        }
+      }
+    };
+
+    loadVariantForEditor();
+  }, [isEditorMode, currentVariantId]);
+
   // Log feature flag status for debugging
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1192,10 +1268,12 @@ function ResumeStudioTab({
       console.log('  - Raw env value:', process.env.NEXT_PUBLIC_ENABLE_TAILORING_UNIFIED);
       console.log('  - Parsed boolean:', ENABLE_TAILORING_UNIFIED);
       console.log('  - showEditor state:', showEditor);
+      console.log('  - isEditorMode:', isEditorMode);
+      console.log('  - currentVariantId:', currentVariantId);
       console.log('  - resumeData exists:', !!resumeData);
       console.log('  - resumeId:', resumeId);
     }
-  }, [ENABLE_TAILORING_UNIFIED, showEditor, resumeData, resumeId]);
+  }, [ENABLE_TAILORING_UNIFIED, showEditor, isEditorMode, currentVariantId, resumeData, resumeId]);
   
   // Handle opening resume in the single Resume Studio editor
   // ONLY called from Open in Editor button
@@ -1203,15 +1281,50 @@ function ResumeStudioTab({
     console.log('Opening editor with variant:', variantId);
     if (tailoredData) setTailoredResumeData(tailoredData);
     if (variantId) setActiveVariantId(variantId);
+    // Deep link: include ?variant_id=... in URL for reload/back/forward
+    if (typeof window !== 'undefined' && variantId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('variant_id', variantId);
+      window.history.pushState({}, '', url.toString());
+    }
     setShowEditor(true);
   };
 
   // Handle returning from editor to preview
   const handleBackToPreview = () => {
-    setShowEditor(false);
-    // Restore base resume data
-    if (resumeData) {
-      supabaseActions.setResumeData?.(resumeData);
+    console.log('🎯 handleBackToPreview called', {
+      isEditorMode,
+      currentVariantId,
+      hasSetIsEditorMode: typeof setIsEditorMode === 'function'
+    });
+
+    try {
+      // Navigate back to preview mode by removing variant_id from URL
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('variant_id');
+        window.history.pushState({}, '', url.toString());
+      }
+
+      // Reset editor mode state
+      setIsEditorMode(false);
+      setCurrentVariantId(null);
+      setActiveVariantId(null);
+      setShowEditor(false);
+
+      // DO NOT restore base resume data - it causes re-analysis
+      // The context already has the base data, no need to reset it
+      // if (resumeData) {
+      //   supabaseActions.setResumeData?.(resumeData);
+      // }
+
+      console.log('✅ handleBackToPreview completed successfully');
+    } catch (error) {
+      console.error('❌ Error in handleBackToPreview:', error);
+      // Try alternative navigation method if state setters fail
+      if (typeof window !== 'undefined') {
+        window.location.href = window.location.pathname;
+      }
     }
   };
   
@@ -1263,11 +1376,16 @@ function ResumeStudioTab({
   console.log('🎯 RESUME STUDIO RENDER DECISION:');
   console.log('  - ENABLE_TAILORING_UNIFIED:', ENABLE_TAILORING_UNIFIED);
   console.log('  - showEditor:', showEditor);
-  console.log('  - Should show preview:', ENABLE_TAILORING_UNIFIED && !showEditor);
-  
+  console.log('  - isEditorMode:', isEditorMode);
+  console.log('  - currentVariantId:', currentVariantId);
+  console.log('  - Should show preview:', ENABLE_TAILORING_UNIFIED && !showEditor && !isEditorMode);
+
+  // If we're in editor mode with a variant, show editor directly
+  const shouldShowEditor = (ENABLE_TAILORING_UNIFIED && showEditor) || (isEditorMode && currentVariantId);
+
   return (
     <div>
-      {ENABLE_TAILORING_UNIFIED && showEditor ? (
+      {shouldShowEditor ? (
         // Single Resume Studio editor when user clicks "Open in Editor"
         <div className="space-y-6">
           {/* Header with back button */}
@@ -1281,9 +1399,14 @@ function ResumeStudioTab({
                   <ArrowLeft className="w-5 h-5 text-blue-600" />
                 </button>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Resume Studio</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    {isEditorMode ? 'Editing: Tailored Variant' : 'Resume Studio'}
+                  </h3>
                   <p className="text-sm text-gray-600">
-                    Editing tailored version for {job.title}
+                    {isEditorMode
+                      ? `Editing variant ${currentVariantId?.slice(0, 8)}... for ${job.title}`
+                      : `Editing tailored version for ${job.title}`
+                    }
                   </p>
                 </div>
               </div>
@@ -1293,25 +1416,38 @@ function ResumeStudioTab({
           </div>
 
           {/* The Single Resume Studio Editor wrapped to avoid baseline autosave */}
-          {activeVariantId ? (
-            <SupabaseResumeProvider initialData={tailoredResumeData} autoSaveInterval={0}>
-              <SaveVariantButton variantId={activeVariantId} />
+          {(activeVariantId || (isEditorMode && currentVariantId)) ? (
+            <SupabaseResumeProvider
+              initialData={tailoredResumeData}
+              autoSaveInterval={0}
+              skipProfileApiFetch={true}
+            >
+              <SaveVariantButton variantId={activeVariantId || currentVariantId!} />
               <PerfectStudio />
             </SupabaseResumeProvider>
           ) : (
-            <PerfectStudio />
+            <SupabaseResumeProvider
+              initialData={tailoredResumeData}
+              autoSaveInterval={0}
+              skipProfileApiFetch={true}
+            >
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-amber-800 text-sm">
+                  ⚠️ Read-only mode: Create a variant to enable editing
+                </p>
+              </div>
+              <PerfectStudio />
+            </SupabaseResumeProvider>
           )}
         </div>
       ) : ENABLE_TAILORING_UNIFIED ? (
-        // Preview-first tailoring experience with real templates
-        <TailoredResumePreview
+        // Simplified preview-first tailoring experience
+        <SimpleTailoredPreview
           jobData={job}
           baseResumeData={resumeData}
           baseResumeId={resumeId || ''}
-          strategy={strategy || studentStrategy}
+          onStatsChange={handleStatsChange}
           onOpenInEditor={handleOpenInEditor}
-          onExportPDF={handleExportPDF}
-          className="space-y-6"
         />
       ) : (
         // Feature flag disabled: fall back to classic editor only

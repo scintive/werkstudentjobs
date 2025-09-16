@@ -6,31 +6,31 @@
 export const APP_CONFIG = {
   // OpenAI Configuration
   OPENAI: {
-    DEFAULT_MODEL: 'gpt-5-mini',
-    FALLBACK_MODELS: ['gpt-4o-mini'],
+    DEFAULT_MODEL: 'gpt-4o-mini',
+    FALLBACK_MODELS: ['gpt-3.5-turbo'],
     DEFAULT_TEMPERATURE: 0.2,
     DEFAULT_MAX_TOKENS: 1500,
     
     // Model-specific settings
     MODELS: {
-      'gpt-5-mini': {
-        max_tokens: 5000,
-        // temperature: GPT-5 models only support default temperature (1.0)
-        suitable_for: ['analysis', 'extraction', 'web_search'],
-        supports_web_search: true,
-        confidence_threshold: 0.6
-      },
-      'gpt-5-nano': {
-        max_tokens: 5000,
-        // temperature: GPT-5 models only support default temperature (1.0)
-        suitable_for: ['analysis', 'extraction', 'web_search'],
-        supports_web_search: true,
-        confidence_threshold: 0.6
-      },
       'gpt-4o-mini': {
         max_tokens: 5000,
         temperature: 0.2,
-        suitable_for: ['analysis', 'extraction', 'generation']
+        suitable_for: ['analysis', 'extraction', 'generation'],
+        supports_web_search: true,
+        confidence_threshold: 0.7
+      },
+      'gpt-4o': {
+        max_tokens: 5000,
+        temperature: 0.2,
+        suitable_for: ['analysis', 'extraction', 'web_search', 'complex_analysis'],
+        supports_web_search: true,
+        confidence_threshold: 0.8
+      },
+      'gpt-3.5-turbo': {
+        max_tokens: 4000,
+        temperature: 0.2,
+        suitable_for: ['simple_tasks', 'generation']
       },
       'gpt-4': {
         max_tokens: 4000,

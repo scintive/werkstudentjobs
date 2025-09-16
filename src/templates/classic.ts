@@ -228,8 +228,8 @@ export function generateClassicResumeHTML(data: any): string {
 <body>
     <div class="resume-container">
         <!-- Header Section -->
-        <header class="header">
-            <div class="name">${personalInfo.name || ''}</div>
+        <header class="header" data-section="header">
+            <div class="name" data-section="name">${personalInfo.name || ''}</div>
             <div class="contact-info">
                 ${[
                     personalInfo.location,
@@ -243,7 +243,7 @@ export function generateClassicResumeHTML(data: any): string {
 
         ${enableProfessionalSummary && professionalSummary ? `
         <!-- Objective/Summary Section -->
-        <section class="section">
+        <section class="section" data-section="summary">
             <h2 class="section-header">Objective</h2>
             <div class="summary-text">${professionalSummary}</div>
         </section>
@@ -251,10 +251,10 @@ export function generateClassicResumeHTML(data: any): string {
 
         ${education.length > 0 ? `
         <!-- Education Section -->
-        <section class="section">
+        <section class="section" data-section="education">
             <h2 class="section-header">Education</h2>
-            ${education.map(edu => `
-                <div class="education-item">
+            ${education.map((edu, eIndex) => `
+                <div class="education-item" data-section="education" data-edu-index="${eIndex}">
                     <div class="item-row">
                         <div class="item-left">
                             <span class="item-title">${edu.institution}</span>${edu.location ? `, <span class="item-location">${edu.location}</span>` : ''}
@@ -269,10 +269,10 @@ export function generateClassicResumeHTML(data: any): string {
 
         ${experience.length > 0 ? `
         <!-- Experience Section -->
-        <section class="section">
+        <section class="section" data-section="experience">
             <h2 class="section-header">Experience</h2>
-            ${experience.map(job => `
-                <div class="experience-item">
+            ${experience.map((job, jIndex) => `
+                <div class="experience-item" data-section="experience" data-exp-index="${jIndex}">
                     <div class="item-row">
                         <div class="item-left">
                             <span class="item-title">${job.position}</span>
@@ -282,7 +282,7 @@ export function generateClassicResumeHTML(data: any): string {
                     <div class="item-subtitle">${job.company}${job.location ? `, ${job.location}` : ''}</div>
                     ${job.achievements && job.achievements.length > 0 ? `
                         <ul class="bullet-list">
-                            ${job.achievements.map(achievement => `<li>${achievement}</li>`).join('')}
+                            ${job.achievements.map((achievement, aIndex) => `<li data-section=\"experience\" data-path=\"experience[${jIndex}].achievements[${aIndex}]\">${achievement}</li>`).join('')}
                         </ul>
                     ` : ''}
                 </div>
@@ -292,17 +292,17 @@ export function generateClassicResumeHTML(data: any): string {
 
         ${projects.length > 0 ? `
         <!-- Projects Section -->
-        <section class="section">
+        <section class="section" data-section="projects">
             <h2 class="section-header">Projects</h2>
-            ${projects.map(project => `
-                <div class="project-item">
+            ${projects.map((project, pIndex) => `
+                <div class="project-item" data-section="projects" data-proj-index="${pIndex}">
                     <div class="item-row">
                         <div class="item-left">
                             <span class="item-title">${project.name}</span>
                         </div>
                         ${project.date ? `<div class="item-right">${project.date}</div>` : ''}
                     </div>
-                    <div class="project-description">${project.description}</div>
+                    <div class="project-description" data-path="projects[${pIndex}].description">${project.description}</div>
                     ${project.technologies && project.technologies.length > 0 ? `
                         <div style="margin-top: 1mm; font-size: 10pt;">
                             <span style="font-weight: 700;">Technologies:</span> ${project.technologies.join(', ')}
@@ -315,21 +315,21 @@ export function generateClassicResumeHTML(data: any): string {
 
         ${Object.keys(skills).length > 0 ? `
         <!-- Skills Section -->
-        <section class="section">
+        <section class="section" data-section="skills">
             <h2 class="section-header">Skills</h2>
             <div class="skills-inline">
                 ${Object.entries(skills).map(([category, skillList]) => `
-                    <div class="skill-category">
+                    <div class="skill-category" data-category="${category}">
                         <span class="skill-label">${category}:</span> ${skillList.map(skill => {
                             if (typeof skill === 'string') {
-                                return skill;
+                                return `<span data-section=\"skills\" data-category=\"${category}\">${skill}</span>`;
                             } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
                                 const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' : 
                                                  skill.proficiency === 'Advanced' ? 'ADV' : 
                                                  skill.proficiency === 'Intermediate' ? 'INT' : 'BEG';
-                                return `${skill.skill} (${levelAbbr})`;
+                                return `<span data-section=\"skills\" data-category=\"${category}\">${skill.skill} (${levelAbbr})</span>`;
                             } else if (skill.skill) {
-                                return skill.skill;
+                                return `<span data-section=\"skills\" data-category=\"${category}\">${skill.skill}</span>`;
                             }
                             return '';
                         }).filter(s => s).join(', ')}

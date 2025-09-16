@@ -407,7 +407,7 @@ export function EnhancedSkillsManager({ skills, onSkillsChange, userProfile, org
         body: JSON.stringify({
           categoryName,
           profileData: userProfile,
-          currentCategorySkills: organizedData?.organized_categories[categoryName]?.skills || []
+          currentCategorySkills: dataToUse?.organized_categories[categoryName]?.skills || []
         }),
       })
 
@@ -562,7 +562,8 @@ export function EnhancedSkillsManager({ skills, onSkillsChange, userProfile, org
     )
   }
 
-  if (!organizedSkills || !organizedData) {
+  // Show loading state only if we don't have organized skills from props
+  if (!organizedSkills || !organizedSkills.organized_categories) {
     return (
       <div className="text-center py-12">
         <Brain className="mx-auto h-16 w-16 text-gray-400 mb-4" />
@@ -575,6 +576,9 @@ export function EnhancedSkillsManager({ skills, onSkillsChange, userProfile, org
       </div>
     )
   }
+  
+  // Use organizedData if available, otherwise use organizedSkills directly
+  const dataToUse = organizedData || organizedSkills
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -689,9 +693,9 @@ export function EnhancedSkillsManager({ skills, onSkillsChange, userProfile, org
       )}
 
       {/* Categories - clean and minimal */}
-      {organizedData && (
+      {dataToUse && dataToUse.organized_categories && (
         <div className="space-y-3">
-          {Object.entries(organizedData.organized_categories).map(([categoryName, categoryData], index) => {
+          {Object.entries(dataToUse.organized_categories).map(([categoryName, categoryData], index) => {
             const isExpanded = expandedCategories.has(categoryName)
             const CategoryIcon = getCategoryIcon(categoryName)
             const colorScheme = CATEGORY_COLORS[index % CATEGORY_COLORS.length]

@@ -202,6 +202,8 @@ class ResumeVariantService {
    */
   async getSuggestions(variantId: string): Promise<ResumeSuggestion[]> {
     try {
+      console.log('📥 Fetching suggestions for variant:', variantId);
+      
       const { data, error } = await supabase
         .from('resume_suggestions')
         .select('*')
@@ -211,6 +213,11 @@ class ResumeVariantService {
       if (error) {
         console.error('Failed to fetch suggestions:', error);
         return [];
+      }
+
+      console.log(`📋 Found ${data?.length || 0} suggestions for variant ${variantId}`);
+      if (data && data.length > 0) {
+        console.log('📋 Suggestion sections:', data.map(s => s.section));
       }
 
       return data as ResumeSuggestion[];

@@ -3,57 +3,12 @@
 import { supabase } from '@/lib/supabase/client'
 import type { ResumeData as ResumeDataType } from '@/lib/types'
 import type { ResumeData as SupabaseResumeData } from '@/lib/supabase/types'
-import { v4 as uuidv4 } from 'uuid'
-
-// Session ID management for anonymous users
-let sessionId: string | null = null
-
-export function getOrCreateSessionId(): string {
-  if (typeof window !== 'undefined') {
-    if (!sessionId) {
-      // Try to get session from cookies first (for logged-in users)
-      const cookieSession = getCookieSession()
-      if (cookieSession) {
-        sessionId = cookieSession
-        localStorage.setItem('resume_session_id', sessionId)
-      } else {
-        // Fallback to localStorage or create new
-        sessionId = localStorage.getItem('resume_session_id') || uuidv4()
-        localStorage.setItem('resume_session_id', sessionId)
-      }
-    }
-  } else {
-    // Server-side fallback
-    sessionId = uuidv4()
-  }
-  return sessionId
-}
-
-// Helper to get session from cookies (client-side only)
-function getCookieSession(): string | null {
-  if (typeof window === 'undefined') return null
-  
-  const cookies = document.cookie.split(';')
-  for (let cookie of cookies) {
-    const [name, value] = cookie.trim().split('=')
-    if (name === 'user_session') {
-      return decodeURIComponent(value)
-    }
-  }
-  return null
-}
-
-// Force refresh session from cookies (call after login)
-export function refreshSessionFromCookies(): void {
-  sessionId = null // Clear cached session
-  getOrCreateSessionId() // Will re-read from cookies
-}
+// Authentication is required for all operations - no session-based access
 
 // Convert between our ResumeData type and Supabase storage format
-function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResumeData['Insert'], 'id' | 'created_at' | 'updated_at' | 'last_accessed_at'> {
+function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResumeData['Insert'], 'id' | 'created_at' | 'updated_at' | 'last_accessed_at' | 'session_id'> {
   return {
-    session_id: getOrCreateSessionId(),
-    // user_id will be added at call-site if authenticated
+    // user_id will be added at call-site - authentication required
     personal_info: resumeData.personalInfo,
     professional_title: resumeData.professionalTitle || '',
     professional_summary: resumeData.professionalSummary || '',
@@ -175,36 +130,23 @@ export class ResumeDataService {
 
   // Get or create resume data for current session
   async getOrCreateResumeData(): Promise<{ id: string; data: ResumeDataType }> {
-    const sessionId = getOrCreateSessionId()
+    // Require authentication for resume creation
+    const { data: authData } = await supabase.auth.getUser()
+    const authUserId = authData.user?.id
+    
+    if (!authUserId) {
+      throw new Error('Authentication required. Please sign in to create or access resumes.')
+    }
 
-    // Bind session for RLS (if enabled)
-    try { await supabase.rpc('set_session_context', { session_id: sessionId }) } catch {}
-
-    // Determine if user is authenticated
-    let authUserId: string | null = null
-    try {
-      const { data } = await supabase.auth.getUser()
-      authUserId = data.user?.id || null
-    } catch {}
-
-    // Try to find existing resume data for this user (preferred) or session
-    const { data: existing, error: fetchError } = authUserId
-      ? await supabase
-          .from('resume_data')
-          .select('*')
-          .eq('user_id', authUserId)
-          .eq('is_active', true)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : await supabase
-          .from('resume_data')
-          .select('*')
-          .eq('session_id', sessionId)
-          .eq('is_active', true)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+    // Try to find existing resume data for this authenticated user
+    const { data: existing, error: fetchError } = await supabase
+      .from('resume_data')
+      .select('*')
+      .eq('user_id', authUserId)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (existing && !fetchError) {
       this.currentResumeId = existing.id
@@ -243,7 +185,11 @@ export class ResumeDataService {
     const baseInsert = convertToSupabaseFormat(initialData)
     const { data: newRecord, error: createError } = await supabase
       .from('resume_data')
-      .insert({ ...baseInsert, user_id: authUserId })
+      .insert({ 
+        ...baseInsert, 
+        user_id: authUserId,  // Always set user_id for authenticated users
+        session_id: null      // No longer using session fallback
+      })
       .select()
       .single()
 
@@ -264,16 +210,18 @@ export class ResumeDataService {
       await this.getOrCreateResumeData()
     }
 
-    const sessionId = getOrCreateSessionId()
-    try { await supabase.rpc('set_session_context', { session_id: sessionId }) } catch { /* ignore if not present */ }
-
-    // Attach user_id if authenticated
-    let authUserId: string | null = null
-    try { const { data } = await supabase.auth.getUser(); authUserId = data.user?.id || null } catch {}
+    // Require authentication for saving
+    const { data: authData } = await supabase.auth.getUser()
+    const authUserId = authData.user?.id
+    
+    if (!authUserId) {
+      throw new Error('Authentication required. Please sign in to save resume data.')
+    }
 
     const updateData = {
       ...convertToSupabaseFormat(resumeData),
       user_id: authUserId,
+      session_id: null, // No longer using session-based access
       last_template_used: template || 'swiss',
       last_accessed_at: new Date().toISOString()
     }
@@ -293,7 +241,12 @@ export class ResumeDataService {
   
   // Sync resume data with user profile for job matching
   async syncUserProfile(resumeData: ResumeDataType): Promise<void> {
-    const sessionId = getOrCreateSessionId()
+    // Authentication required - get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      throw new Error('Authentication required for profile sync')
+    }
+    
     const { skills, tools } = extractSkillsAndTools(resumeData)
     
     // Extract languages from skills
@@ -310,11 +263,11 @@ export class ResumeDataService {
     const { data: existingProfile } = await supabase
       .from('user_profiles')
       .select('id')
-      .eq('session_id', sessionId)
+      .eq('user_id', user.id)
       .single()
     
     const profileData = {
-      session_id: sessionId,
+      user_id: user.id,
       name: resumeData.personalInfo?.name || '',
       email: resumeData.personalInfo?.email || '',
       phone: resumeData.personalInfo?.phone || '',
@@ -364,8 +317,7 @@ export class ResumeDataService {
       throw new Error('No active resume data')
     }
 
-    const sessionId = getOrCreateSessionId()
-    try { await supabase.rpc('set_session_context', { session_id: sessionId }) } catch { /* ignore if not present */ }
+    // Authentication required - no session context needed
 
     // For complex nested updates, we'll fetch current data, update, and save back
     const { data: current, error: fetchError } = await supabase

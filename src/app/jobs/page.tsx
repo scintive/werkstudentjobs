@@ -5,6 +5,7 @@ import { JobBrowser } from '@/components/jobs/JobBrowser'
 import { SupabaseResumeProvider } from '@/lib/contexts/SupabaseResumeContext'
 import { useSupabaseResumeContext } from '@/lib/contexts/SupabaseResumeContext'
 import { EditModeProvider } from '@/lib/contexts/EditModeContext'
+import { RequireAuth } from '@/components/auth/RequireAuth'
 import type { UserProfile } from '@/lib/types'
 
 // This page now uses the full-featured JobBrowser component
@@ -142,10 +143,12 @@ function JobsContent() {
 
 export default function JobsPage() {
   return (
-    <SupabaseResumeProvider autoSaveInterval={2000}>
-      <EditModeProvider>
-        <JobsContent />
-      </EditModeProvider>
-    </SupabaseResumeProvider>
+    <RequireAuth>
+      <SupabaseResumeProvider autoSaveInterval={2000}>
+        <EditModeProvider>
+          <JobsContent />
+        </EditModeProvider>
+      </SupabaseResumeProvider>
+    </RequireAuth>
   )
 }

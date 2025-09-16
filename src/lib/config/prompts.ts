@@ -81,6 +81,9 @@ Malformed JSON:
 - Look for sections like "Leadership", "Volunteer Experience", "Awards", "Publications", "Honors", "Activities", "Community Service", etc.
 - Extract these as custom_sections with title and array of items
 - Common custom section titles: Leadership & Volunteer, Awards & Achievements, Publications, Community Involvement, Professional Associations, Honors, etc.
+- IMPORTANT: DO NOT duplicate sections that are already extracted as core sections (education, experience, projects, certifications, languages, skills)
+- CRITICAL: "Academic Projects", "Personal Projects", "Side Projects", "Research Projects" or ANY variation of "Projects" should ALWAYS go in the main "projects" array, NEVER in custom_sections
+- Only extract truly custom/additional sections not covered by the main schema
 
 **LANGUAGE PROFICIENCY - PRESERVE EXACT LEVELS:**
 - Parse languages with ACTUAL proficiency levels mentioned in resume
@@ -141,7 +144,7 @@ Required JSON structure:
   "projects": [{
     "title": string,
     "description": string
-  }],
+  }], // ALL projects go here: Academic Projects, Personal Projects, Side Projects, Research Projects, etc.
   "custom_sections": [{
     "title": string, // e.g., "Leadership & Volunteer", "Awards", "Publications", etc.
     "items": string[] // Array of achievements, activities, or items under this section

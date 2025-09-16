@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { ResumeProvider, useResumeContext, useResumeActions } from './ResumeContext'
 import { supabase } from '@/lib/supabase/client'
-import { ResumeDataService, refreshSessionFromCookies } from '@/lib/services/resumeDataService'
+import { ResumeDataService } from '@/lib/services/resumeDataService'
 import type { ResumeData } from '@/lib/types'
 
 // Extended context that adds Supabase persistence
@@ -55,12 +55,23 @@ export function SupabaseResumeProvider({
       try {
         setIsLoading(true)
         setSaveError(null)
-        
-        // Refresh session from cookies in case user logged in
-        refreshSessionFromCookies()
-        
-        console.log('🔄 SUPABASE CONTEXT: Initializing resume context')
-        
+
+        // Authentication required - no session refresh needed
+        console.log('🔄 SUPABASE CONTEXT: Initializing resume context', { hasInitialData: !!initialData })
+
+        // If initialData is provided, use it directly (for editor mode with variant data)
+        if (initialData) {
+          console.log('🎯 SUPABASE CONTEXT: Using provided initialData (editor mode)')
+          if (isMounted) {
+            setResumeId('variant-editor') // Placeholder ID for editor mode
+            setResumeDataFromDB(initialData)
+            setLastSaved(new Date())
+            lastSavedDataRef.current = JSON.stringify(initialData)
+            setIsLoading(false)
+          }
+          return
+        }
+
         if (!skipProfileApiFetch) {
           console.log('🔄 SUPABASE CONTEXT: Fetching profile from /api/profile/latest')
           // Use the working /api/profile/latest endpoint with Supabase JWT
