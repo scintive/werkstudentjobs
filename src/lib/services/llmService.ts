@@ -181,7 +181,7 @@ const ProfileExtractionSchema = {
   },
   required: [
     "personal_details", "professional_title", "professional_summary",
-    "education", "certifications", "experience", "skills", "languages", "projects"
+    "education", "certifications", "experience", "skills", "languages", "projects", "custom_sections"
   ],
   additionalProperties: false
 };

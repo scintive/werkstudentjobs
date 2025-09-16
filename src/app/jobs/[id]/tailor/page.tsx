@@ -1191,7 +1191,7 @@ function StrategyTab({
   );
 }
 
-// Resume Studio Tab with unified preview-first approach (Single Editor)
+// Resume Studio Tab with unified editor approach
 function ResumeStudioTab({
   job,
   strategy,
@@ -1206,22 +1206,10 @@ function ResumeStudioTab({
   currentVariantId,
   onVariantIdChange
 }: any) {
-  // Optional stats callback - parent can provide this if it needs suggestion counts
-  const [stats, setStats] = React.useState({pending: 0, applied: 0, declined: 0})
-
-  const handleStatsChange = React.useCallback((newStats: {pending: number, applied: number, declined: number}) => {
-    setStats(newStats)
-  }, [])
-  // Feature flag - read from centralized config
-  const ENABLE_TAILORING_UNIFIED = APP_CONFIG.FEATURES.ENABLE_TAILORING_UNIFIED;
+  const [localVariantId, setLocalVariantId] = useState<string | null>(currentVariantId);
+  const [tailoredResumeData, setTailoredResumeData] = useState<any>(resumeData);
   
-  // Editor state - NEVER true on initial load
-  const [showEditor, setShowEditor] = useState(false);
-  const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
-  const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
-  const supabaseActions = useSupabaseResumeActions();
-  
-  // Create or load variant when entering resume tab in tailor mode
+  // Create or load variant when entering resume tab
   useEffect(() => {
     const getOrCreateVariant = async () => {
       if (!resumeId || !job?.id) return;
@@ -1237,8 +1225,11 @@ function ResumeStudioTab({
 
         if (existingVariant) {
           console.log('Found existing variant:', existingVariant.id);
-          setCurrentVariantId(existingVariant.id);
+          setLocalVariantId(existingVariant.id);
           setTailoredResumeData(existingVariant.tailored_data || resumeData);
+          
+          // Trigger suggestions generation if needed
+          generateSuggestionsIfNeeded(existingVariant.id);
         } else {
           // Create new variant
           console.log('Creating new variant...');
@@ -1263,156 +1254,53 @@ function ResumeStudioTab({
           }
 
           console.log('Created variant:', newVariant.id);
-          setCurrentVariantId(newVariant.id);
+          setLocalVariantId(newVariant.id);
           setTailoredResumeData(resumeData);
+          
+          // Generate suggestions for new variant
+          generateSuggestionsIfNeeded(newVariant.id);
         }
       } catch (error) {
         console.error('Failed to get/create variant:', error);
       }
     };
 
-    // Only run when we have job and resumeId
-    if (job && resumeId && !currentVariantId) {
+    if (job && resumeId && !localVariantId) {
       getOrCreateVariant();
     }
-  }, [job, resumeId, resumeData]);
+  }, [job, resumeId]);
   
-  // Load variant data when in editor mode
-  useEffect(() => {
-    const loadVariantForEditor = async () => {
-      if (isEditorMode && currentVariantId && (!tailoredResumeData || activeVariantId !== currentVariantId)) {
-        try {
-          console.log('🎯 LOADING VARIANT FOR EDITOR:', currentVariantId);
-
-          // Load variant data from Supabase
-          const { data: variantData, error } = await supabase
-            .from('resume_variants')
-            .select('*')
-            .eq('id', currentVariantId)
-            .single();
-
-          if (error) {
-            console.error('Failed to load variant:', error);
-            return;
-          }
-
-          if (variantData) {
-            console.log('🎯 LOADED VARIANT DATA:', {
-              variantId: currentVariantId,
-              hasTailoredData: !!variantData.tailored_data,
-              tailoredDataKeys: variantData.tailored_data ? Object.keys(variantData.tailored_data) : []
-            });
-            setTailoredResumeData(variantData.tailored_data);
-            setActiveVariantId(currentVariantId);
-            console.log('✅ Loaded variant data for editor');
-          }
-        } catch (error) {
-          console.error('Error loading variant for editor:', error);
-        }
-      }
-    };
-
-    loadVariantForEditor();
-  }, [isEditorMode, currentVariantId]);
-
-  // Log feature flag status for debugging
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.log('🚀 RESUME STUDIO TAB - Feature Flag Check:');
-      console.log('  - Raw env value:', process.env.NEXT_PUBLIC_ENABLE_TAILORING_UNIFIED);
-      console.log('  - Parsed boolean:', ENABLE_TAILORING_UNIFIED);
-      console.log('  - showEditor state:', showEditor);
-      console.log('  - isEditorMode:', isEditorMode);
-      console.log('  - currentVariantId:', currentVariantId);
-      console.log('  - resumeData exists:', !!resumeData);
-      console.log('  - resumeId:', resumeId);
-    }
-  }, [ENABLE_TAILORING_UNIFIED, showEditor, isEditorMode, currentVariantId, resumeData, resumeId]);
-  
-  // Handle opening resume in the single Resume Studio editor
-  // ONLY called from Open in Editor button
-  const handleOpenInEditor = (tailoredData: any, variantId?: string) => {
-    console.log('Opening editor with variant:', variantId);
-    if (tailoredData) setTailoredResumeData(tailoredData);
-    if (variantId) setActiveVariantId(variantId);
-    // Deep link: include ?variant_id=... in URL for reload/back/forward
-    if (typeof window !== 'undefined' && variantId) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('variant_id', variantId);
-      window.history.pushState({}, '', url.toString());
-    }
-    setShowEditor(true);
-  };
-
-  // Handle returning from editor to preview
-  const handleBackToPreview = () => {
-    console.log('🎯 handleBackToPreview called', {
-      isEditorMode,
-      currentVariantId,
-      hasSetIsEditorMode: typeof setIsEditorMode === 'function'
-    });
-
+  // Generate suggestions if they don't exist
+  const generateSuggestionsIfNeeded = async (variantId: string) => {
     try {
-      // Navigate back to preview mode by removing variant_id from URL
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('variant_id');
-        window.history.pushState({}, '', url.toString());
-      }
-
-      // Reset editor mode state
-      setIsEditorMode(false);
-      setCurrentVariantId(null);
-      setActiveVariantId(null);
-      setShowEditor(false);
-
-      // DO NOT restore base resume data - it causes re-analysis
-      // The context already has the base data, no need to reset it
-      // if (resumeData) {
-      //   supabaseActions.setResumeData?.(resumeData);
-      // }
-
-      console.log('✅ handleBackToPreview completed successfully');
-    } catch (error) {
-      console.error('❌ Error in handleBackToPreview:', error);
-      // Try alternative navigation method if state setters fail
-      if (typeof window !== 'undefined') {
-        window.location.href = window.location.pathname;
-      }
-    }
-  };
-  
-  // Handle PDF export
-  const handleExportPDF = async (tailoredData: any) => {
-    try {
-      // Use the existing PDF generation API with selected template
-      const template = localStorage.getItem('selectedTemplate') || 'swiss';
-      const response = await fetch('/api/resume/pdf-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeData: tailoredData,
-          template
-        })
-      });
+      // Check if suggestions exist
+      const { data: suggestions } = await supabase
+        .from('resume_suggestions')
+        .select('id')
+        .eq('variant_id', variantId)
+        .limit(1);
       
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Tailored_Resume_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        console.error('PDF generation failed');
-        alert('PDF generation failed. Please try again.');
+      if (!suggestions || suggestions.length === 0) {
+        console.log('No suggestions found, generating...');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        await fetch('/api/jobs/analyze-with-tailoring', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            job_id: job.id,
+            base_resume_id: resumeId,
+            variant_id: variantId
+          }),
+          credentials: 'include'
+        });
       }
     } catch (error) {
-      console.error('PDF export error:', error);
-      alert('PDF export failed. Please try again.');
+      console.error('Failed to generate suggestions:', error);
     }
   };
   
@@ -1427,91 +1315,32 @@ function ResumeStudioTab({
     );
   }
 
-  console.log('🎯 RESUME STUDIO RENDER DECISION:');
-  console.log('  - ENABLE_TAILORING_UNIFIED:', ENABLE_TAILORING_UNIFIED);
-  console.log('  - showEditor:', showEditor);
-  console.log('  - isEditorMode:', isEditorMode);
-  console.log('  - currentVariantId:', currentVariantId);
-  console.log('  - Should show preview:', ENABLE_TAILORING_UNIFIED && !showEditor && !isEditorMode);
-
-  // If we're in editor mode with a variant, show editor directly
-  const shouldShowEditor = (ENABLE_TAILORING_UNIFIED && showEditor) || (isEditorMode && currentVariantId);
+  // Simply render the unified editor
 
   return (
-    <div>
-      {shouldShowEditor ? (
-        // Single Resume Studio editor when user clicks "Open in Editor"
-        <div className="space-y-6">
-          {/* Header with back button */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleBackToPreview}
-                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-blue-600" />
-                </button>
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    {isEditorMode ? 'Editing: Tailored Variant' : 'Resume Studio'}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {isEditorMode
-                      ? `Editing variant ${currentVariantId?.slice(0, 8)}... for ${job.title}`
-                      : `Editing tailored version for ${job.title}`
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Save button rendered inside nested editor provider below */}
-            </div>
-          </div>
-
-          {/* The Single Resume Studio Editor wrapped to avoid baseline autosave */}
-          {(activeVariantId || (isEditorMode && currentVariantId)) ? (
-            <SupabaseResumeProvider
-              initialData={tailoredResumeData}
-              autoSaveInterval={0}
-              skipProfileApiFetch={true}
-            >
-              <SaveVariantButton variantId={activeVariantId || currentVariantId!} />
-              <PerfectStudio />
-            </SupabaseResumeProvider>
-          ) : (
-            <SupabaseResumeProvider
-              initialData={tailoredResumeData}
-              autoSaveInterval={0}
-              skipProfileApiFetch={true}
-            >
-              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-amber-800 text-sm">
-                  ⚠️ Read-only mode: Create a variant to enable editing
-                </p>
-              </div>
-              <PerfectStudio />
-            </SupabaseResumeProvider>
-          )}
-        </div>
-      ) : (
+    <div className="h-full">
+      {localVariantId ? (
         // Unified editor with tailor mode
-        <div className="h-full">
-          <SupabaseResumeProvider 
-            initialData={resumeData}
+        <SupabaseResumeProvider 
+          initialData={tailoredResumeData || resumeData}
+          mode="tailor"
+          variantId={localVariantId}
+          jobId={job.id}
+          baseResumeId={resumeId}
+        >
+          <PerfectStudio 
             mode="tailor"
-            variantId={currentVariantId}
-            jobId={job.id}
+            jobData={job}
+            variantId={localVariantId}
             baseResumeId={resumeId}
-          >
-            <PerfectStudio 
-              mode="tailor"
-              jobData={job}
-              variantId={currentVariantId}
-              baseResumeId={resumeId}
-              jobId={job.id}
-            />
-          </SupabaseResumeProvider>
+            jobId={job.id}
+          />
+        </SupabaseResumeProvider>
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-gray-600">Loading tailored resume editor...</p>
+          </div>
         </div>
       )}
     </div>
