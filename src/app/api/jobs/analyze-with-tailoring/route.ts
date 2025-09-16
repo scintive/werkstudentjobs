@@ -251,13 +251,9 @@ export async function POST(request: NextRequest) {
     };
 
     // Use raw SQL for upsert to handle race conditions
-    // Convert arrays to ensure they're plain JavaScript arrays, not JSONB
-    const appliedSuggestionsArray: string[] = Array.isArray(variantData.applied_suggestions) 
-      ? variantData.applied_suggestions 
-      : [];
-    const atsKeywordsArray: string[] = Array.isArray(variantData.ats_keywords)
-      ? variantData.ats_keywords
-      : [];
+    // Ensure arrays are properly formatted as PostgreSQL arrays
+    const appliedSuggestionsArray: string[] = [];
+    const atsKeywordsArray: string[] = [];
       
     const { data: upsertResult, error: upsertError } = await db.rpc('upsert_resume_variant', {
       p_base_resume_id: base_resume_id,

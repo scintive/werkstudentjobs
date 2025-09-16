@@ -30,8 +30,6 @@ import BulletRewriter from '@/components/werkstudent/BulletRewriter';
 import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveStrategy';
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
 import { PerfectStudio } from '@/components/resume-editor/PerfectStudio';
-import { TailoredResumePreview } from '@/components/tailor-resume-editor/TailoredResumePreview';
-import { SimpleTailoredPreview } from '@/components/tailor-preview/SimpleTailoredPreview';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 
 // Enhanced Tab configuration with visual elements
@@ -1223,6 +1221,62 @@ function ResumeStudioTab({
   const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
   const supabaseActions = useSupabaseResumeActions();
   
+  // Create or load variant when entering resume tab in tailor mode
+  useEffect(() => {
+    const getOrCreateVariant = async () => {
+      if (!resumeId || !job?.id) return;
+      
+      try {
+        // Check if variant exists
+        const { data: existingVariant } = await supabase
+          .from('resume_variants')
+          .select('*')
+          .eq('base_resume_id', resumeId)
+          .eq('job_id', job.id)
+          .maybeSingle();
+
+        if (existingVariant) {
+          console.log('Found existing variant:', existingVariant.id);
+          setCurrentVariantId(existingVariant.id);
+          setTailoredResumeData(existingVariant.tailored_data || resumeData);
+        } else {
+          // Create new variant
+          console.log('Creating new variant...');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          
+          const { data: newVariant, error } = await supabase
+            .from('resume_variants')
+            .insert({
+              base_resume_id: resumeId,
+              job_id: job.id,
+              user_id: user.id,
+              tailored_data: resumeData,
+              is_active: true
+            })
+            .select()
+            .single();
+
+          if (error) {
+            console.error('Failed to create variant:', error);
+            return;
+          }
+
+          console.log('Created variant:', newVariant.id);
+          setCurrentVariantId(newVariant.id);
+          setTailoredResumeData(resumeData);
+        }
+      } catch (error) {
+        console.error('Failed to get/create variant:', error);
+      }
+    };
+
+    // Only run when we have job and resumeId
+    if (job && resumeId && !currentVariantId) {
+      getOrCreateVariant();
+    }
+  }, [job, resumeId, resumeData]);
+  
   // Load variant data when in editor mode
   useEffect(() => {
     const loadVariantForEditor = async () => {
@@ -1440,29 +1494,24 @@ function ResumeStudioTab({
             </SupabaseResumeProvider>
           )}
         </div>
-      ) : ENABLE_TAILORING_UNIFIED ? (
-        // Simplified preview-first tailoring experience
-        <SimpleTailoredPreview
-          jobData={job}
-          baseResumeData={resumeData}
-          baseResumeId={resumeId || ''}
-          onStatsChange={handleStatsChange}
-          onOpenInEditor={handleOpenInEditor}
-        />
       ) : (
-        // Feature flag disabled: fall back to classic editor only
-        <div className="space-y-6">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Resume Studio</h3>
-                  <p className="text-sm text-gray-600">Editing your baseline resume</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <PerfectStudio />
+        // Unified editor with tailor mode
+        <div className="h-full">
+          <SupabaseResumeProvider 
+            initialData={resumeData}
+            mode="tailor"
+            variantId={currentVariantId}
+            jobId={job.id}
+            baseResumeId={resumeId}
+          >
+            <PerfectStudio 
+              mode="tailor"
+              jobData={job}
+              variantId={currentVariantId}
+              baseResumeId={resumeId}
+              jobId={job.id}
+            />
+          </SupabaseResumeProvider>
         </div>
       )}
     </div>

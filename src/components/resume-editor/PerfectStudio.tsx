@@ -45,6 +45,8 @@ import { cn } from '@/lib/utils'
 import { EnhancedRichText } from './enhanced-rich-text'
 import { SimpleTemplateDropdown } from './SimpleTemplateDropdown'
 import { EnhancedSkillsManager } from './EnhancedSkillsManager'
+import { useUnifiedSuggestions } from '@/hooks/useUnifiedSuggestions'
+import { SuggestionIndicator, SuggestionBadge } from './SuggestionIndicator'
 
 // Custom Section Templates
 const CUSTOM_SECTION_TEMPLATES = {
@@ -316,7 +318,25 @@ const SkillPill = ({
   )
 }
 
-export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills }: { userProfile?: any, organizedSkills?: any }) {
+interface PerfectStudioProps {
+  userProfile?: any
+  organizedSkills?: any
+  mode?: 'base' | 'tailor'
+  variantId?: string
+  jobId?: string
+  jobData?: any
+  baseResumeId?: string
+}
+
+export function PerfectStudio({ 
+  userProfile: initialUserProfile, 
+  organizedSkills,
+  mode = 'base',
+  variantId,
+  jobId,
+  jobData,
+  baseResumeId
+}: PerfectStudioProps) {
   const { resumeData } = useSupabaseResumeContext()
   const { 
     updatePersonalInfo, 
@@ -382,6 +402,100 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
   const debounceTimer = React.useRef<NodeJS.Timeout>()
   const iframeRef = React.useRef<HTMLIFrameElement>(null)
   const savedScrollPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 })
+  
+  // Unified Suggestions System for Tailor Mode
+  const {
+    suggestions,
+    loading: suggestionsLoading,
+    error: suggestionsError,
+    acceptSuggestion,
+    declineSuggestion,
+    getSuggestionsForSection,
+    getSuggestionForField,
+    getStats,
+    generateSuggestionsForSection,
+    isEnabled: suggestionsEnabled,
+    hasChanges
+  } = useUnifiedSuggestions({
+    mode,
+    variantId,
+    jobId,
+    baseResumeId,
+    onDataChange: (suggestion) => {
+      // Apply the suggestion to local data
+      handleSuggestionApply(suggestion)
+    }
+  })
+  
+  // Handle applying a suggestion to the actual data
+  const handleSuggestionApply = (suggestion: any) => {
+    // Update localData based on suggestion type and section
+    setLocalData(prev => {
+      const updated = { ...prev }
+      
+      switch(suggestion.section) {
+        case 'title':
+          if (updated.personalInfo) {
+            updated.personalInfo = {
+              ...updated.personalInfo,
+              title: suggestion.suggested
+            }
+          }
+          break
+          
+        case 'summary':
+          updated.professionalSummary = suggestion.suggested
+          break
+          
+        case 'experience':
+          // Handle experience bullet points
+          if (suggestion.targetPath && suggestion.targetIndex !== undefined) {
+            const [, expIndex, , bulletIndex] = suggestion.targetPath.split('.')
+            if (updated.experience && updated.experience[expIndex]) {
+              const exp = updated.experience[expIndex]
+              if (exp.bullets && exp.bullets[bulletIndex]) {
+                exp.bullets[bulletIndex] = suggestion.suggested
+              }
+            }
+          }
+          break
+          
+        case 'projects':
+          // Handle project descriptions
+          if (suggestion.targetPath && suggestion.targetIndex !== undefined) {
+            const [, projIndex] = suggestion.targetPath.split('.')
+            if (updated.projects && updated.projects[projIndex]) {
+              updated.projects[projIndex] = {
+                ...updated.projects[projIndex],
+                description: suggestion.suggested
+              }
+            }
+          }
+          break
+          
+        case 'skills':
+          // Handle skill additions/removals
+          if (suggestion.type === 'skill_add' && suggestion.targetPath) {
+            const category = suggestion.targetPath
+            if (!updated.skills) updated.skills = {}
+            if (!updated.skills[category]) updated.skills[category] = []
+            if (!updated.skills[category].includes(suggestion.suggested)) {
+              updated.skills[category] = [...updated.skills[category], suggestion.suggested]
+            }
+          } else if (suggestion.type === 'skill_remove' && suggestion.targetPath) {
+            const category = suggestion.targetPath
+            if (updated.skills && updated.skills[category]) {
+              updated.skills[category] = updated.skills[category].filter(
+                (skill: string) => skill !== suggestion.original
+              )
+            }
+          }
+          break
+      }
+      
+      return updated
+    })
+  }
 
   // Real-time preview generation
   React.useEffect(() => {
@@ -668,33 +782,52 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
                   <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Professional Summary
                   </label>
-                  <button
-                    onClick={() => setLocalData({
-                      ...localData,
-                      enableProfessionalSummary: !localData.enableProfessionalSummary
-                    })}
-                    className={cn(
-                      "text-xs px-2 py-1 rounded-md font-medium transition-all duration-200",
-                      localData.enableProfessionalSummary
-                        ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  <div className="flex items-center gap-2">
+                    {/* Show suggestion badge in tailor mode */}
+                    {suggestionsEnabled && (
+                      <SuggestionBadge
+                        count={getSuggestionsForSection('summary').length}
+                        section="summary"
+                      />
                     )}
-                  >
-                    {localData.enableProfessionalSummary ? "Enabled" : "Disabled"}
-                  </button>
+                    <button
+                      onClick={() => setLocalData({
+                        ...localData,
+                        enableProfessionalSummary: !localData.enableProfessionalSummary
+                      })}
+                      className={cn(
+                        "text-xs px-2 py-1 rounded-md font-medium transition-all duration-200",
+                        localData.enableProfessionalSummary
+                          ? "bg-green-100 text-green-700 hover:bg-green-200"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      )}
+                    >
+                      {localData.enableProfessionalSummary ? "Enabled" : "Disabled"}
+                    </button>
+                  </div>
                 </div>
                 {localData.enableProfessionalSummary && (
-                  <EnhancedRichText
-                    value={localData.professionalSummary}
-                    onChange={(value) => setLocalData({
-                      ...localData,
-                      professionalSummary: value
-                    })}
-                    multiline
-                    showHighlight
-                    placeholder="Write a compelling professional summary..."
-                    className="min-h-[100px]"
-                  />
+                  <div className="space-y-2">
+                    {/* Show suggestion for summary if available */}
+                    {suggestionsEnabled && getSuggestionForField('summary') && (
+                      <SuggestionIndicator
+                        suggestion={getSuggestionForField('summary')!}
+                        onAccept={acceptSuggestion}
+                        onDecline={declineSuggestion}
+                      />
+                    )}
+                    <EnhancedRichText
+                      value={localData.professionalSummary}
+                      onChange={(value) => setLocalData({
+                        ...localData,
+                        professionalSummary: value
+                      })}
+                      multiline
+                      showHighlight
+                      placeholder="Write a compelling professional summary..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
                 )}
                 {!localData.enableProfessionalSummary && (
                   <div className="text-xs text-gray-500 italic p-3 bg-gray-50 rounded-lg">
@@ -774,33 +907,60 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
                     <div className="mt-3">
                       <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-2">
                         Responsibilities & Achievements
+                        {/* Show suggestion count for this experience */}
+                        {suggestionsEnabled && (
+                          <span className="ml-2">
+                            <SuggestionBadge
+                              count={getSuggestionsForSection('experience').filter(s => 
+                                s.targetPath?.startsWith(`experience.${index}`)
+                              ).length}
+                              section={`experience-${index}`}
+                            />
+                          </span>
+                        )}
                       </label>
-                      {exp.achievements?.map((achievement, achIndex) => (
-                        <div key={achIndex} className="flex items-start gap-2 mb-2">
-                          <span className="text-purple-500 mt-1">•</span>
-                          <EnhancedRichText
-                            value={achievement}
-                            onChange={(value) => {
-                              const newExp = [...localData.experience]
-                              newExp[index].achievements[achIndex] = value
-                              setLocalData({ ...localData, experience: newExp })
-                            }}
-                            showHighlight
-                            placeholder="Describe key responsibility or achievement..."
-                            className="flex-1"
-                          />
-                          <button
-                            onClick={() => {
-                              const newExp = [...localData.experience]
-                              newExp[index].achievements = newExp[index].achievements.filter((_, i) => i !== achIndex)
-                              setLocalData({ ...localData, experience: newExp })
-                            }}
-                            className="text-red-500 hover:text-red-700 p-1"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                      {exp.achievements?.map((achievement, achIndex) => {
+                        const suggestionPath = `experience.${index}.achievements.${achIndex}`
+                        const suggestion = suggestionsEnabled ? getSuggestionForField(suggestionPath) : null
+                        
+                        return (
+                          <div key={achIndex} className="space-y-1 mb-2">
+                            {/* Show suggestion indicator if available */}
+                            {suggestion && (
+                              <SuggestionIndicator
+                                suggestion={suggestion}
+                                onAccept={acceptSuggestion}
+                                onDecline={declineSuggestion}
+                                compact={false}
+                              />
+                            )}
+                            <div className="flex items-start gap-2">
+                              <span className="text-purple-500 mt-1">•</span>
+                              <EnhancedRichText
+                                value={achievement}
+                                onChange={(value) => {
+                                  const newExp = [...localData.experience]
+                                  newExp[index].achievements[achIndex] = value
+                                  setLocalData({ ...localData, experience: newExp })
+                                }}
+                                showHighlight
+                                placeholder="Describe key responsibility or achievement..."
+                                className="flex-1"
+                              />
+                              <button
+                                onClick={() => {
+                                  const newExp = [...localData.experience]
+                                  newExp[index].achievements = newExp[index].achievements.filter((_, i) => i !== achIndex)
+                                  setLocalData({ ...localData, experience: newExp })
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
                       <button
                         onClick={() => {
                           const newExp = [...localData.experience]
@@ -877,17 +1037,43 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
                       />
                     </div>
                     
-                    <CleanInput
-                      label="Description"
-                      value={project.description}
-                      onChange={(value) => {
-                        const newProjects = [...(localData.projects || [])]
-                        newProjects[index].description = value
-                        setLocalData({ ...localData, projects: newProjects })
-                      }}
-                      placeholder="Brief description of the project..."
-                      multiline
-                    />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1">
+                        Description
+                        {/* Show suggestion badge for this project */}
+                        {suggestionsEnabled && (
+                          <span className="ml-2">
+                            <SuggestionBadge
+                              count={getSuggestionsForSection('projects').filter(s => 
+                                s.targetPath === `projects.${index}`
+                              ).length}
+                              section={`project-${index}`}
+                            />
+                          </span>
+                        )}
+                      </label>
+                      {/* Show suggestion indicator if available */}
+                      {suggestionsEnabled && getSuggestionForField(`projects.${index}`) && (
+                        <div className="mb-2">
+                          <SuggestionIndicator
+                            suggestion={getSuggestionForField(`projects.${index}`)!}
+                            onAccept={acceptSuggestion}
+                            onDecline={declineSuggestion}
+                            compact={false}
+                          />
+                        </div>
+                      )}
+                      <CleanInput
+                        value={project.description}
+                        onChange={(value) => {
+                          const newProjects = [...(localData.projects || [])]
+                          newProjects[index].description = value
+                          setLocalData({ ...localData, projects: newProjects })
+                        }}
+                        placeholder="Brief description of the project..."
+                        multiline
+                      />
+                    </div>
                     
                     <div className="mt-3">
                       <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-2">
@@ -954,6 +1140,11 @@ export function PerfectStudio({ userProfile: initialUserProfile, organizedSkills
                 userProfile={userProfile}
                 organizedSkills={organizedSkills} // Pass pre-organized skills to avoid separate API call
                 languages={userProfile?.languages || []}
+                // Pass suggestion props for tailor mode
+                suggestions={suggestionsEnabled ? getSuggestionsForSection('skills') : []}
+                onAcceptSuggestion={acceptSuggestion}
+                onDeclineSuggestion={declineSuggestion}
+                mode={mode}
                 onLanguagesChange={(updatedLanguages) => {
                   console.log('🌍 Language change callback triggered:', updatedLanguages)
                   // Update both userProfile AND localData to keep them in sync
