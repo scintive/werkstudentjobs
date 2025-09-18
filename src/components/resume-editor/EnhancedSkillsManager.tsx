@@ -33,6 +33,10 @@ interface EnhancedSkillsManagerProps {
   languages?: Language[] // Separate language data with proficiency
   onLanguagesChange?: (languages: Language[]) => void
   onShowSkillLevelsChange?: (show: boolean) => void // Callback for skill level toggle
+  suggestions?: any[] // Suggestions for tailor mode
+  onAcceptSuggestion?: (suggestionId: string) => void
+  onDeclineSuggestion?: (suggestionId: string) => void
+  mode?: 'base' | 'tailor'
 }
 
 interface Language {
@@ -193,7 +197,29 @@ function mapLanguageProficiency(oldProficiency: string): string {
   return mapping[oldProficiency] || 'Professional working'
 }
 
-export function EnhancedSkillsManager({ skills, onSkillsChange, userProfile, organizedSkills, languages = [], onLanguagesChange, onShowSkillLevelsChange }: EnhancedSkillsManagerProps) {
+export function EnhancedSkillsManager({ 
+  skills, 
+  onSkillsChange, 
+  userProfile, 
+  organizedSkills, 
+  languages = [], 
+  onLanguagesChange, 
+  onShowSkillLevelsChange,
+  suggestions = [],
+  onAcceptSuggestion,
+  onDeclineSuggestion,
+  mode = 'base'
+}: EnhancedSkillsManagerProps) {
+  // Debug logging
+  console.log('🎯 EnhancedSkillsManager props:', { 
+    mode, 
+    suggestionsCount: suggestions?.length || 0,
+    hasSuggestionHandlers: !!onAcceptSuggestion && !!onDeclineSuggestion
+  })
+  if (suggestions && suggestions.length > 0) {
+    console.log('📋 Skill suggestions:', suggestions)
+  }
+  
   // REMOVED: isOrganizing state - no longer needed since skills come pre-organized
   const [organizedData, setOrganizedData] = React.useState<OrganizedSkillsResponse | null>(null)
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set())
@@ -658,6 +684,71 @@ export function EnhancedSkillsManager({ skills, onSkillsChange, userProfile, org
 
       {/* Content */}
       <div className="p-6 space-y-4">
+
+      {/* Tailor Mode Suggestions */}
+      {mode === 'tailor' && suggestions && suggestions.length > 0 && (
+        <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">AI Suggestions</h3>
+            <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+              {suggestions.filter(s => s.status === 'pending').length} pending
+            </span>
+          </div>
+          <div className="space-y-2">
+            {suggestions
+              .filter(s => s.type === 'skill_add' || s.type === 'skill_addition')
+              .filter(s => s.status === 'pending')
+              .map(suggestion => (
+                <div key={suggestion.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-100">
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      Add: {suggestion.suggested}
+                    </span>
+                    {suggestion.rationale && (
+                      <p className="text-xs text-gray-600 mt-1">{suggestion.rationale}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        // Accept suggestion - add skill to appropriate category
+                        if (onAcceptSuggestion) {
+                          onAcceptSuggestion(suggestion.id)
+                          // Also add the skill to the local state
+                          const targetCategory = suggestion.targetPath?.split('.')[1] || 'technical'
+                          const updatedCategories = { ...dataToUse.organized_categories }
+                          if (!updatedCategories[targetCategory]) {
+                            updatedCategories[targetCategory] = { skills: [], suggestions: [], reasoning: '' }
+                          }
+                          updatedCategories[targetCategory].skills.push(suggestion.suggested)
+                          setOrganizedData({ ...dataToUse, organized_categories: updatedCategories })
+                          const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
+                          onSkillsChange(newSkillsFormat)
+                        }
+                      }}
+                      className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors"
+                      title="Accept suggestion"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (onDeclineSuggestion) {
+                          onDeclineSuggestion(suggestion.id)
+                        }
+                      }}
+                      className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
+                      title="Decline suggestion"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Add Category Form */}
       {showAddCategory && (
