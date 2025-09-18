@@ -404,6 +404,8 @@ export function PerfectStudio({
   const savedScrollPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 })
   
   // Unified Suggestions System for Tailor Mode
+  console.log('🎨 PerfectStudio rendering with:', { mode, variantId, jobId, baseResumeId })
+  
   const {
     suggestions,
     loading: suggestionsLoading,
@@ -425,6 +427,13 @@ export function PerfectStudio({
       // Apply the suggestion to local data
       handleSuggestionApply(suggestion)
     }
+  })
+  
+  console.log('📝 Suggestions state:', { 
+    enabled: suggestionsEnabled, 
+    count: suggestions.length,
+    loading: suggestionsLoading,
+    error: suggestionsError 
   })
   
   // Handle applying a suggestion to the actual data

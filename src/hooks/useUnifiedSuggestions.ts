@@ -51,18 +51,27 @@ export function useUnifiedSuggestions({
   
   // Load suggestions if in tailor mode
   useEffect(() => {
+    console.log('🎯 useUnifiedSuggestions effect triggered', { mode, variantId })
     if (mode === 'tailor' && variantId) {
+      console.log('✅ Loading suggestions for tailor mode with variant:', variantId)
       loadSuggestions()
     } else if (mode === 'base') {
+      console.log('🔄 Base mode - clearing suggestions')
       // Clear suggestions in base mode
       setSuggestions([])
       appliedChanges.current.clear()
+    } else {
+      console.log('⚠️ Conditions not met for loading', { mode, variantId })
     }
   }, [mode, variantId])
 
   const loadSuggestions = async () => {
-    if (!variantId) return
+    if (!variantId) {
+      console.log('⚠️ No variantId provided, skipping suggestion load')
+      return
+    }
     
+    console.log('🔄 Loading suggestions for variant:', variantId)
     setLoading(true)
     setError(null)
     
@@ -74,7 +83,15 @@ export function useUnifiedSuggestions({
         .order('section', { ascending: true })
         .order('confidence', { ascending: false })
       
-      if (error) throw error
+      if (error) {
+        console.error('❌ Failed to load suggestions from database:', error)
+        throw error
+      }
+      
+      console.log(`📊 Raw suggestions from DB:`, data?.length || 0, 'suggestions')
+      if (data && data.length > 0) {
+        console.log('Sample suggestion:', data[0])
+      }
       
       // Transform to our format
       const transformed: UnifiedSuggestion[] = (data || []).map(s => ({
@@ -88,7 +105,7 @@ export function useUnifiedSuggestions({
         rationale: s.rationale,
         atsKeywords: s.keywords || [],
         confidence: s.confidence,
-        status: s.status || 'pending',
+        status: s.accepted === true ? 'accepted' : (s.accepted === false && s.applied_at ? 'declined' : 'pending'),
         appliedAt: s.applied_at
       }))
       
@@ -130,7 +147,7 @@ export function useUnifiedSuggestions({
         await supabase
           .from('resume_suggestions')
           .update({ 
-            status: 'accepted',
+            accepted: true,
             applied_at: new Date().toISOString()
           })
           .eq('id', suggestionId)
@@ -162,7 +179,7 @@ export function useUnifiedSuggestions({
         await supabase
           .from('resume_suggestions')
           .update({ 
-            status: 'declined',
+            accepted: false,
             applied_at: new Date().toISOString()
           })
           .eq('id', suggestionId)
