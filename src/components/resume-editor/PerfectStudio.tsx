@@ -353,6 +353,12 @@ export function PerfectStudio({
   const [localData, setLocalData] = React.useState(resumeData)
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
   
+  // Sync resumeData changes to localData
+  React.useEffect(() => {
+    console.log('🔄 Syncing resumeData to localData, skills keys:', Object.keys(resumeData?.skills || {}))
+    setLocalData(resumeData)
+  }, [resumeData])
+  
   // Save template preference when it changes
   React.useEffect(() => {
     if (activeTemplate) {
@@ -581,7 +587,7 @@ export function PerfectStudio({
         clearTimeout(debounceTimer.current)
       }
     }
-  }, [localData, activeTemplate, showSkillLevelsInResume, resumeData])
+  }, [localData, activeTemplate, showSkillLevelsInResume])
 
   // Restore scroll position after preview HTML updates
   React.useEffect(() => {
