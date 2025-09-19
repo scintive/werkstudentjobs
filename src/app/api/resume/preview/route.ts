@@ -73,21 +73,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Resume data is required' }, { status: 400 });
     }
 
-    console.log('🎯 API: PROFICIENCY DEBUG - showSkillLevelsInResume:', showSkillLevelsInResume);
-    console.log('API: Received request for template:', template);
-    console.log('API: Resume data keys:', Object.keys(resumeData));
-    console.log('API: Raw skills data:', JSON.stringify(resumeData.skills, null, 2));
-    console.log('API: Raw experience count:', resumeData.experience?.length || 0);
-    console.log('API: Raw experience sample:', JSON.stringify(resumeData.experience?.[0], null, 2));
-    console.log('API: Raw certifications count:', resumeData.certifications?.length || 0);
+    // Minimal observability: track proficiency toggle and template only
+    // console.debug('preview: skillLevels=', showSkillLevelsInResume, 'template=', template)
 
     // Format the resume data exactly like CLI (now with GPT education formatting)
     const templateData = await formatResumeDataForTemplate(resumeData, userProfile, showSkillLevelsInResume);
-    console.log('API: Formatted template data keys:', Object.keys(templateData));
-    console.log('API: Personal info:', templateData.personalInfo);
-    console.log('API: Formatted skills:', JSON.stringify(templateData.skills, null, 2));
-    console.log('API: Formatted certifications:', JSON.stringify(templateData.certifications, null, 2));
-    console.log('API: Formatted custom sections:', JSON.stringify(templateData.customSections, null, 2));
 
     // Generate HTML using the same direct approach as CLI
     let html = '';
@@ -108,8 +98,7 @@ export async function POST(request: NextRequest) {
         html = generateSwissResumeHTML(templateData);
     }
 
-    console.log('API: Generated HTML length:', html.length);
-    console.log('API: HTML preview (first 500 chars):', html.substring(0, 500));
+    // console.debug('preview: html_length=', html.length)
 
     // Defensive sanitize: strip any script tags before returning
     // Sanitize: strip scripts, inline handlers, and javascript: URLs
@@ -151,21 +140,12 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
   
   // Helper function to process skills based on proficiency toggle and intelligent categorization
   const processSkillArray = (skillArray: any[], categoryName: string) => {
-    console.log('🔧 processSkillArray called with:', { 
-      categoryName,
-      showSkillLevelsInResume, 
-      skillArraySample: skillArray.slice(0, 3),
-      skillArrayLength: skillArray.length 
-    });
-    
-    // Use intelligent categorization to determine if this category should have proficiency
+    // Determine if this category should have proficiency
     const shouldHaveProficiency = showSkillLevelsInResume && shouldCategoryHaveProficiency(categoryName);
-    console.log(`🔧 Category "${categoryName}" should have proficiency:`, shouldHaveProficiency);
     
     if (!shouldHaveProficiency) {
       // Return as strings when proficiency is disabled or category shouldn't have proficiency
       const result = skillArray.map(skill => typeof skill === 'string' ? skill : (skill as any).skill || skill);
-      console.log('🔧 Returning strings:', result.slice(0, 3));
       return result;
     } else {
       // Convert to skill objects with proficiency when enabled AND category supports it
@@ -178,7 +158,6 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
           return { skill: skill.toString(), proficiency: 'Intermediate' };
         }
       });
-      console.log('🔧 Returning skill objects with proficiency:', result.slice(0, 3));
       return result;
     }
   };
@@ -232,8 +211,7 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
     skills[displayName] = processSkillArray(skillArray as any[], displayName);
   });
 
-  console.log('🎯 FINAL PROCESSED SKILLS:', JSON.stringify(skills, null, 2));
-  console.log('🎯 showSkillLevelsInResume passed to templates:', showSkillLevelsInResume);
+  // Minimal: keep templates clean
 
   return {
     personalInfo: {

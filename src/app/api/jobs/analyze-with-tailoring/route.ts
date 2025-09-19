@@ -707,18 +707,11 @@ Return your response as a valid JSON object only. Do not include any additional 
       });
       
       if (analysisData.atomic_suggestions?.length > 0) {
-        console.log('🤖 Atomic suggestions by section:');
         const bySect = analysisData.atomic_suggestions.reduce((acc: any, s: any) => {
           acc[s.section] = (acc[s.section] || 0) + 1;
           return acc;
         }, {});
-        console.log(bySect);
-        
-        // Log first few suggestions
-        console.log('🤖 First 3 atomic suggestions:');
-        analysisData.atomic_suggestions.slice(0, 3).forEach((s: any, i: number) => {
-          console.log(`  ${i + 1}. Section: ${s.section}, Type: ${s.suggestion_type}, Has target_path: ${!!s.target_path}`);
-        });
+        console.log('🤖 Suggestions by section:', bySect);
       }
       
       // 8.1 Safe merge: preserve base sections if model returns empty/missing
