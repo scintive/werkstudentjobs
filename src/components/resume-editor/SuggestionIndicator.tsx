@@ -60,8 +60,13 @@ export function SuggestionIndicator({
       >
         <Lightbulb className="w-4 h-4 text-amber-600" />
         <span className="text-sm text-amber-700 font-medium">
-          {suggestion.type === 'skill_add' ? 'Add skill' : 
-           suggestion.type === 'skill_remove' ? 'Remove skill' :
+          {suggestion.type === 'skill_add' || suggestion.type === 'skill_addition' ? 'Add skill' : 
+           suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal' ? 'Remove skill' :
+           suggestion.section === 'title' ? 'Title suggestion' :
+           suggestion.section === 'summary' ? 'Summary suggestion' :
+           suggestion.section === 'experience' ? 'Experience suggestion' :
+           suggestion.section === 'projects' ? 'Project suggestion' :
+           suggestion.section === 'skills' ? 'Skills suggestion' :
            'Suggestion available'}
         </span>
         <span className="text-xs text-amber-600 bg-amber-200 px-1.5 py-0.5 rounded-full">

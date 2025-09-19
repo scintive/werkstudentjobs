@@ -1206,8 +1206,8 @@ function ResumeStudioTab({
   currentVariantId,
   onVariantIdChange
 }: any) {
-  const [localVariantId, setLocalVariantId] = useState<string | null>(currentVariantId);
-  const [tailoredResumeData, setTailoredResumeData] = useState<any>(resumeData);
+  const [localVariantId, setLocalVariantId] = useState<string | null>(null);
+  const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
   
   // Create or load variant when entering resume tab
   useEffect(() => {
@@ -1215,59 +1215,23 @@ function ResumeStudioTab({
       if (!resumeId || !job?.id) return;
       
       try {
-        // Check if variant exists
-        const { data: existingVariant } = await supabase
-          .from('resume_variants')
-          .select('*')
-          .eq('base_resume_id', resumeId)
-          .eq('job_id', job.id)
-          .maybeSingle();
+        const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
+        const variant = await resumeVariantService.getOrCreateVariant(resumeId, job.id);
 
-        if (existingVariant) {
-          console.log('Found existing variant:', existingVariant.id);
-          setLocalVariantId(existingVariant.id);
-          setTailoredResumeData(existingVariant.tailored_data || resumeData);
+        if (variant) {
+          console.log('Found existing variant:', variant.id);
+          setLocalVariantId(variant.id);
+          setTailoredResumeData(variant.tailored_data || resumeData);
           
           // Trigger suggestions generation if needed
-          generateSuggestionsIfNeeded(existingVariant.id);
-        } else {
-          // Create new variant
-          console.log('Creating new variant...');
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-          
-          const { data: newVariant, error } = await supabase
-            .from('resume_variants')
-            .insert({
-              base_resume_id: resumeId,
-              job_id: job.id,
-              user_id: user.id,
-              tailored_data: resumeData,
-              is_active: true
-            })
-            .select()
-            .single();
-
-          if (error) {
-            console.error('Failed to create variant:', error);
-            return;
-          }
-
-          console.log('Created variant:', newVariant.id);
-          setLocalVariantId(newVariant.id);
-          setTailoredResumeData(resumeData);
-          
-          // Generate suggestions for new variant
-          generateSuggestionsIfNeeded(newVariant.id);
+          generateSuggestionsIfNeeded(variant.id);
         }
       } catch (error) {
         console.error('Failed to get/create variant:', error);
       }
     };
 
-    if (job && resumeId && !localVariantId) {
-      getOrCreateVariant();
-    }
+    getOrCreateVariant();
   }, [job, resumeId]);
   
   // Generate suggestions if they don't exist
@@ -1305,11 +1269,11 @@ function ResumeStudioTab({
   };
   
   // Check if we have resume data
-  if (!resumeData) {
+  if (!tailoredResumeData) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
         <div className="text-center">
-          <p className="text-gray-600">No resume data found. Please upload your resume first.</p>
+          <p className="text-gray-600">Loading tailored resume...</p>
         </div>
       </div>
     );
@@ -1322,18 +1286,20 @@ function ResumeStudioTab({
       {localVariantId ? (
         // Unified editor with tailor mode
         <SupabaseResumeProvider 
-          initialData={tailoredResumeData || resumeData}
+          initialData={tailoredResumeData}
           mode="tailor"
           variantId={localVariantId}
-          jobId={job.id}
-          baseResumeId={resumeId}
         >
           <PerfectStudio 
             mode="tailor"
             jobData={job}
             variantId={localVariantId}
-            baseResumeId={resumeId}
-            jobId={job.id}
+            userProfile={userProfile}
+            organizedSkills={
+              (strategy && 'organized_skills' in strategy && strategy.organized_skills) ||
+              (studentStrategy && 'organized_skills' in studentStrategy && studentStrategy.organized_skills) ||
+              undefined
+            }
           />
         </SupabaseResumeProvider>
       ) : (

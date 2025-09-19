@@ -978,11 +978,10 @@ Return your response as a valid JSON object only. Do not include any additional 
       // 10. UPDATE VARIANT WITH TAILORED DATA
       logContext.stage = 'update_variant';
       
-      // CRITICAL: Preserve personal info and ALWAYS preserve skills from base resume
+      // CRITICAL: Preserve personal info exactly; do not overwrite tailored skills
       const tailoredDataWithOriginalInfo = {
         ...(analysisData.tailored_resume || analysisContext.resume),
         personalInfo: baseResume.personal_info, // Force original personal info
-        skills: baseResume.skills || {} // ALWAYS use base resume skills - fixes "Profile Required"
       };
       
       await db

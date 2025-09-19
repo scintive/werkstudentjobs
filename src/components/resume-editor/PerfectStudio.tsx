@@ -351,16 +351,8 @@ export function PerfectStudio({
   } = useSupabaseResumeActions()
 
   const [localData, setLocalData] = React.useState(resumeData)
-  const [userProfile, setUserProfile] = React.useState(initialUserProfile) // LOCAL STATE FOR LANGUAGE EDITING
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
   
-  // Update local userProfile when prop changes
-  React.useEffect(() => {
-    if (initialUserProfile) {
-      setUserProfile(initialUserProfile)
-    }
-  }, [initialUserProfile])
-
   // Save template preference when it changes
   React.useEffect(() => {
     if (activeTemplate) {
@@ -443,6 +435,13 @@ export function PerfectStudio({
       const updated = { ...prev }
       
       switch(suggestion.section) {
+        case 'title':
+          if (updated.personalInfo) {
+            updated.professionalTitle = suggestion.suggested
+          } else {
+            updated.professionalTitle = suggestion.suggested
+          }
+          break
         case 'title':
           if (updated.personalInfo) {
             updated.personalInfo = {
@@ -544,7 +543,7 @@ export function PerfectStudio({
           body: JSON.stringify({
             resumeData: localData,
             template: activeTemplate,
-            userProfile: userProfile, // Pass userProfile for languages
+            userProfile: resumeData, // Pass userProfile for languages
             showSkillLevelsInResume: showSkillLevelsInResume // Pass skill level toggle
           })
         })
@@ -565,7 +564,7 @@ export function PerfectStudio({
         clearTimeout(debounceTimer.current)
       }
     }
-  }, [localData, activeTemplate, showSkillLevelsInResume, userProfile])
+  }, [localData, activeTemplate, showSkillLevelsInResume, resumeData])
 
   // Restore scroll position after preview HTML updates
   React.useEffect(() => {
@@ -603,7 +602,7 @@ export function PerfectStudio({
         body: JSON.stringify({
           resumeData: localData,
           template: activeTemplate,
-          userProfile: userProfile,
+          userProfile: resumeData,
           showSkillLevelsInResume: showSkillLevelsInResume
         })
       })
@@ -737,6 +736,15 @@ export function PerfectStudio({
                   })}
                   icon={<Briefcase className="w-4 h-4" />}
                 />
+              {suggestionsEnabled && getSuggestionForField('title') && (
+                <div className="col-span-2 -mt-2">
+                  <SuggestionIndicator
+                    suggestion={getSuggestionForField('title')!}
+                    onAccept={acceptSuggestion}
+                    onDecline={declineSuggestion}
+                  />
+                </div>
+              )}
                 <CleanInput
                   label="Email"
                   value={localData.personalInfo.email}
@@ -791,33 +799,13 @@ export function PerfectStudio({
                   <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Professional Summary
                   </label>
-                  <div className="flex items-center gap-2">
-                    {/* Show suggestion badge in tailor mode */}
-                    {suggestionsEnabled && (
-                      <SuggestionBadge
-                        count={getSuggestionsForSection('summary').length}
-                        section="summary"
-                      />
-                    )}
-                    <button
-                      onClick={() => setLocalData({
-                        ...localData,
-                        enableProfessionalSummary: !localData.enableProfessionalSummary
-                      })}
-                      className={cn(
-                        "text-xs px-2 py-1 rounded-md font-medium transition-all duration-200",
-                        localData.enableProfessionalSummary
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      )}
-                    >
-                      {localData.enableProfessionalSummary ? "Enabled" : "Disabled"}
-                    </button>
-                  </div>
+                  <SuggestionBadge
+                    count={getSuggestionsForSection('summary').length}
+                    section="summary"
+                  />
                 </div>
                 {localData.enableProfessionalSummary && (
                   <div className="space-y-2">
-                    {/* Show suggestion for summary if available */}
                     {suggestionsEnabled && getSuggestionForField('summary') && (
                       <SuggestionIndicator
                         suggestion={getSuggestionForField('summary')!}
@@ -1141,14 +1129,14 @@ export function PerfectStudio({
                   setLocalData(prevData => ({
                     ...prevData,
                     skills: updatedSkills,
-                    // Preserve languages from userProfile to prevent reset
-                    languages: userProfile?.languages || prevData.languages || []
+                    // Preserve languages from resumeData to prevent reset
+                    languages: prevData.languages || []
                   }))
-                  console.log('🎯 Updated localData with skills, preserved languages from userProfile')
+                  console.log('🎯 Updated localData with skills, preserved languages from resumeData')
                 }}
-                userProfile={userProfile}
+                userProfile={resumeData} // Use resumeData from context
                 organizedSkills={organizedSkills} // Pass pre-organized skills to avoid separate API call
-                languages={userProfile?.languages || []}
+                languages={localData.languages || []}
                 // Pass suggestion props for tailor mode
                 suggestions={suggestionsEnabled ? getSuggestionsForSection('skills') : []}
                 onAcceptSuggestion={acceptSuggestion}
@@ -1156,18 +1144,12 @@ export function PerfectStudio({
                 mode={mode}
                 onLanguagesChange={(updatedLanguages) => {
                   console.log('🌍 Language change callback triggered:', updatedLanguages)
-                  // Update both userProfile AND localData to keep them in sync
-                  if (userProfile) {
-                    const newUserProfile = { ...userProfile, languages: updatedLanguages }
-                    setUserProfile(newUserProfile)
-                    console.log('🌍 Updated userProfile with new languages:', newUserProfile.languages)
-                  }
-                  // ALSO update localData to prevent reset during skills updates
-                  setLocalData({
-                    ...localData,
+                  // Update localData to keep it in sync
+                  setLocalData(prevData => ({
+                    ...prevData,
                     languages: updatedLanguages
-                  })
-                  console.log('🌍 Also updated localData languages to prevent reset')
+                  }))
+                  console.log('🌍 Updated localData languages to prevent reset')
                 }}
                 showSkillLevelsInResume={showSkillLevelsInResume}
                 onShowSkillLevelsChange={setShowSkillLevelsInResume}

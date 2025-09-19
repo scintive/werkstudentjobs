@@ -18,6 +18,9 @@ interface SupabaseResumeContextValue {
   lastSaved: Date | null
   resumeId: string | null
   saveError: string | null
+  // Tailor/base mode awareness
+  mode: 'base' | 'tailor'
+  variantId?: string | null
 }
 
 const SupabaseResumeContext = React.createContext<SupabaseResumeContextValue | null>(null)
@@ -28,6 +31,8 @@ interface SupabaseResumeProviderProps {
   autoSaveInterval?: number // Auto-save interval in ms (default: 2000ms)
   // When true, do not call /api/profile/latest on mount (use local service fallback)
   skipProfileApiFetch?: boolean
+  mode?: 'base' | 'tailor' // Add mode to distinguish behavior
+  variantId?: string // Add variantId for tailor mode
 }
 
 export function SupabaseResumeProvider({ 
@@ -35,6 +40,8 @@ export function SupabaseResumeProvider({
   initialData,
   autoSaveInterval = 2000,
   skipProfileApiFetch = false,
+  mode = 'base', // Default to 'base'
+  variantId
 }: SupabaseResumeProviderProps) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSaving, setIsSaving] = React.useState(false)
@@ -152,7 +159,19 @@ export function SupabaseResumeProvider({
       setIsSaving(true)
       setSaveError(null)
       
-      await resumeService.current.saveResumeData(data, template)
+      if (mode === 'tailor') {
+        if (variantId) {
+          const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
+          await resumeVariantService.updateVariant(variantId, data);
+          console.log(`✅ Tailored variant ${variantId} saved.`);
+        } else {
+          console.warn('⚠️ Skipped saving tailored resume: variantId not available yet.');
+          // Do not save, as we don't want to overwrite the base resume.
+        }
+      } else {
+        await resumeService.current.saveResumeData(data, template)
+        console.log(`✅ Base resume saved.`);
+      }
       
       setLastSaved(new Date())
       lastSavedDataRef.current = currentDataString
@@ -162,7 +181,7 @@ export function SupabaseResumeProvider({
     } finally {
       setIsSaving(false)
     }
-  }, [])
+  }, [mode, variantId])
 
   // Debounced auto-save
   const scheduleAutoSave = React.useCallback((data: ResumeData) => {
@@ -208,6 +227,8 @@ export function SupabaseResumeProvider({
         lastSaved={lastSaved}
         resumeId={resumeId}
         saveError={saveError}
+        mode={mode}
+        variantId={variantId || null}
       >
         {children}
       </SupabaseResumeWrapper>
@@ -224,6 +245,8 @@ interface SupabaseResumeWrapperProps {
   lastSaved: Date | null
   resumeId: string | null
   saveError: string | null
+  mode: 'base' | 'tailor'
+  variantId: string | null
 }
 
 function SupabaseResumeWrapper({
@@ -233,7 +256,9 @@ function SupabaseResumeWrapper({
   isSaving,
   lastSaved,
   resumeId,
-  saveError
+  saveError,
+  mode,
+  variantId
 }: SupabaseResumeWrapperProps) {
   const { resumeData, dispatch, canUndo, canRedo } = useResumeContext()
   
@@ -253,8 +278,10 @@ function SupabaseResumeWrapper({
     isSaving,
     lastSaved,
     resumeId,
-    saveError
-  }), [resumeData, dispatch, canUndo, canRedo, isLoading, isSaving, lastSaved, resumeId, saveError])
+    saveError,
+    mode,
+    variantId
+  }), [resumeData, dispatch, canUndo, canRedo, isLoading, isSaving, lastSaved, resumeId, saveError, mode, variantId])
 
   return (
     <SupabaseResumeContext.Provider value={contextValue}>
@@ -275,21 +302,26 @@ export function useSupabaseResumeContext() {
 // Enhanced actions hook that includes manual save
 export function useSupabaseResumeActions() {
   const baseActions = useResumeActions()
-  const { resumeData } = useSupabaseResumeContext()
+  const { resumeData, mode, variantId } = useSupabaseResumeContext()
   const resumeService = React.useRef<ResumeDataService>(ResumeDataService.getInstance())
 
   return React.useMemo(() => ({
     ...baseActions,
     // Manual save function
     saveNow: async (template?: string) => {
-      await resumeService.current.saveResumeData(resumeData, template)
+      if (mode === 'tailor' && variantId) {
+        const { resumeVariantService } = await import('@/lib/services/resumeVariantService')
+        await resumeVariantService.updateVariant(variantId, resumeData)
+      } else {
+        await resumeService.current.saveResumeData(resumeData, template)
+      }
     },
     // Force refresh from database
     refreshFromDatabase: async () => {
       const result = await resumeService.current.getOrCreateResumeData()
       baseActions.setResumeData(result.data)
     }
-  }), [baseActions, resumeData])
+  }), [baseActions, resumeData, mode, variantId])
 }
 
 // Save status indicator component
