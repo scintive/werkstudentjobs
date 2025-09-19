@@ -238,12 +238,13 @@ export function enhancedCategorizeSkill(skill: string): keyof EnhancedSkillCateg
 /**
  * Auto-categorize an array of mixed skills into enhanced granular categories
  */
-export function enhancedAutoCategorizeSkills(skills: string[]): EnhancedSkillCategories {
+export function enhancedAutoCategorizeSkills(skills: any[]): EnhancedSkillCategories {
   const categorized: EnhancedSkillCategories = {};
   
-  skills.forEach(skill => {
-    if (skill.trim()) {
-      const category = enhancedCategorizeSkill(skill);
+  skills.forEach((s: any) => {
+    const skill = typeof s === 'string' ? s : (s?.skill ?? s?.name ?? '');
+    if (typeof skill === 'string' && skill.trim()) {
+      const category = enhancedCategorizeSkill(skill.trim());
       if (!categorized[category]) {
         categorized[category] = [];
       }

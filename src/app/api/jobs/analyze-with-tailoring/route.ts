@@ -616,7 +616,8 @@ OUTPUT FORMAT (JSON):
               type: 'object',
               additionalProperties: false,
               properties: {
-                section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom_sections','custom','title'] },
+                // Align with DB check constraint; drop 'custom'
+                section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom_sections','title'] },
                 suggestion_type: { enum: ['text','bullet','skill_addition','skill_removal','reorder','language_addition'] },
                 target_id: { type: ['string','null'] },
                 target_path: { type: ['string','null'] },
