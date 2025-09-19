@@ -341,19 +341,23 @@ export function EnhancedSkillsManager({
     // Canonical category mapping to prevent drift
     const canonicalCategoryMap: Record<string, string> = {
       'technical skills': 'technical',
+      'technical & digital': 'technical',
       'technical': 'technical',
       'soft skills': 'soft_skills',
       'soft': 'soft_skills',
       'interpersonal': 'interpersonal',
       'communication': 'interpersonal',
+      'communication & collaboration': 'interpersonal',
       'tools': 'tools',
       'tools & platforms': 'tools',
       'core skills': 'core',
       'core': 'core',
       'business': 'business',
+      'business intelligence & strategy': 'business',
       'creative': 'creative',
       'specialized': 'specialized',
-      'languages': 'languages'
+      'languages': 'languages',
+      'data analysis & visualization': 'technical'
     }
 
     Object.entries(organizedCategories).forEach(([categoryName, categoryData]) => {

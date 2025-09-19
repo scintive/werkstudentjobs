@@ -1157,19 +1157,14 @@ export function PerfectStudio({
               <EnhancedSkillsManager
                 skills={localData.skills}
                 onSkillsChange={(updatedSkills) => {
-                  console.log('🎯 Skills change callback triggered')
-                  // Guard: avoid wiping skills when an empty map bubbles up transiently
-                  if (!updatedSkills || Object.keys(updatedSkills).length === 0) {
-                    console.warn('⚠️ Ignoring empty skills update to prevent disappearance')
-                    return
-                  }
+                  console.log('🎯 Skills change callback triggered with:', Object.keys(updatedSkills || {}))
                   setLocalData(prevData => ({
                     ...prevData,
-                    skills: updatedSkills,
+                    skills: updatedSkills || {},
                     // Preserve languages from resumeData to prevent reset
                     languages: prevData.languages || []
                   }))
-                  console.log('🎯 Updated localData with skills, preserved languages from resumeData')
+                  console.log('🎯 Updated localData with skills:', updatedSkills)
                 }}
                 userProfile={resumeData} // Use resumeData from context
                 organizedSkills={organizedSkills} // Pass pre-organized skills to avoid separate API call

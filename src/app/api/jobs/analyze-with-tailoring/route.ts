@@ -698,6 +698,29 @@ Return your response as a valid JSON object only. Do not include any additional 
         }
       }
 
+      // Log what GPT returned
+      console.log('🤖 GPT Response Overview:', {
+        hasStrategy: !!analysisData.strategy,
+        hasTailoredResume: !!analysisData.tailored_resume,
+        atomicSuggestionsCount: analysisData.atomic_suggestions?.length || 0,
+        skillsSuggestionsCount: analysisData.skills_suggestions?.length || 0
+      });
+      
+      if (analysisData.atomic_suggestions?.length > 0) {
+        console.log('🤖 Atomic suggestions by section:');
+        const bySect = analysisData.atomic_suggestions.reduce((acc: any, s: any) => {
+          acc[s.section] = (acc[s.section] || 0) + 1;
+          return acc;
+        }, {});
+        console.log(bySect);
+        
+        // Log first few suggestions
+        console.log('🤖 First 3 atomic suggestions:');
+        analysisData.atomic_suggestions.slice(0, 3).forEach((s: any, i: number) => {
+          console.log(`  ${i + 1}. Section: ${s.section}, Type: ${s.suggestion_type}, Has target_path: ${!!s.target_path}`);
+        });
+      }
+      
       // 8.1 Safe merge: preserve base sections if model returns empty/missing
       const ensureArray = (v: any) => Array.isArray(v) ? v : [];
       const ensureObject = (v: any) => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
