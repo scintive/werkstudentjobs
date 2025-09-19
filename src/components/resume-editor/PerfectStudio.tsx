@@ -353,10 +353,17 @@ export function PerfectStudio({
   const [localData, setLocalData] = React.useState(resumeData)
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
   
-  // Sync resumeData changes to localData
+  // Sync resumeData changes to localData (avoid loops)
+  const lastSyncedJsonRef = React.useRef<string>('')
   React.useEffect(() => {
-    console.log('🔄 Syncing resumeData to localData, skills keys:', Object.keys(resumeData?.skills || {}))
-    setLocalData(resumeData)
+    try {
+      const nextJson = JSON.stringify(resumeData || {})
+      if (nextJson === lastSyncedJsonRef.current) return
+      lastSyncedJsonRef.current = nextJson
+      setLocalData(resumeData)
+    } catch {
+      setLocalData(resumeData)
+    }
   }, [resumeData])
   
   // Save template preference when it changes
@@ -536,6 +543,14 @@ export function PerfectStudio({
 
     debounceTimer.current = setTimeout(async () => {
       setIsGeneratingPreview(true)
+      const snapshotJson = (() => { try { return JSON.stringify(localData || {}) } catch { return '' } })()
+      // Skip duplicate work if nothing changed since last run
+      const lastPreviewJson = (debounceTimer as any).lastPreviewJson as string | undefined
+      if (lastPreviewJson && lastPreviewJson === snapshotJson) {
+        setIsGeneratingPreview(false)
+        return
+      }
+      ;(debounceTimer as any).lastPreviewJson = snapshotJson
       
       // Save current scroll position before updating
       if (iframeRef.current?.contentWindow) {
@@ -549,14 +564,28 @@ export function PerfectStudio({
         }
       }
       
-      // Update global context
-      Object.keys(localData).forEach(key => {
-        if (key === 'personalInfo') {
-          updatePersonalInfo(localData.personalInfo)
-        } else {
-          updateField(key as any, localData[key as keyof typeof localData])
+      // Update global context only when data changed to avoid feedback loops
+      try {
+        const currentContextJson = JSON.stringify(resumeData || {})
+        if (currentContextJson !== snapshotJson) {
+          Object.keys(localData).forEach(key => {
+            if (key === 'personalInfo') {
+              updatePersonalInfo(localData.personalInfo)
+            } else {
+              updateField(key as any, localData[key as keyof typeof localData])
+            }
+          })
         }
-      })
+      } catch {
+        // Best-effort update
+        Object.keys(localData).forEach(key => {
+          if (key === 'personalInfo') {
+            updatePersonalInfo(localData.personalInfo)
+          } else {
+            updateField(key as any, localData[key as keyof typeof localData])
+          }
+        })
+      }
 
       // Generate preview
       try {
