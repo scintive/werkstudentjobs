@@ -162,14 +162,34 @@ export function SupabaseResumeProvider({
       if (mode === 'tailor') {
         if (variantId) {
           const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
-          await resumeVariantService.updateVariant(variantId, data);
+          // Normalize languages into both top-level and skills.languages before saving variant
+          const normalized = { ...data } as any
+          const topLangs = Array.isArray((normalized as any).languages) ? (normalized as any).languages : []
+          const skillsLanguages = topLangs.map((l: any) => {
+            if (typeof l === 'string') return l
+            const name = (l?.language ?? l?.name ?? '').toString().trim()
+            const level = (l?.proficiency ?? l?.level ?? '').toString().trim()
+            return name ? (level ? `${name} (${level})` : name) : ''
+          }).filter(Boolean)
+          normalized.skills = { ...(normalized.skills || {}), languages: skillsLanguages }
+          await resumeVariantService.updateVariant(variantId, normalized);
           console.log(`✅ Tailored variant ${variantId} saved.`);
         } else {
           console.warn('⚠️ Skipped saving tailored resume: variantId not available yet.');
           // Do not save, as we don't want to overwrite the base resume.
         }
       } else {
-        await resumeService.current.saveResumeData(data, template)
+        // Normalize languages back into skills.languages for base save (no top-level column in DB)
+        const normalized = { ...data } as any
+        const topLangs = Array.isArray((normalized as any).languages) ? (normalized as any).languages : []
+        const skillsLanguages = topLangs.map((l: any) => {
+          if (typeof l === 'string') return l
+          const name = (l?.language ?? l?.name ?? '').toString().trim()
+          const level = (l?.proficiency ?? l?.level ?? '').toString().trim()
+          return name ? (level ? `${name} (${level})` : name) : ''
+        }).filter(Boolean)
+        normalized.skills = { ...(normalized.skills || {}), languages: skillsLanguages }
+        await resumeService.current.saveResumeData(normalized, template)
         console.log(`✅ Base resume saved.`);
       }
       

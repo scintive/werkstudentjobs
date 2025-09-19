@@ -210,6 +210,17 @@ export function EnhancedSkillsManager({
   onDeclineSuggestion,
   mode = 'base'
 }: EnhancedSkillsManagerProps) {
+  // Helper: normalize incoming language objects to canonical shape
+  const normalizeLanguage = React.useCallback((l: any): Language => ({
+    language: (l?.language ?? l?.name ?? '').toString(),
+    proficiency: (l?.proficiency ?? l?.level ?? 'Not specified').toString()
+  }), [])
+
+  // Always work with normalized languages internally
+  const normalizedLanguages = React.useMemo<Language[]>(
+    () => (languages || []).map(normalizeLanguage),
+    [languages, normalizeLanguage]
+  )
   // Debug logging
   console.log('🎯 EnhancedSkillsManager props:', { 
     mode, 
@@ -236,30 +247,21 @@ export function EnhancedSkillsManager({
   const [openProficiencyDropdowns, setOpenProficiencyDropdowns] = React.useState<Record<string, boolean>>({})
   const [openLanguageDropdowns, setOpenLanguageDropdowns] = React.useState<Record<number, boolean>>({})
 
-  // Map language proficiency levels on initialization
+  // Normalize languages and standardize proficiency once on load
   React.useEffect(() => {
-    if (languages.length > 0 && onLanguagesChange) {
-      console.log('🌍 Original languages from GPT profile extraction:', languages)
-      
-      // Only map the proficiency formats - NO manual inference, use actual data from GPT
-      const mappedLanguages = languages.map(lang => ({
-        ...lang,
-        proficiency: mapLanguageProficiency(lang.proficiency) // Only standardize the format
-      }))
-      
-      console.log('🎯 Format-standardized languages:', mappedLanguages)
-      
-      // Only update if mapping changed anything
-      const hasChanges = mappedLanguages.some((mapped, idx) => 
-        mapped.proficiency !== languages[idx].proficiency
-      )
-      
-      if (hasChanges) {
-        console.log('✅ Updated languages with standardized proficiency format')
-        onLanguagesChange(mappedLanguages)
-      }
+    if (!onLanguagesChange) return
+    if (!normalizedLanguages || normalizedLanguages.length === 0) return
+    const standardized = normalizedLanguages.map(l => ({
+      language: l.language,
+      proficiency: mapLanguageProficiency(l.proficiency)
+    }))
+    // If incoming array differs from standardized, push standardized up
+    const a = JSON.stringify(normalizedLanguages)
+    const b = JSON.stringify(standardized)
+    if (a !== b) {
+      onLanguagesChange(standardized)
     }
-  }, [languages.length]) // Only run when languages are first loaded
+  }, [normalizedLanguages.length])
 
   // Initialize organized data from props ONLY - NO MORE SEPARATE API CALLS
   React.useEffect(() => {
@@ -335,23 +337,18 @@ export function EnhancedSkillsManager({
 
   const convertOrganizedToSkillsFormat = (organizedCategories: Record<string, OrganizedCategory>) => {
     const skillsFormat: Record<string, any[]> = {}
-    
+
     Object.entries(organizedCategories).forEach(([categoryName, categoryData]) => {
       const categoryKey = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '_')
       
-      // ALWAYS preserve the skill objects as they are - let the template formatter decide display
-      // This preserves proficiency data even when toggle is off
+      // Preserve objects as-is for technical categories; flatten to strings for non-technical to avoid downstream rendering bugs
       skillsFormat[categoryKey] = categoryData.skills.map(skill => {
-        if (typeof skill === 'string') {
-          // For string skills, create object only if category allows proficiency
-          return categoryData.allowProficiency ? { skill, proficiency: 'Intermediate' } : skill
-        } else {
-          // Always preserve existing skill objects with their proficiency data
-          return skill
-        }
+        if (typeof skill === 'string') return skill
+        // If category allows proficiency, keep object; otherwise use the name string
+        return categoryData.allowProficiency ? skill : (skill as any).skill
       })
     })
-    
+
     return skillsFormat
   }
 
@@ -471,7 +468,7 @@ export function EnhancedSkillsManager({
   const handleAddLanguage = () => {
     if (!newLanguage.language.trim() || !onLanguagesChange) return
     
-    const updatedLanguages = [...languages, { ...newLanguage }]
+    const updatedLanguages = [...normalizedLanguages, normalizeLanguage(newLanguage)]
     onLanguagesChange(updatedLanguages)
     setNewLanguage({ language: '', proficiency: 'Elementary' })
     setShowAddLanguage(false)
@@ -480,16 +477,16 @@ export function EnhancedSkillsManager({
   const handleRemoveLanguage = (index: number) => {
     if (!onLanguagesChange) return
     
-    const updatedLanguages = languages.filter((_, i) => i !== index)
+    const updatedLanguages = normalizedLanguages.filter((_, i) => i !== index)
     onLanguagesChange(updatedLanguages)
   }
 
   const handleUpdateLanguageProficiency = (index: number, proficiency: string) => {
     if (!onLanguagesChange) return
     
-    console.log(`🔄 Updating language ${languages[index]?.language} proficiency from "${languages[index]?.proficiency}" to "${proficiency}"`)
+    console.log(`🔄 Updating language ${normalizedLanguages[index]?.language} proficiency from "${normalizedLanguages[index]?.proficiency}" to "${proficiency}"`)
     
-    const updatedLanguages = [...languages]
+    const updatedLanguages = [...normalizedLanguages]
     updatedLanguages[index] = { ...updatedLanguages[index], proficiency }
     
     console.log('📝 Updated languages:', updatedLanguages)
@@ -786,7 +783,13 @@ export function EnhancedSkillsManager({
       {/* Categories - clean and minimal */}
       {dataToUse && dataToUse.organized_categories && (
         <div className="space-y-3">
-          {Object.entries(dataToUse.organized_categories).map(([categoryName, categoryData], index) => {
+          {Object.entries(dataToUse.organized_categories).map(([categoryName, categoryDataRaw], index) => {
+            const categoryData: OrganizedCategory = {
+              skills: Array.isArray((categoryDataRaw as any)?.skills) ? (categoryDataRaw as any).skills : [],
+              suggestions: Array.isArray((categoryDataRaw as any)?.suggestions) ? (categoryDataRaw as any).suggestions : [],
+              reasoning: typeof (categoryDataRaw as any)?.reasoning === 'string' ? (categoryDataRaw as any).reasoning : '',
+              allowProficiency: !!(categoryDataRaw as any)?.allowProficiency
+            }
             const isExpanded = expandedCategories.has(categoryName)
             const CategoryIcon = getCategoryIcon(categoryName)
             const colorScheme = CATEGORY_COLORS[index % CATEGORY_COLORS.length]
@@ -1051,14 +1054,14 @@ export function EnhancedSkillsManager({
       {/* MODERN LANGUAGES SECTION */}
       <div className="mt-8">
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
                 <Globe2 className="w-4 h-4 text-indigo-600" />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Languages</h3>
-                <p className="text-xs text-gray-500">{languages.length} language{languages.length !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-gray-500">{normalizedLanguages.length} language{normalizedLanguages.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
             
@@ -1114,8 +1117,8 @@ export function EnhancedSkillsManager({
 
           {/* LANGUAGES LIST - Clean design */}
           <div className="divide-y divide-gray-100">
-            {languages.length > 0 ? (
-              languages.map((lang, index) => (
+            {normalizedLanguages.length > 0 ? (
+              normalizedLanguages.map((lang, index) => (
                 <div
                   key={`${lang.language}-${index}`}
                   className="px-6 py-4 hover:bg-gray-50 transition-colors group">

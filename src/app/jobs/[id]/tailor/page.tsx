@@ -1208,72 +1208,121 @@ function ResumeStudioTab({
 }: any) {
   const [localVariantId, setLocalVariantId] = useState<string | null>(null);
   const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
+  const [organizedSkillsState, setOrganizedSkillsState] = useState<any | null>(null);
+  const [preparing, setPreparing] = useState<boolean>(true);
   
-  // Create or load variant when entering resume tab
+  // Trigger pre-analysis (which upserts/returns variant id server-side)
   useEffect(() => {
-    const getOrCreateVariant = async () => {
+    const prepare = async () => {
       if (!resumeId || !job?.id) return;
-      
-      try {
-        const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
-        const variant = await resumeVariantService.getOrCreateVariant(resumeId, job.id);
-
-        if (variant) {
-          console.log('Found existing variant:', variant.id);
-          setLocalVariantId(variant.id);
-          setTailoredResumeData(variant.tailored_data || resumeData);
-          
-          // Trigger suggestions generation if needed
-          generateSuggestionsIfNeeded(variant.id);
-        }
-      } catch (error) {
-        console.error('Failed to get/create variant:', error);
-      }
+      await runPreAnalysis();
     };
-
-    getOrCreateVariant();
+    prepare();
   }, [job, resumeId]);
   
-  // Generate suggestions if they don't exist
-  const generateSuggestionsIfNeeded = async (variantId: string) => {
+  // Pre-analysis pipeline: (1) analyze-with-tailoring → saves variant + suggestions
+  // (2) load fresh tailored data and suggestions, (3) enhance skills via GPT for organized view
+  const runPreAnalysis = async (variantId?: string) => {
     try {
-      // Check if suggestions exist
-      const { data: suggestions } = await supabase
-        .from('resume_suggestions')
-        .select('id')
-        .eq('variant_id', variantId)
-        .limit(1);
-      
-      if (!suggestions || suggestions.length === 0) {
-        console.log('No suggestions found, generating...');
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        
-        await fetch('/api/jobs/analyze-with-tailoring', {
+      setPreparing(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('Auth session missing; cannot run analyze-with-tailoring');
+        setTailoredResumeData(resumeData);
+        setPreparing(false);
+        return;
+      }
+
+      // Always analyze before loading editor to ensure fresh suggestions
+      const analyzeResp = await fetch('/api/jobs/analyze-with-tailoring', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          job_id: job.id,
+          base_resume_id: resumeId,
+          ...(variantId ? { variant_id: variantId } : {}),
+          force_refresh: false
+        }),
+        credentials: 'include'
+      });
+
+      if (analyzeResp.ok) {
+        const payload = await analyzeResp.json();
+        // Use tailored resume from analysis for editor initial data
+        setTailoredResumeData(payload.tailored_resume || payload.analysisData?.tailored_resume || resumeData);
+        if (payload.variant_id) {
+          setLocalVariantId(payload.variant_id);
+          onVariantIdChange?.(payload.variant_id);
+        }
+      } else {
+        // Fallback to existing variant data if API returns 304/409
+        if (variantId) {
+          const { data: variantRow } = await supabase
+            .from('resume_variants')
+            .select('*')
+            .eq('id', variantId)
+            .maybeSingle();
+          setTailoredResumeData(variantRow?.tailored_data || resumeData);
+        } else {
+          setTailoredResumeData(resumeData);
+        }
+      }
+
+      // Generate organized skills using GPT enhancer for clean categories
+      try {
+        const enhanceResp = await fetch('/api/skills/enhance', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            job_id: job.id,
-            base_resume_id: resumeId,
-            variant_id: variantId
-          }),
-          credentials: 'include'
+            userProfile: {
+              ...userProfile,
+              // Provide minimal context needed by enhancer
+              skills: (resumeData?.skills) || {}
+            },
+            currentSkills: resumeData?.skills || {}
+          })
         });
+        if (enhanceResp.ok) {
+          const enhanced = await enhanceResp.json();
+          // Normalize to shape EnhancedSkillsManager expects: { organized_categories: { [cat]: { skills: [], suggestions: [], reasoning: '' } } }
+          if (enhanced.organized_skills && typeof enhanced.organized_skills === 'object') {
+            const organized_categories: Record<string, any> = {};
+            Object.entries(enhanced.organized_skills).forEach(([cat, list]) => {
+              const skills = Array.isArray(list) ? list : [];
+              organized_categories[cat] = {
+                skills,
+                suggestions: Array.isArray(enhanced.suggestions?.[cat]) ? enhanced.suggestions[cat] : [],
+                reasoning: enhanced.reasoning || ''
+              };
+            });
+            setOrganizedSkillsState({ organized_categories, reasoning: enhanced.reasoning || '' });
+          } else {
+            setOrganizedSkillsState(null);
+          }
+        } else {
+          setOrganizedSkillsState(null);
+        }
+      } catch (e) {
+        console.error('Skills enhance failed:', e);
+        setOrganizedSkillsState(null);
       }
     } catch (error) {
-      console.error('Failed to generate suggestions:', error);
+      console.error('Pre-analysis failed:', error);
+      setTailoredResumeData(resumeData);
+    } finally {
+      setPreparing(false);
     }
   };
   
-  // Check if we have resume data
-  if (!tailoredResumeData) {
+  // Gate editor until pre-analysis is done and we have data
+  if (preparing || !tailoredResumeData) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
         <div className="text-center">
-          <p className="text-gray-600">Loading tailored resume...</p>
+          <p className="text-gray-600">Preparing AI-tailored editor...</p>
         </div>
       </div>
     );
@@ -1293,12 +1342,15 @@ function ResumeStudioTab({
           <PerfectStudio 
             mode="tailor"
             jobData={job}
+            jobId={job?.id}
+            baseResumeId={resumeId}
             variantId={localVariantId}
             userProfile={userProfile}
             organizedSkills={
-              (strategy && 'organized_skills' in strategy && strategy.organized_skills) ||
-              (studentStrategy && 'organized_skills' in studentStrategy && studentStrategy.organized_skills) ||
-              undefined
+              organizedSkillsState ||
+              ((strategy && 'organized_skills' in strategy && strategy.organized_skills) ||
+               (studentStrategy && 'organized_skills' in studentStrategy && studentStrategy.organized_skills) ||
+               undefined)
             }
           />
         </SupabaseResumeProvider>

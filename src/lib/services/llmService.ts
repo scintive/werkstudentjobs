@@ -1552,17 +1552,24 @@ Rules:
         "knowledge_gaps": ["specific hiring managers", "recent organizational changes"]
       }`;
 
-      const confidenceResponse = await this.createJsonCompletion({
+      const confidenceCompletion = await this.createJsonCompletion({
         messages: [{ role: 'user', content: confidencePrompt }],
         max_tokens: 200,
         model: 'gpt-4o-mini'
       });
 
-      const confidence = confidenceResponse.confidence || 0.0;
+      // Parse structured content from completion safely
+      let confidencePayload: any = { confidence: 0.0 };
+      try {
+        const content = confidenceCompletion.choices?.[0]?.message?.content || '{}';
+        confidencePayload = JSON.parse(content);
+      } catch {}
+
+      const confidence = Number(confidencePayload.confidence ?? 0.0) || 0.0;
       const threshold = getModelConfig('gpt-4o-mini')?.confidence_threshold || 0.7;
 
       console.log(`🧠 Confidence: ${confidence}/1.0 (threshold: ${threshold})`);
-      console.log(`🧠 Reasoning: ${confidenceResponse.reasoning}`);
+      console.log(`🧠 Reasoning: ${confidencePayload.reasoning || 'n/a'}`);
 
       let searchUsed = false;
       let research;
@@ -1626,11 +1633,18 @@ Rules:
 
     Only include information you're confident about. Use null for uncertain data.`;
 
-    return await this.createJsonCompletion({
+    const response = await this.createJsonCompletion({
       messages: [{ role: 'user', content: researchPrompt }],
       max_tokens: 800,
       model: 'gpt-4o-mini'
     });
+    // Parse into JSON object
+    try {
+      const content = response.choices?.[0]?.message?.content || '{}';
+      return JSON.parse(content);
+    } catch {
+      return { company_name: companyName, research_confidence: 'low' };
+    }
   }
 
 

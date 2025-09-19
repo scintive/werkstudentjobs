@@ -7,13 +7,33 @@ import type { ResumeData as SupabaseResumeData } from '@/lib/supabase/types'
 
 // Convert between our ResumeData type and Supabase storage format
 function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResumeData['Insert'], 'id' | 'created_at' | 'updated_at' | 'last_accessed_at' | 'session_id'> {
+  // Persist languages inside skills.languages to match current DB schema
+  const topLevelLanguages = (resumeData as any).languages as any[] | undefined
+  const skillsLanguages = Array.isArray(topLevelLanguages)
+    ? topLevelLanguages
+        .map((l: any) => {
+          if (typeof l === 'string') return l
+          const name = (l?.language ?? l?.name ?? '').toString().trim()
+          const prof = (l?.proficiency ?? l?.level ?? '').toString().trim()
+          return name ? (prof ? `${name} (${prof})` : name) : ''
+        })
+        .filter(Boolean)
+    : Array.isArray((resumeData as any)?.skills?.languages)
+    ? (resumeData as any).skills.languages
+    : []
+
+  const skillsToSave = {
+    ...(resumeData.skills || {}),
+    languages: skillsLanguages
+  }
+
   return {
     // user_id will be added at call-site - authentication required
     personal_info: resumeData.personalInfo,
     professional_title: resumeData.professionalTitle || '',
     professional_summary: resumeData.professionalSummary || '',
     enable_professional_summary: resumeData.enableProfessionalSummary || false,
-    skills: resumeData.skills,
+    skills: skillsToSave,
     experience: resumeData.experience,
     education: resumeData.education,
     projects: resumeData.projects || null,
@@ -26,6 +46,21 @@ function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResum
 }
 
 function convertFromSupabaseFormat(supabaseData: SupabaseResumeData): ResumeDataType {
+  const skillsObj: any = (supabaseData.skills as any) || {}
+  const rawLangs: any[] = Array.isArray(skillsObj.languages) ? skillsObj.languages : []
+  const parsedLanguages = rawLangs.map((entry: any) => {
+    if (typeof entry === 'string') {
+      const name = entry.replace(/\s*\([^)]*\)\s*$/, '').trim()
+      const levelMatch = entry.match(/\(([^)]+)\)/)
+      const level = levelMatch ? levelMatch[1] : 'Not specified'
+      return { name, level }
+    }
+    return {
+      name: (entry?.name ?? entry?.language ?? '').toString(),
+      level: (entry?.level ?? entry?.proficiency ?? 'Not specified').toString()
+    }
+  })
+
   return {
     personalInfo: supabaseData.personal_info as ResumeDataType['personalInfo'],
     professionalTitle: supabaseData.professional_title,
@@ -36,7 +71,8 @@ function convertFromSupabaseFormat(supabaseData: SupabaseResumeData): ResumeData
     education: supabaseData.education as ResumeDataType['education'],
     projects: supabaseData.projects as ResumeDataType['projects'],
     certifications: supabaseData.certifications as ResumeDataType['certifications'],
-    customSections: supabaseData.custom_sections as ResumeDataType['customSections']
+    customSections: supabaseData.custom_sections as ResumeDataType['customSections'],
+    languages: parsedLanguages
   }
 }
 

@@ -110,14 +110,49 @@ function MainApp() {
               // Check if user explicitly wants to upload a new resume
               const urlParams = new URLSearchParams(window.location.search)
               const forceUpload = urlParams.get('upload') === 'new'
+              const editMode = urlParams.get('edit') === '1'
               
-              if (!forceUpload) {
-                // User has a complete profile - redirect to jobs page
+              if (forceUpload) {
+                console.log('Force upload mode - allowing new resume upload')
+              } else if (editMode) {
+                console.log('Edit mode requested - open editor directly')
+                setResumeData(result.resumeData)
+                setIsCheckingProfile(false)
+                setCurrentStep('editor')
+                updateStepStatus('editor', false, true)
+                // Compute organized skills so the editor doesn't show "Waiting for Skills"
+                try {
+                  const enhanceResp = await fetch('/api/skills/enhance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userProfile: { ...result.resumeData, skills: result.resumeData.skills },
+                      currentSkills: result.resumeData.skills || {}
+                    })
+                  })
+                  if (enhanceResp.ok) {
+                    const enhanced = await enhanceResp.json()
+                    if (enhanced && enhanced.organized_skills) {
+                      const organized_categories: Record<string, any> = {}
+                      Object.entries(enhanced.organized_skills).forEach(([cat, list]: any) => {
+                        organized_categories[String(cat)] = {
+                          skills: Array.isArray(list) ? list : [],
+                          suggestions: Array.isArray(enhanced.suggestions?.[cat]) ? enhanced.suggestions[cat] : [],
+                          reasoning: enhanced.reasoning || ''
+                        }
+                      })
+                      setOrganizedSkills({ organized_categories, reasoning: enhanced.reasoning || '' })
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Enhance skills failed in edit mode')
+                }
+                return
+              } else {
+                // Default behavior: go to jobs page if not editing
                 console.log('Complete profile found, redirecting to jobs')
                 window.location.href = '/jobs'
                 return
-              } else {
-                console.log('Force upload mode - allowing new resume upload')
               }
             } else {
               console.log('Profile exists but incomplete, staying on upload page')
@@ -174,11 +209,15 @@ function MainApp() {
         },
         professionalTitle: profile.professional_title || "Professional",
         professionalSummary: profile.professional_summary || "Detail-oriented professional with extensive experience and proven ability to drive results.",
+        enableProfessionalSummary: !!profile.professional_summary,
         skills: {
           technical: profile.skills?.technology || [],
           soft_skills: profile.skills?.soft_skills || [],
           tools: profile.skills?.design || [], // Reusing design as tools for demo
-          languages: profile.languages?.map(lang => `${lang.language} (${lang.proficiency})`) || []
+          // Keep skills.languages as strings as per type definition
+          languages: (profile.languages || []).map((lang: any) =>
+            typeof lang === 'string' ? lang : `${lang.language} (${lang.proficiency})`
+          )
         },
         experience: (profile.experience || []).map(exp => ({
           company: exp.company,
@@ -190,9 +229,7 @@ function MainApp() {
           degree: edu.degree,
           field_of_study: edu.field_of_study,
           institution: edu.institution,
-          year: edu.year || edu.duration,
-          duration: edu.duration,
-          location: edu.location
+          year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
         })),
         projects: (profile.projects || []).map(proj => ({
           name: proj.title,
@@ -200,35 +237,17 @@ function MainApp() {
           technologies: [],
           date: "2023" // Default date
         })),
-        languages: (profile.languages || []).map((lang: any) => {
-          if (typeof lang === 'string') {
-            // Parse string format like "English (Fluent (Native-level))"
-            const match = lang.match(/^([^(]+)\s*\(([^)]+)\)$/);
-            if (match) {
-              return {
-                language: match[1].trim(),
-                proficiency: match[2].trim()
-              };
-            }
-            // Fallback if no parentheses found
-            return {
-              language: lang.trim(),
-              proficiency: 'Not specified'
-            };
-          } else {
-            // Already structured object
-            return {
-              language: lang.language || lang,
-              proficiency: lang.proficiency || 'Not specified'
-            };
-          }
-        }),
+        // Languages array for editor Languages card (kept in sync from skills.languages)
+        languages: (profile.languages || []).map((lang: any) => ({
+          name: typeof lang === 'string' ? lang : (lang.language || ''),
+          level: typeof lang === 'string' ? (lang.includes('(') ? lang.split('(')[1].replace(')','') : 'Not specified') : (lang.proficiency || 'Not specified')
+        })),
         certifications: profile.certifications.map(cert => ({
           name: cert.title,
           issuer: cert.institution,
           date: cert.date
         })),
-        customSections: (profile.custom_sections || []).map((section: any, index: number) => {
+        customSections: (profile as any).custom_sections ? (profile as any).custom_sections.map((section: any, index: number) => {
           console.log('🔍 CONVERTING CUSTOM SECTION:', section);
           
           // Helper function to intelligently parse custom section items based on title
@@ -306,7 +325,7 @@ function MainApp() {
             type: 'custom',
             items: section.items.map((item: string) => parseCustomSectionItem(item, section.title))
           }
-        })
+        }) : []
       }
       
       // Update resume data through context

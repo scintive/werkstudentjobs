@@ -344,8 +344,8 @@ export function generateProfessionalResumeHTML(data: any): string {
                 <h2 class="sidebar-header">Languages</h2>
                 ${languages.map(lang => `
                     <div class="language-item">
-                        <span class="language-name">${lang.language}</span>
-                        <span class="language-proficiency">${lang.proficiency}</span>
+                        <span class="language-name">${(lang.language || lang.name || '').toString()}</span>
+                        <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
                     </div>
                 `).join('')}
             </section>

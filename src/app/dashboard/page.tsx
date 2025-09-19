@@ -134,7 +134,7 @@ export default function DashboardPage() {
           <div className="text-xs text-gray-500">Completeness: {completeness}%</div>
           <div className="mt-3 flex gap-2">
             {baseResumeId && (
-              <Link href="/" className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-sm flex items-center gap-1">
+              <Link href="/?edit=1" className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-sm flex items-center gap-1">
                 <Edit3 className="w-4 h-4" /> Edit Resume
               </Link>
             )}

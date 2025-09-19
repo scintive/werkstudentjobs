@@ -48,6 +48,20 @@ export function useUnifiedSuggestions({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const appliedChanges = useRef(new Set<string>())
+
+  // Normalize target paths like "experience[0].bullets[2]" → "experience.0.achievements.2"
+  const canonicalizePath = (raw?: string | null): string | undefined => {
+    if (!raw || typeof raw !== 'string') return undefined
+    let p = raw
+      .replace(/\[\s*(\d+)\s*\]/g, '.$1')
+      .replace(/bullets/g, 'achievements')
+      .replace(/\s+/g, '')
+    // Convert underscore-delimited ids like experience_0_achievements_2
+    p = p.replace(/^experience_(\d+)_achievements_(\d+)$/, 'experience.$1.achievements.$2')
+    // Remove any trailing dots
+    p = p.replace(/\.+$/,'')
+    return p
+  }
   
   // Load suggestions if in tailor mode
   useEffect(() => {
@@ -97,9 +111,9 @@ export function useUnifiedSuggestions({
       const transformed: UnifiedSuggestion[] = (data || []).map(s => ({
         id: s.id,
         variantId: s.variant_id,
-        section: s.section,
-        type: s.suggestion_type || 'enhancement',
-        targetPath: s.target_id,
+        section: (s.section === 'professionalSummary' ? 'summary' : s.section),
+        type: (s.suggestion_type === 'skill_addition' ? 'skill_add' : s.suggestion_type === 'skill_removal' ? 'skill_remove' : (s.suggestion_type || 'enhancement')),
+        targetPath: canonicalizePath((s as any).target_id || (s as any).target_path),
         original: s.original_content,
         suggested: s.suggested_content,
         rationale: s.rationale,
@@ -108,6 +122,12 @@ export function useUnifiedSuggestions({
         status: s.accepted === true ? 'accepted' : (s.accepted === false && s.applied_at ? 'declined' : 'pending'),
         appliedAt: s.applied_at
       }))
+
+      // Observability: count missing anchors for experience
+      const missingAnchors = transformed.filter(s => s.section === 'experience' && !s.targetPath)
+      if (missingAnchors.length > 0) {
+        console.warn('SUGGESTIONS_ANCHOR_MISS', { count: missingAnchors.length, example: missingAnchors[0] })
+      }
       
       setSuggestions(transformed)
       
@@ -196,8 +216,9 @@ export function useUnifiedSuggestions({
   }, [suggestions])
 
   const getSuggestionForField = useCallback((path: string): UnifiedSuggestion | undefined => {
+    const canonical = canonicalizePath(path)
     return suggestions.find(s => 
-      s.targetPath === path && s.status === 'pending'
+      (s.status === 'pending') && (s.targetPath === canonical || s.targetPath?.startsWith(String(canonical)))
     )
   }, [suggestions])
 

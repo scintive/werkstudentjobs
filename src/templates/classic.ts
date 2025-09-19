@@ -346,7 +346,7 @@ export function generateClassicResumeHTML(data: any): string {
             <div class="skills-inline">
                 ${languages.map(lang => `
                     <div class="language-item">
-                        <span class="language-name">${lang.language}</span>: <span class="language-proficiency">${lang.proficiency}</span>
+                        <span class="language-name">${(lang.language || lang.name || '').toString()}</span>: <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
                     </div>
                 `).join('')}
             </div>

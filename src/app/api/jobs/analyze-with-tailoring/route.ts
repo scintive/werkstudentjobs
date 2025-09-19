@@ -729,7 +729,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       finalTailored.enableProfessionalSummary = tailoredResume.enableProfessionalSummary ?? 
         baseResumeData.enable_professional_summary ?? true;
       
-      // Skills: merge with base, never drop categories
+      // Skills: merge with base, never drop categories, and normalize languages into array on top level too
       if (isEmptyObject(tailoredResume.skills)) {
         finalTailored.skills = baseResumeData.skills || {};
       } else {
@@ -758,10 +758,57 @@ Return your response as a valid JSON object only. Do not include any additional 
         { client: 'customSections', db: 'customSections' }
       ];
       arrayFieldMappings.forEach(({ client, db }) => {
-        if (isEmptyArray(tailoredResume[client])) {
-          finalTailored[client] = ensureArray(baseResumeData[db]);
+        const candidate = ensureArray(tailoredResume[client]);
+        const baseArr = ensureArray(baseResumeData[db]);
+        // Preserve base entries; only include model entries if non-empty to avoid duplicates
+        if (isEmptyArray(candidate)) {
+          finalTailored[client] = baseArr;
+        } else if (client === 'experience') {
+          // Do not fabricate responsibilities; keep base bullets and allow suggestions to update
+          finalTailored.experience = baseArr.map((exp: any, idx: number) => ({
+            position: exp.position, company: exp.company, duration: exp.duration,
+            achievements: ensureArray(exp.achievements || exp.highlights || [])
+          }))
+          // Normalize editor expectations: ensure achievements arrays exist
+          if (!Array.isArray(finalTailored.experience)) finalTailored.experience = []
+          finalTailored.experience = finalTailored.experience.map((exp: any) => ({
+            position: exp.position || '',
+            company: exp.company || '',
+            duration: exp.duration || '',
+            achievements: Array.isArray(exp.achievements) ? exp.achievements : []
+          }))
+        } else if (client === 'education') {
+          // De-dupe duplicate education entries by title+institution
+          const combined = [...baseArr, ...candidate]
+          const seen = new Set<string>()
+          finalTailored.education = combined.filter((e: any) => {
+            const key = `${(e.degree||'').toLowerCase()}|${(e.institution||'').toLowerCase()}`
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          })
+        } else if (client === 'languages') {
+          // Always preserve base languages; merge with model entries if present
+          const modelLangs = candidate.map((l: any) => (typeof l === 'string') ? { name: l, level: 'Not specified' } : l)
+          const baseLangs = baseArr.map((l: any) => (typeof l === 'string') ? { name: l, level: 'Not specified' } : l)
+          const seenLang = new Set<string>()
+          const merged = [...baseLangs, ...modelLangs].filter((l: any) => {
+            const key = `${(l.name||l.language||'').toLowerCase()}|${(l.level||l.proficiency||'').toLowerCase()}`
+            if (seenLang.has(key)) return false
+            seenLang.add(key)
+            return true
+          })
+          finalTailored.languages = merged
+          // Also reflect into skills.languages for downstream components that rely on it
+          const languagesForSkills = merged.map((l: any) => {
+            const name = (l?.name || l?.language || '').toString()
+            const level = (l?.level || l?.proficiency || '').toString()
+            return level ? `${name} (${level})` : name
+          }).filter(Boolean)
+          finalTailored.skills = finalTailored.skills || {}
+          finalTailored.skills.languages = languagesForSkills
         } else {
-          finalTailored[client] = ensureArray(tailoredResume[client]);
+          finalTailored[client] = candidate
         }
       });
       
@@ -820,6 +867,80 @@ Return your response as a valid JSON object only. Do not include any additional 
         console.log(`✅ Added ${skillsSuggestionsAsAtomic.length} skills suggestions to atomic suggestions`);
       }
       
+      // Normalize and enrich atomic suggestions BEFORE validation so we don't drop useful ones
+      if (Array.isArray(analysisData.atomic_suggestions) && analysisData.atomic_suggestions.length > 0) {
+        const normalizeKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
+        const baseCategories = Object.keys(baseResumeData.skills || {}).map(normalizeKey)
+
+        const pickSkillCategory = (categoryCandidate: string | undefined, skillName: string): string => {
+          const candidate = normalizeKey(categoryCandidate || '')
+          if (candidate && baseCategories.includes(candidate)) return candidate
+          // Heuristics: map common phrases to existing categories
+          const skill = (skillName || '').toLowerCase()
+          const tryMatch = (needle: string, fallback: string) => (skill.includes(needle) && baseCategories.includes(fallback)) ? fallback : ''
+          const heuristics = [
+            tryMatch('project', 'project_management'),
+            tryMatch('management', 'project_management'),
+            tryMatch('analysis', 'business_analysis'),
+            tryMatch('analytics', 'business_analysis'),
+            tryMatch('agile', 'project_management'),
+            tryMatch('scrum', 'project_management'),
+            tryMatch('jira', 'project_management'),
+            tryMatch('database', 'domain_expertise'),
+            tryMatch('sql', 'domain_expertise'),
+            tryMatch('excel', 'domain_expertise'),
+            tryMatch('tableau', 'domain_expertise'),
+            tryMatch('power bi', 'domain_expertise'),
+            tryMatch('visualization', 'domain_expertise')
+          ].filter(Boolean)
+          if (heuristics.length > 0) return heuristics[0]
+          if (baseCategories.includes('domain_expertise')) return 'domain_expertise'
+          // Fallback to candidate or a safe bucket
+          return candidate || 'additional_skills'
+        }
+
+        const anchored = analysisData.atomic_suggestions.map((s: any) => {
+          const out = { ...s }
+          // Ensure skills suggestions are targeted to a concrete category
+          if ((out.section === 'skills') && !out.target_path) {
+            const skillName = out.after || out.suggested_content || out.suggestion || ''
+            const finalCat = pickSkillCategory(out.category, skillName)
+            out.target_path = `skills.${finalCat}`
+            out.target_id = out.target_id || out.target_path
+          }
+
+          // Anchor experience suggestions to a specific bullet when missing target_path
+          if (out.section === 'experience' && !out.target_path) {
+            const snippet: string = (out.anchors?.text_snippet || out.before || '').toString().slice(0, 80).toLowerCase()
+            if (snippet && Array.isArray(baseResumeData.experience)) {
+              let foundPath: string | null = null
+              baseResumeData.experience.forEach((exp: any, ei: number) => {
+                const bullets: string[] = Array.isArray(exp.achievements) ? exp.achievements : []
+                bullets.forEach((b, bi) => {
+                  if (!foundPath && typeof b === 'string' && b.toLowerCase().includes(snippet.slice(0, Math.max(12, Math.min(24, snippet.length))))) {
+                    foundPath = `experience.${ei}.achievements.${bi}`
+                  }
+                })
+              })
+              if (foundPath) {
+                out.target_path = foundPath
+                out.target_id = out.target_id || foundPath
+              }
+            }
+            // Fallback: treat as an addition on the first role
+            if (!out.target_path && Array.isArray(baseResumeData.experience) && baseResumeData.experience.length > 0) {
+              const idx = 0
+              const currentLen = Array.isArray(baseResumeData.experience[idx]?.achievements) ? baseResumeData.experience[idx].achievements.length : 0
+              const addPath = `experience.${idx}.achievements.${currentLen}`
+              out.target_path = addPath
+              out.target_id = out.target_id || addPath
+            }
+          }
+          return out
+        })
+        analysisData.atomic_suggestions = anchored
+      }
+
       // Production: suppress verbose debug logs
       
       if (analysisData.atomic_suggestions?.length > 0) {
@@ -872,15 +993,9 @@ Return your response as a valid JSON object only. Do not include any additional 
               return false;
             }
             
-            // Must have target_path for proper anchoring
-            if (!s.target_path) {
-              return false;
-            }
-            
-            // Must have evidence and requirements
-            if (!s.resume_evidence || !s.job_requirement) {
-              return false;
-            }
+            // Must have a target anchor for non-skills sections
+            if (s.section !== 'skills' && !s.target_path) return false;
+            // Be lenient on evidence/requirements to avoid dropping useful chips
             
             return true;
           })
@@ -984,7 +1099,7 @@ Return your response as a valid JSON object only. Do not include any additional 
         personalInfo: baseResume.personal_info, // Force original personal info
       };
       
-      await db
+      const { error: variantUpdateError } = await db
         .from('resume_variants')
         .update({
           tailored_data: tailoredDataWithOriginalInfo,
@@ -993,6 +1108,10 @@ Return your response as a valid JSON object only. Do not include any additional 
           updated_at: new Date().toISOString()
         })
         .eq('id', variant.id);
+
+      if (variantUpdateError) {
+        console.error("UNIFIED_ANALYSIS_ERROR", { ...logContext, stage: 'update_variant', code: 'update_failed', message: variantUpdateError.message });
+      }
       
       // 11. PREPARE RESPONSE
       const response = {

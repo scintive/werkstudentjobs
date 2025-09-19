@@ -85,11 +85,20 @@ class ResumeVariantService {
         return null;
       }
 
+      // Resolve user id for RLS-safe insert
+      let effectiveUserId = userId || (baseResume as any)?.user_id || null;
+      try {
+        if (!effectiveUserId) {
+          const { data: authData } = await supabase.auth.getUser();
+          effectiveUserId = authData?.user?.id || effectiveUserId;
+        }
+      } catch {}
+
       // Create new variant with base resume data as starting point
       const newVariant = {
         base_resume_id: baseResumeId,
         job_id: jobId,
-        user_id: userId || null,
+        user_id: effectiveUserId,
         session_id: sessionId || null,
         tailored_data: {
           personalInfo: baseResume.personal_info,
@@ -137,6 +146,13 @@ class ResumeVariantService {
     appliedSuggestions?: string[]
   ): Promise<boolean> {
     try {
+      // Ensure we scope the update by the current user to satisfy RLS policies
+      let authUserId: string | null = null
+      try {
+        const { data: authData } = await supabase.auth.getUser()
+        authUserId = authData?.user?.id || null
+      } catch {}
+
       const updateData: any = {
         tailored_data: tailoredData,
         updated_at: new Date().toISOString()
@@ -149,7 +165,8 @@ class ResumeVariantService {
       const { error } = await supabase
         .from('resume_variants')
         .update(updateData)
-        .eq('id', variantId);
+        .eq('id', variantId)
+        .maybeSingle();
 
       if (error) {
         console.error('Failed to update resume variant:', error);

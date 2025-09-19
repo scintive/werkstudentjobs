@@ -87,11 +87,30 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Get resume data for the specific user session (resume_data table uses session_id, not user_email)
+    // Get resume data prioritizing authenticated user_id, then session_id
     let resumeDataList: any[] | null = null
     let resumeError: any = null
     if (resumeRecordByUser) {
       resumeDataList = [resumeRecordByUser]
+    } else if (authUserId) {
+      const byUser = await supabase
+        .from('resume_data')
+        .select('*')
+        .eq('user_id', authUserId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+      if (!byUser.error && byUser.data && byUser.data.length > 0) {
+        resumeDataList = byUser.data
+      } else if (correctSessionId) {
+        const { data, error } = await supabase
+          .from('resume_data')
+          .select('*')
+          .eq('session_id', correctSessionId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+        resumeDataList = data
+        resumeError = error
+      }
     } else if (correctSessionId) {
       const { data, error } = await supabase
         .from('resume_data')

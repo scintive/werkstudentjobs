@@ -427,6 +427,26 @@ export function PerfectStudio({
     loading: suggestionsLoading,
     error: suggestionsError 
   })
+
+  // Ensure languages are present in editor state even if only skills.languages exists
+  React.useEffect(() => {
+    const hasExplicitLanguages = Array.isArray((localData as any).languages) && (localData as any).languages.length > 0
+    const skillsLanguages = Array.isArray((localData as any)?.skills?.languages) ? (localData as any).skills.languages : []
+    if (!hasExplicitLanguages && skillsLanguages.length > 0) {
+      const parsed = skillsLanguages.map((entry: any) => {
+        if (typeof entry === 'string') {
+          const name = entry.replace(/\s*\([^)]*\)\s*$/, '').trim()
+          const level = (entry.match(/\(([^)]+)\)/)?.[1] || 'Not specified')
+          return { language: name, proficiency: level }
+        }
+        return {
+          language: (entry?.language ?? entry?.name ?? '').toString(),
+          proficiency: (entry?.proficiency ?? entry?.level ?? 'Not specified').toString()
+        }
+      })
+      setLocalData(prev => ({ ...prev, languages: parsed as any }))
+    }
+  }, [localData.skills?.languages])
   
   // Handle applying a suggestion to the actual data
   const handleSuggestionApply = (suggestion: any) => {
@@ -436,19 +456,7 @@ export function PerfectStudio({
       
       switch(suggestion.section) {
         case 'title':
-          if (updated.personalInfo) {
-            updated.professionalTitle = suggestion.suggested
-          } else {
-            updated.professionalTitle = suggestion.suggested
-          }
-          break
-        case 'title':
-          if (updated.personalInfo) {
-            updated.personalInfo = {
-              ...updated.personalInfo,
-              title: suggestion.suggested
-            }
-          }
+          updated.professionalTitle = suggestion.suggested
           break
           
         case 'summary':
@@ -457,13 +465,22 @@ export function PerfectStudio({
           
         case 'experience':
           // Handle experience bullet points
-          if (suggestion.targetPath && suggestion.targetIndex !== undefined) {
-            const [, expIndex, , bulletIndex] = suggestion.targetPath.split('.')
-            if (updated.experience && updated.experience[expIndex]) {
-              const exp = updated.experience[expIndex]
-              if (exp.bullets && exp.bullets[bulletIndex]) {
-                exp.bullets[bulletIndex] = suggestion.suggested
-              }
+          if (suggestion.targetPath) {
+            // support experience.N.achievements.M and add-if-missing
+            const parts = suggestion.targetPath.split('.')
+            const expIdx = parseInt(parts[1] || '0', 10)
+            const achIdx = parseInt(parts[3] || '0', 10)
+            if (!updated.experience) updated.experience = []
+            if (!updated.experience[expIdx]) {
+              updated.experience[expIdx] = { position: '', company: '', duration: '', achievements: [] }
+            }
+            const exp = updated.experience[expIdx]
+            if (!exp.achievements) exp.achievements = []
+            // if original empty (add case), push; else replace index
+            if (isNaN(achIdx) || achIdx >= exp.achievements.length) {
+              exp.achievements.push(suggestion.suggested)
+            } else {
+              exp.achievements[achIdx] = suggestion.suggested
             }
           }
           break
@@ -483,15 +500,15 @@ export function PerfectStudio({
           
         case 'skills':
           // Handle skill additions/removals
-          if (suggestion.type === 'skill_add' && suggestion.targetPath) {
-            const category = suggestion.targetPath
+          if ((suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') && suggestion.targetPath) {
+            const category = suggestion.targetPath.replace(/^skills\./,'')
             if (!updated.skills) updated.skills = {}
             if (!updated.skills[category]) updated.skills[category] = []
             if (!updated.skills[category].includes(suggestion.suggested)) {
               updated.skills[category] = [...updated.skills[category], suggestion.suggested]
             }
-          } else if (suggestion.type === 'skill_remove' && suggestion.targetPath) {
-            const category = suggestion.targetPath
+          } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal') && suggestion.targetPath) {
+            const category = suggestion.targetPath.replace(/^skills\./,'')
             if (updated.skills && updated.skills[category]) {
               updated.skills[category] = updated.skills[category].filter(
                 (skill: string) => skill !== suggestion.original
@@ -916,6 +933,21 @@ export function PerfectStudio({
                           </span>
                         )}
                       </label>
+                      {/* Render suggestions not anchored to an existing bullet (e.g., additions) */}
+                      {suggestionsEnabled && (
+                        <div className="space-y-2 mb-2">
+                          {getSuggestionsForSection('experience')
+                            .filter(s => s.targetPath?.startsWith(`experience.${index}`))
+                            .map((s, i) => (
+                              <SuggestionIndicator
+                                key={`${s.id}-${i}`}
+                                suggestion={s as any}
+                                onAccept={acceptSuggestion}
+                                onDecline={declineSuggestion}
+                              />
+                            ))}
+                        </div>
+                      )}
                       {exp.achievements?.map((achievement, achIndex) => {
                         const suggestionPath = `experience.${index}.achievements.${achIndex}`
                         const suggestion = suggestionsEnabled ? getSuggestionForField(suggestionPath) : null
@@ -1126,6 +1158,11 @@ export function PerfectStudio({
                 skills={localData.skills}
                 onSkillsChange={(updatedSkills) => {
                   console.log('🎯 Skills change callback triggered')
+                  // Guard: avoid wiping skills when an empty map bubbles up transiently
+                  if (!updatedSkills || Object.keys(updatedSkills).length === 0) {
+                    console.warn('⚠️ Ignoring empty skills update to prevent disappearance')
+                    return
+                  }
                   setLocalData(prevData => ({
                     ...prevData,
                     skills: updatedSkills,

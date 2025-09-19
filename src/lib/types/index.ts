@@ -145,6 +145,10 @@ export interface ResumeData {
     institution: string;
     year: string;
   }>;
+  languages?: Array<{
+    name: string;
+    level: string;
+  }>;
   projects?: Array<{
     name: string;
     description: string;

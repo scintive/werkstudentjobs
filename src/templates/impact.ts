@@ -729,10 +729,10 @@ export function generateImpactResumeHTML(data: any): string {
                         </div>
                         <h2 class="section-title">Languages</h2>
                     </div>
-                    ${languages.map(lang => `
+                ${languages.map(lang => `
                         <div class="language-item">
-                            <span class="language-name">${lang.language}</span>
-                            <span class="language-proficiency">${lang.proficiency}</span>
+                            <span class="language-name">${(lang.language || lang.name || '').toString()}</span>
+                            <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
                         </div>
                     `).join('')}
                 </section>
