@@ -651,7 +651,8 @@ ${JSON.stringify(analysisContext.resume, null, 2)}
 
 Constraints:
 • Cover ALL sections: summary, title, skills, EVERY experience role, projects, education, languages, certifications
-• Return 8–15 total high-value suggestions with at least one per populated section
+• For EACH experience role present, return 2–3 suggestions (prefer 'bullet' additions/rewrites). Anchor with target_path like experience[ROLE_INDEX].achievements[BULLET_INDEX]
+• Return 10–20 total high-value suggestions while meeting the per‑role requirement above
 • Skills must include add/alias/reorder/remove (add only if provably present elsewhere)
 • Every item must include target_path, before, after, diff_html, rationale, resume_evidence, job_requirement, ats_keywords, impact, confidence
 
