@@ -962,12 +962,21 @@ Return your response as a valid JSON object only. Do not include any additional 
       
       if (analysisData.atomic_suggestions?.length > 0) {
         // Normalize and validate suggestions with new structure
+        const allowedSections = new Set(['summary','experience','skills','languages','education','projects','certifications','custom_sections'])
+        const sanitizeSection = (raw: string, suggestionType?: string) => {
+          const s = (raw === 'professionalSummary') ? 'summary' : (raw || '')
+          if (allowedSections.has(s)) return s
+          if (s === 'title') return 'summary' // DB does not allow 'title'
+          // Fallback: route unknown sections to skills if it looks like a skill op, else custom_sections
+          if ((suggestionType || '').includes('skill')) return 'skills'
+          return 'custom_sections'
+        }
+
         const validSuggestions = analysisData.atomic_suggestions
           .filter((s: any) => {
             // Check section validity (including new 'title' section)
-            const section = s.section === 'professionalSummary' ? 'summary' : s.section;
-            const validSections = new Set(['summary', 'title', 'experience', 'skills', 'languages', 'education', 'projects', 'certifications', 'custom_sections']);
-            if (!validSections.has(section)) {
+            const section = sanitizeSection(s.section, s.suggestion_type)
+            if (!allowedSections.has(section)) {
               return false;
             }
             
@@ -1037,7 +1046,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           .map((s: any) => ({
             variant_id: variant.id,
             job_id,
-            section: s.section === 'professionalSummary' ? 'summary' : s.section,
+            section: sanitizeSection(s.section, s.suggestion_type),
             suggestion_type: s.suggestion_type || 'text',
             target_id: s.target_id || s.target_path || null, // Map target_path to target_id
             original_content: s.before || s.original_content || '',

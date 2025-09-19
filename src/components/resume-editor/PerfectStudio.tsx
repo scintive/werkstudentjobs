@@ -495,6 +495,14 @@ export function PerfectStudio({
             } else {
               exp.achievements[achIdx] = suggestion.suggested
             }
+          } else {
+            // Fallback: add to first role when no anchor
+            if (!updated.experience || updated.experience.length === 0) {
+              updated.experience = [{ position: '', company: '', duration: '', achievements: [] }]
+            }
+            const exp = updated.experience[0]
+            if (!exp.achievements) exp.achievements = []
+            exp.achievements.push(suggestion.suggested)
           }
           break
           
