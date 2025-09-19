@@ -982,7 +982,25 @@ Return your response as a valid JSON object only. Do not include any additional 
               return true;
             }
             
-            // Non-skills suggestions need stricter validation
+            // Experience suggestions are more lenient - allow additions without 'before'
+            if (s.section === 'experience') {
+              // Allow bullet additions with just 'after' content
+              if (s.suggestion_type === 'bullet' || s.suggestion_type === 'addition') {
+                if (!suggestedContent || suggestedContent.trim().length === 0) {
+                  return false;
+                }
+                // Don't require 'before' for additions - they might be new bullets
+                return true;
+              }
+              // For modifications, need both before and after
+              if (!originalContent || !suggestedContent || originalContent === suggestedContent) {
+                return false;
+              }
+              // Experience suggestions with target_path are preferred but not required
+              return true;
+            }
+            
+            // Non-skills/non-experience suggestions need stricter validation
             // Ensure grounding (must have before content and it can't be empty) - except for additions
             if (s.suggestion_type !== 'skill_addition' && (!originalContent || originalContent.trim().length === 0)) {
               return false;
@@ -1015,6 +1033,21 @@ Return your response as a valid JSON object only. Do not include any additional 
             accepted: false, // Default to not accepted
             applied_at: null
           }));
+        
+        // Log metrics for debugging
+        console.log(`📊 SUGGESTION METRICS: Generated ${analysisData.atomic_suggestions?.length || 0} suggestions, kept ${validSuggestions.length} after validation`);
+        
+        // Log validation drops by section
+        const droppedBySection: Record<string, number> = {};
+        analysisData.atomic_suggestions?.forEach((s: any) => {
+          const section = s.section === 'professionalSummary' ? 'summary' : s.section;
+          if (!validSuggestions.find((v: any) => v.target_id === (s.target_id || s.target_path) && v.section === section)) {
+            droppedBySection[section] = (droppedBySection[section] || 0) + 1;
+          }
+        });
+        if (Object.keys(droppedBySection).length > 0) {
+          console.log('🚫 Suggestions dropped by section:', droppedBySection);
+        }
         
         // Quiet in production
         

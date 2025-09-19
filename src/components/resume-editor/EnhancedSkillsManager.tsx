@@ -338,8 +338,38 @@ export function EnhancedSkillsManager({
   const convertOrganizedToSkillsFormat = (organizedCategories: Record<string, OrganizedCategory>) => {
     const skillsFormat: Record<string, any[]> = {}
 
+    // Canonical category mapping to prevent drift
+    const canonicalCategoryMap: Record<string, string> = {
+      'technical skills': 'technical',
+      'technical': 'technical',
+      'soft skills': 'soft_skills',
+      'soft': 'soft_skills',
+      'interpersonal': 'interpersonal',
+      'communication': 'interpersonal',
+      'tools': 'tools',
+      'tools & platforms': 'tools',
+      'core skills': 'core',
+      'core': 'core',
+      'business': 'business',
+      'creative': 'creative',
+      'specialized': 'specialized',
+      'languages': 'languages'
+    }
+
     Object.entries(organizedCategories).forEach(([categoryName, categoryData]) => {
-      const categoryKey = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '_')
+      // First try canonical mapping
+      const lowerName = categoryName.toLowerCase()
+      let categoryKey = canonicalCategoryMap[lowerName]
+      
+      // If no canonical match, generate a stable key with triple underscores for '&' or 'and'
+      if (!categoryKey) {
+        categoryKey = categoryName
+          .toLowerCase()
+          .replace(/\s*(&|and)\s*/g, '___') // Convert '&' or 'and' to triple underscores
+          .replace(/[^a-z0-9_]/g, '_') // Replace other non-alphanumeric with single underscore
+          .replace(/_+/g, '_') // Collapse multiple underscores
+          .replace(/^_|_$/g, '') // Trim leading/trailing underscores
+      }
       
       // Preserve objects as-is for technical categories; flatten to strings for non-technical to avoid downstream rendering bugs
       skillsFormat[categoryKey] = categoryData.skills.map(skill => {
