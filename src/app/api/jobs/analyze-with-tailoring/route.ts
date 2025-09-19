@@ -651,8 +651,7 @@ ${JSON.stringify(analysisContext.resume, null, 2)}
 
 Constraints:
 • Cover ALL sections: summary, title, skills, EVERY experience role, projects, education, languages, certifications
-• For EACH experience role present, return 2–3 suggestions (prefer 'bullet' additions/rewrites). Anchor with target_path like experience[ROLE_INDEX].achievements[BULLET_INDEX]
-• Return 10–20 total high-value suggestions while meeting the per‑role requirement above
+• Return 8–15 total high-value suggestions with at least one per populated section
 • Skills must include add/alias/reorder/remove (add only if provably present elsewhere)
 • Every item must include target_path, before, after, diff_html, rationale, resume_evidence, job_requirement, ats_keywords, impact, confidence
 
@@ -893,9 +892,9 @@ Return your response as a valid JSON object only. Do not include any additional 
         const pickSkillCategory = (categoryCandidate: string | undefined, skillName: string): string => {
           const candidate = normalizeKey(categoryCandidate || '')
           if (candidate && baseCategories.includes(candidate)) return candidate
+          // Heuristics: map common phrases to existing categories
           const skill = (skillName || '').toLowerCase()
           const tryMatch = (needle: string, fallback: string) => (skill.includes(needle) && baseCategories.includes(fallback)) ? fallback : ''
-          // Prefer mapping into existing user categories only
           const heuristics = [
             tryMatch('project', 'project_management'),
             tryMatch('management', 'project_management'),
@@ -904,23 +903,25 @@ Return your response as a valid JSON object only. Do not include any additional 
             tryMatch('agile', 'project_management'),
             tryMatch('scrum', 'project_management'),
             tryMatch('jira', 'project_management'),
-            tryMatch('database', 'domain_expertise'),
-            tryMatch('sql', 'domain_expertise'),
-            tryMatch('excel', 'domain_expertise'),
-            tryMatch('tableau', 'domain_expertise'),
-            tryMatch('power bi', 'domain_expertise'),
-            tryMatch('visualization', 'domain_expertise')
+            tryMatch('database', 'technical'),
+            tryMatch('sql', 'technical'),
+            tryMatch('excel', baseCategories.includes('tools') ? 'tools' : (baseCategories.includes('technical') ? 'technical' : 'domain_expertise')),
+            tryMatch('tableau', baseCategories.includes('tools') ? 'tools' : (baseCategories.includes('technical') ? 'technical' : 'domain_expertise')),
+            tryMatch('power bi', baseCategories.includes('tools') ? 'tools' : (baseCategories.includes('technical') ? 'technical' : 'domain_expertise')),
+            tryMatch('visualization', baseCategories.includes('technical') ? 'technical' : 'domain_expertise')
           ].filter(Boolean)
           if (heuristics.length > 0) return heuristics[0]
-          // Choose best existing category by simple token similarity
-          for (const base of baseCategories) {
-            if (base && skill.includes(base.replace(/_/g, ' '))) return base
+          // Prefer user's existing canonical buckets
+          const preferredOrder = ['technical','tools','soft_skills','business','interpersonal']
+          for (const key of preferredOrder) {
+            if (baseCategories.includes(key)) return key
           }
-          // Final fallback: first existing category
-          return baseCategories[0] || 'skills'
+          if (baseCategories.length > 0) return baseCategories[0]
+          // Fallback to candidate or a safe bucket
+          return candidate || 'additional_skills'
         }
 
-        const anchored = analysisData.atomic_suggestions.map((s: any) => {
+        let anchored = analysisData.atomic_suggestions.map((s: any) => {
           const out = { ...s }
           // Ensure skills suggestions are targeted to a concrete category
           if ((out.section === 'skills') && !out.target_path) {
@@ -959,6 +960,35 @@ Return your response as a valid JSON object only. Do not include any additional 
           }
           return out
         })
+        // Ensure each experience role has at least 2 suggestions
+        try {
+          const expCount = Array.isArray(baseResumeData.experience) ? baseResumeData.experience.length : 0
+          if (expCount > 0) {
+            for (let i = 0; i < expCount; i++) {
+              const perRole = anchored.filter((s: any) => (s.section === 'experience') && ((s.target_id || s.target_path || '').includes(`experience_${i}_achievements`)))
+              const need = Math.max(0, 2 - perRole.length)
+              for (let k = 0; k < need; k++) {
+                const addIdx = ((baseResumeData.experience?.[i]?.achievements?.length || 0) + k)
+                anchored.push({
+                  section: 'experience',
+                  suggestion_type: 'bullet',
+                  target_id: `experience_${i}_achievements_${addIdx}`,
+                  target_path: `experience[${i}].achievements[${addIdx}]`,
+                  before: '',
+                  after: `Add a quantified achievement aligned with ${jobData?.title || 'the role'} (impact %, $, time).`,
+                  original_content: '',
+                  suggested_content: `Delivered a measurable improvement (e.g., +X% efficiency) using relevant tools.`,
+                  rationale: 'Ensure each role has multiple strong achievements',
+                  ats_relevance: 'Strengthens experience depth for ATS and HM',
+                  keywords: [],
+                  confidence: 80,
+                  impact: 'high'
+                })
+              }
+            }
+          }
+        } catch {}
+
         analysisData.atomic_suggestions = anchored
       }
 
@@ -1063,37 +1093,6 @@ Return your response as a valid JSON object only. Do not include any additional 
             accepted: false, // Default to not accepted
             applied_at: null
           }));
-
-        // Ensure each experience role has at least 2 suggestions (multiple per job)
-        try {
-          const expCount = Array.isArray(baseResumeData.experience) ? baseResumeData.experience.length : 0
-          if (expCount > 0) {
-            for (let i = 0; i < expCount; i++) {
-              const perRole = validSuggestions.filter((s: any) => (s.section === 'experience') && ((s.target_id || s.target_path || '').includes(`experience_${i}_achievements`)))
-              const need = Math.max(0, 2 - perRole.length)
-              for (let k = 0; k < need; k++) {
-                const addIdx = ((baseResumeData.experience?.[i]?.achievements?.length || 0) + k)
-                validSuggestions.push({
-                  variant_id: variant.id,
-                  job_id,
-                  section: 'experience',
-                  suggestion_type: 'bullet',
-                  target_id: `experience_${i}_achievements_${addIdx}`,
-                  target_path: `experience[${i}].achievements[${addIdx}]`,
-                  original_content: '',
-                  suggested_content: `Add a quantified achievement aligned with ${jobData?.title || 'the role'} (impact %, $, time).`,
-                  rationale: 'Ensure each role has multiple strong achievements',
-                  ats_relevance: 'Strengthens experience depth for ATS and hiring manager',
-                  keywords: [],
-                  confidence: 80,
-                  impact: 'high',
-                  accepted: false,
-                  applied_at: null
-                })
-              }
-            }
-          }
-        } catch {}
         
         // Log metrics for debugging
         console.log(`📊 SUGGESTION METRICS: Generated ${analysisData.atomic_suggestions?.length || 0} suggestions, kept ${validSuggestions.length} after validation`);
