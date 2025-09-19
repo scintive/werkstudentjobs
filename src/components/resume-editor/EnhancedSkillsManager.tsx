@@ -284,7 +284,12 @@ export function EnhancedSkillsManager({
       
       // Convert to skills format for resume
       const newSkillsFormat = convertOrganizedToSkillsFormat(filteredCategories)
-      onSkillsChange(newSkillsFormat)
+      // Avoid wiping skills if enhancer yielded nothing meaningful
+      if (Object.keys(newSkillsFormat).length > 0) {
+        onSkillsChange(newSkillsFormat)
+      } else {
+        console.warn('⚠️ Skipping empty skills update from organized skills')
+      }
     }
     // REMOVED: No fallback API call - organized skills should ALWAYS come from profile extraction
   }, [organizedSkills, organizedData])
