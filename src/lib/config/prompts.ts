@@ -348,39 +348,14 @@ Return STRICT JSON:
   "category_mapping": {
     "Suggested Skill Name": "Category Name it belongs to"
   }
+}`
+  },
 
-  ,
   // GPT Skill Suggestions (missing category fix)
   SKILL_SUGGESTIONS: {
     SYSTEM: "You are a career assistant. Return ONLY strict JSON. Suggest skills to add and briefly explain why.",
-    USER_TEMPLATE: `Analyze the user's profile and current skills and return JSON:
-
-{
-  "skill_suggestions": {
-    "technical": [{"skill": string, "reason": string}] ,
-    "soft_skills": [{"skill": string, "reason": string}],
-    "industry_specific": [{"skill": string, "reason": string}],
-    "tools_platforms": [{"skill": string, "reason": string}]
-  },
-  "priority_recommendations": [{"skill": string, "category": string, "impact": string}],
-  "learning_path": {"immediate": string[], "short_term": string[], "long_term": string[]},
-  "profile_analysis": string
-}
-
-PROFILE:
-{{PROFILE_DATA}}
-
-CURRENT_SKILLS:
-{{CURRENT_SKILLS}}
-
-Rules:
-- Use real, resume-appropriate skills.
-- Do not invent technologies not supported by profile/job context.
-- Be concise; 3-6 items per bucket is enough.`
+    USER_TEMPLATE: `Analyze the user's profile and current skills and return JSON:\n\n{\n  "skill_suggestions": {\n    "technical": [{"skill": "string", "reason": "string"}],\n    "soft_skills": [{"skill": "string", "reason": "string"}],\n    "industry_specific": [{"skill": "string", "reason": "string"}],\n    "tools_platforms": [{"skill": "string", "reason": "string"}]\n  },\n  "priority_recommendations": [{"skill": "string", "category": "string", "impact": "string"}],\n  "learning_path": {"immediate": [], "short_term": [], "long_term": []},\n  "profile_analysis": "string"\n}\n\nPROFILE:\n{{PROFILE_DATA}}\n\nCURRENT_SKILLS:\n{{CURRENT_SKILLS}}\n\nRules:\n- Use real, resume-appropriate skills.\n- Do not invent technologies not supported by profile/job context.\n- Be concise; 3-6 items per bucket is enough.`
   }
-}`
-  }
-
 };
 
 /**
