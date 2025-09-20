@@ -877,7 +877,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       // 9. PERSIST SUGGESTIONS (atomic replace with auth client)
       logContext.stage = 'persist_suggestions';
       
-      // Process skills_suggestions and add them to atomic_suggestions
+      // Process skills_suggestions and explicit add/remove lists
       if (analysisData.skills_suggestions && Array.isArray(analysisData.skills_suggestions)) {
         console.log(`📊 Processing ${analysisData.skills_suggestions.length} skills suggestions`);
         
@@ -924,6 +924,59 @@ Return your response as a valid JSON object only. Do not include any additional 
         }
         analysisData.atomic_suggestions.push(...skillsSuggestionsAsAtomic);
         console.log(`✅ Added ${skillsSuggestionsAsAtomic.length} skills suggestions to atomic suggestions`);
+      }
+      // New: skill_additions / skill_removals arrays
+      const additions = Array.isArray((analysisData as any).skill_additions) ? (analysisData as any).skill_additions : []
+      const removals = Array.isArray((analysisData as any).skill_removals) ? (analysisData as any).skill_removals : []
+      const normalizeKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
+      const baseCategories = Object.keys(baseResumeData.skills || {}).map(normalizeKey)
+      const mapCategory = (cat: string) => {
+        const c = normalizeKey(cat)
+        return baseCategories.includes(c) ? c : (baseCategories[0] || 'skills')
+      }
+      if (additions.length > 0) {
+        additions.forEach((item: any) => {
+          const category = mapCategory(item.category)
+          const target = `skills.${category}`
+          analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
+          analysisData.atomic_suggestions.push({
+            section: 'skills',
+            suggestion_type: 'skill_addition',
+            target_id: target,
+            target_path: target,
+            before: '',
+            after: item.skill,
+            original_content: '',
+            suggested_content: item.skill,
+            rationale: item.reason || 'Add skill aligned with job',
+            ats_relevance: item.reason || null,
+            keywords: [],
+            confidence: 80,
+            impact: 'medium'
+          })
+        })
+      }
+      if (removals.length > 0) {
+        removals.forEach((item: any) => {
+          const category = mapCategory(item.category)
+          const target = `skills.${category}`
+          analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
+          analysisData.atomic_suggestions.push({
+            section: 'skills',
+            suggestion_type: 'skill_removal',
+            target_id: target,
+            target_path: target,
+            before: item.skill,
+            after: '',
+            original_content: item.skill,
+            suggested_content: '',
+            rationale: item.reason || 'Remove less relevant skill for this job',
+            ats_relevance: item.reason || null,
+            keywords: [],
+            confidence: 75,
+            impact: 'low'
+          })
+        })
       }
       
       // Normalize and enrich atomic suggestions BEFORE validation so we don't drop useful ones

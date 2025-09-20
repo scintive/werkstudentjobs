@@ -102,16 +102,20 @@ export function SuggestionIndicator({
         >
           <div className="space-y-3">
             {/* Before/After comparison */}
-            {suggestion.original && (
+            {(suggestion.original || suggestion.suggested) && (
               <div className="space-y-2">
-                <div className="p-2 bg-red-50 rounded border border-red-200">
-                  <p className="text-xs text-red-600 font-medium mb-1">Current:</p>
-                  <p className="text-sm text-red-800 line-through">{suggestion.original}</p>
-                </div>
-                <div className="p-2 bg-green-50 rounded border border-green-200">
-                  <p className="text-xs text-green-600 font-medium mb-1">Suggested:</p>
-                  <p className="text-sm text-green-800">{suggestion.suggested}</p>
-                </div>
+                {suggestion.original && (
+                  <div className="p-2 bg-red-50 rounded border border-red-200">
+                    <p className="text-xs text-red-600 font-medium mb-1">Current:</p>
+                    <p className="text-sm text-red-800 line-through">{suggestion.original}</p>
+                  </div>
+                )}
+                {suggestion.suggested && (
+                  <div className="p-2 bg-green-50 rounded border border-green-200">
+                    <p className="text-xs text-green-600 font-medium mb-1">Suggested:</p>
+                    <p className="text-sm text-green-800">{suggestion.suggested}</p>
+                  </div>
+                )}
               </div>
             )}
             
