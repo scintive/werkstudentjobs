@@ -709,6 +709,44 @@ Return your response as a valid JSON object only. Do not include any additional 
         skillsSuggestionsCount: analysisData.skills_suggestions?.length || 0
       });
       
+      // If model returned no suggestions, immediately re-try with a cache-busting, stricter prompt (no synthetic fallbacks)
+      if (!Array.isArray(analysisData.atomic_suggestions) || analysisData.atomic_suggestions.length === 0) {
+        console.warn('⚠️ Zero atomic suggestions from first pass. Retrying with stricter requirements...')
+        const retryUserPrompt = userPrompt + `\n\nSTRICT_REQUIREMENTS: Return 15–25 atomic_suggestions and 6–12 skill suggestions. For EACH experience role present, include at least 2 bullet additions/rewrites anchored with target_path (experience[ROLE_INDEX].achievements[BULLET_INDEX]). Do not return empty arrays. CACHE_BUST:${Date.now()}`
+        try {
+          const retryResp = await llmService.createJsonCompletion({
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: retryUserPrompt }
+            ],
+            temperature: 0.25,
+            max_tokens: 3200,
+            model: modelName
+          })
+          const content = retryResp.choices?.[0]?.message?.content || '{}'
+          let parsed: any
+          try {
+            parsed = JSON.parse(content)
+          } catch {
+            const start = content.indexOf('{');
+            const end = content.lastIndexOf('}');
+            if (start >= 0 && end > start) {
+              parsed = JSON.parse(content.slice(start, end + 1));
+            } else {
+              throw new Error('Retry parse failed')
+            }
+          }
+          if (parsed && (Array.isArray(parsed.atomic_suggestions) ? parsed.atomic_suggestions.length > 0 : false)) {
+            analysisData = parsed
+            console.log('✅ Retry produced atomic suggestions:', parsed.atomic_suggestions.length)
+          } else {
+            console.warn('⚠️ Retry still produced zero suggestions; proceeding to normalization without synthetic inserts')
+          }
+        } catch (retryErr) {
+          console.error('🔴 Retry attempt failed:', (retryErr as Error).message)
+        }
+      }
+      
       if (analysisData.atomic_suggestions?.length > 0) {
         const bySect = analysisData.atomic_suggestions.reduce((acc: any, s: any) => {
           acc[s.section] = (acc[s.section] || 0) + 1;
@@ -1005,54 +1043,8 @@ Return your response as a valid JSON object only. Do not include any additional 
           }
           return out
         })
-        // If the model failed to return experience suggestions, synthesize minimal ones per role
-        try {
-          const expCount = Array.isArray(baseResumeData.experience) ? baseResumeData.experience.length : 0
-          const existingExpSugg = anchored.filter((s: any) => s.section === 'experience')
-          const synthesized: any[] = []
-          if (expCount > 0) {
-            for (let i = 0; i < expCount; i++) {
-              const perRole = existingExpSugg.filter((s: any) => (s.target_id || s.target_path || '').includes(`experience.${i}.achievements.`))
-              const need = Math.max(0, 2 - perRole.length)
-              for (let k = 0; k < need; k++) {
-                const addIdx = ((baseResumeData.experience?.[i]?.achievements?.length || 0) + k)
-                const role = baseResumeData.experience?.[i]
-                const position = role?.position || 'this role'
-                const company = role?.company || 'the company'
-                const achievementTemplates = [
-                  `Delivered measurable results in ${position}, improving efficiency by X% through data-driven solutions.`,
-                  `Collaborated cross-functionally at ${company} to streamline processes, reducing turnaround time by X hours.`,
-                  `Implemented best practices in ${position} responsibilities, improving quality metrics.`,
-                  `Supported ${company} objectives by executing key initiatives with quantifiable impact.`,
-                  `Enhanced operational performance through a systematic approach to ${position} tasks.`
-                ]
-                const text = achievementTemplates[k % achievementTemplates.length]
-                const addPath = `experience.${i}.achievements.${addIdx}`
-                synthesized.push({
-                  section: 'experience',
-                  suggestion_type: 'bullet',
-                  target_id: addPath,
-                  target_path: addPath,
-                  before: '',
-                  after: text,
-                  original_content: '',
-                  suggested_content: text,
-                  rationale: 'Add quantified achievement to strengthen experience section',
-                  ats_relevance: 'Demonstrates measurable impact and results',
-                  keywords: [],
-                  confidence: 75,
-                  impact: 'medium'
-                })
-              }
-            }
-          }
-          analysisData.atomic_suggestions = [...anchored, ...synthesized]
-          if (synthesized.length > 0) {
-            console.log(`🧩 Synthesized ${synthesized.length} fallback experience suggestions across ${expCount} roles`)
-          }
-        } catch (e) {
-          // non-fatal
-        }
+        // Do NOT synthesize "mock" suggestions; strictly use GPT output only
+        analysisData.atomic_suggestions = anchored
       }
 
       // Production: suppress verbose debug logs
