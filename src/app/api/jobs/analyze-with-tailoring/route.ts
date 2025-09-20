@@ -969,20 +969,35 @@ Return your response as a valid JSON object only. Do not include any additional 
               const need = Math.max(0, 2 - perRole.length)
               for (let k = 0; k < need; k++) {
                 const addIdx = ((baseResumeData.experience?.[i]?.achievements?.length || 0) + k)
+                // Generate role-specific achievement suggestions
+                const role = baseResumeData.experience?.[i]
+                const position = role?.position || 'this role'
+                const company = role?.company || 'the company'
+                
+                const achievementTemplates = [
+                  `Delivered measurable results in ${position} role, improving efficiency by X% through data-driven solutions.`,
+                  `Collaborated with cross-functional teams to streamline processes, reducing turnaround time by X hours.`,
+                  `Implemented best practices in ${position} responsibilities, resulting in improved quality metrics.`,
+                  `Supported ${company} objectives by executing key initiatives with quantifiable impact.`,
+                  `Enhanced operational performance through systematic approach to ${position} tasks.`
+                ]
+                
+                const suggestionText = achievementTemplates[k % achievementTemplates.length]
+                
                 anchored.push({
                   section: 'experience',
                   suggestion_type: 'bullet',
                   target_id: `experience_${i}_achievements_${addIdx}`,
                   target_path: `experience[${i}].achievements[${addIdx}]`,
                   before: '',
-                  after: `Add a quantified achievement aligned with ${jobData?.title || 'the role'} (impact %, $, time).`,
+                  after: suggestionText,
                   original_content: '',
-                  suggested_content: `Delivered a measurable improvement (e.g., +X% efficiency) using relevant tools.`,
-                  rationale: 'Ensure each role has multiple strong achievements',
-                  ats_relevance: 'Strengthens experience depth for ATS and HM',
+                  suggested_content: suggestionText,
+                  rationale: 'Add quantified achievement to strengthen experience section',
+                  ats_relevance: 'Demonstrates measurable impact and results',
                   keywords: [],
-                  confidence: 80,
-                  impact: 'high'
+                  confidence: 75,
+                  impact: 'medium'
                 })
               }
             }
