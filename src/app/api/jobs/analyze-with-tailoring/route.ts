@@ -364,14 +364,15 @@ export async function POST(request: NextRequest) {
       is_werkstudent: !!(jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent'))
     };
 
-    // Include ALL experience roles, trim bullets if needed for token management
-    const trimmedExperience = Array.isArray(baseResume.experience) ? baseResume.experience.map((e: any) => ({
+    // Include ALL experience roles (not just top 3)
+    const trimmedExperience = Array.isArray(baseResume.experience) ? baseResume.experience.map((e: any, idx: number) => ({
       company: trimText(e.company, 140),
       position: trimText(e.position, 140),
       duration: trimText(e.duration, 80),
-      // Trim bullets but ensure at least 3 per role for evaluation
+      // Keep first 5 bullets per role for context, or all if less than 5
       achievements: trimArray(e.achievements || e.highlights || (e.description ? String(e.description).split('\n') : []), 
-                             Math.max(3, Math.min(5, (e.achievements || e.highlights || []).length)), 220)
+                             5, 220),
+      _index: idx // Preserve index for mapping suggestions
     })) : [];
 
     const analysisContext = {
@@ -650,9 +651,10 @@ RESUME DATA (JSON):
 ${JSON.stringify(analysisContext.resume, null, 2)}
 
 Constraints:
-• Cover ALL sections: summary, title, skills, EVERY experience role, projects, education, languages, certifications
-• Return 8–15 total high-value suggestions with at least one per populated section
-• Skills must include add/alias/reorder/remove (add only if provably present elsewhere)
+• Cover ALL sections: summary, title, skills, EVERY experience role (ALL of them, not just recent ones), projects, education, languages, certifications
+• For EACH experience role present (including older roles), return 2–3 suggestions (prefer 'bullet' additions/rewrites). Anchor with target_path like experience[ROLE_INDEX].achievements[BULLET_INDEX]
+• Return 15–25 total high-value suggestions ensuring ALL experience roles get suggestions
+• Skills: ONLY suggest skills under categories the user already has. DO NOT create new categories unless explicitly needed for critical job requirements
 • Every item must include target_path, before, after, diff_html, rationale, resume_evidence, job_requirement, ats_keywords, impact, confidence
 
 Return your response as a valid JSON object only. Do not include any additional text or explanation outside the JSON structure.`;
@@ -891,37 +893,80 @@ Return your response as a valid JSON object only. Do not include any additional 
 
         const pickSkillCategory = (categoryCandidate: string | undefined, skillName: string): string => {
           const candidate = normalizeKey(categoryCandidate || '')
+          
+          // CRITICAL: Only use existing user categories
           if (candidate && baseCategories.includes(candidate)) return candidate
-          // Heuristics: map common phrases to existing categories
+          
+          // Map variations to user's existing categories
+          const categoryVariants: Record<string, string[]> = {
+            'technical_skills': ['technical', 'programming', 'development', 'coding'],
+            'tools': ['tools', 'software', 'technologies', 'platforms'],
+            'soft_skills': ['soft_skills', 'interpersonal', 'communication', 'leadership'],
+            'business': ['business', 'business_intelligence', 'business_analysis'],
+            'domain_expertise': ['domain_expertise', 'domain', 'industry', 'expertise'],
+            'project_management': ['project_management', 'management', 'agile', 'scrum'],
+            'data_analysis___visualization': ['data_analysis', 'analytics', 'visualization', 'reporting'],
+            'business_intelligence___strategy': ['business_intelligence', 'strategy', 'planning'],
+            'communication___collaboration': ['communication', 'collaboration', 'teamwork']
+          }
+          
+          // Check if candidate maps to existing category
+          for (const [userCat, variants] of Object.entries(categoryVariants)) {
+            const userCatNorm = normalizeKey(userCat)
+            if (baseCategories.includes(userCatNorm) && variants.some(v => normalizeKey(v) === candidate)) {
+              return userCatNorm
+            }
+          }
+          
+          // Pattern-based matching on skill content
           const skill = (skillName || '').toLowerCase()
-          const tryMatch = (needle: string, fallback: string) => (skill.includes(needle) && baseCategories.includes(fallback)) ? fallback : ''
+          const tryMatch = (needle: string, fallback: string) => {
+            const fallbackNorm = normalizeKey(fallback)
+            return (skill.includes(needle) && baseCategories.includes(fallbackNorm)) ? fallbackNorm : ''
+          }
+          
+          // Try to match skill patterns to user's existing categories
           const heuristics = [
+            // Data patterns
+            tryMatch('data', 'data_analysis___visualization'),
+            tryMatch('analys', 'data_analysis___visualization'),
+            tryMatch('sql', 'data_analysis___visualization') || tryMatch('sql', 'technical_skills'),
+            tryMatch('excel', 'data_analysis___visualization') || tryMatch('excel', 'tools'),
+            tryMatch('tableau', 'data_analysis___visualization') || tryMatch('tableau', 'tools'),
+            tryMatch('power bi', 'data_analysis___visualization') || tryMatch('power bi', 'tools'),
+            tryMatch('visualization', 'data_analysis___visualization'),
+            
+            // Business patterns
+            tryMatch('business', 'business_intelligence___strategy') || tryMatch('business', 'business'),
+            tryMatch('strategy', 'business_intelligence___strategy'),
+            tryMatch('market', 'business_intelligence___strategy'),
+            
+            // Communication patterns  
+            tryMatch('communication', 'communication___collaboration') || tryMatch('communication', 'soft_skills'),
+            tryMatch('collaborat', 'communication___collaboration') || tryMatch('collaborat', 'soft_skills'),
+            tryMatch('team', 'communication___collaboration') || tryMatch('team', 'soft_skills'),
+            
+            // Project management patterns
             tryMatch('project', 'project_management'),
-            tryMatch('management', 'project_management'),
-            tryMatch('analysis', 'business_analysis'),
-            tryMatch('analytics', 'business_analysis'),
             tryMatch('agile', 'project_management'),
             tryMatch('scrum', 'project_management'),
-            tryMatch('jira', 'project_management'),
-            tryMatch('database', 'technical'),
-            tryMatch('sql', 'technical'),
-            tryMatch('excel', baseCategories.includes('tools') ? 'tools' : (baseCategories.includes('technical') ? 'technical' : 'domain_expertise')),
-            tryMatch('tableau', baseCategories.includes('tools') ? 'tools' : (baseCategories.includes('technical') ? 'technical' : 'domain_expertise')),
-            tryMatch('power bi', baseCategories.includes('tools') ? 'tools' : (baseCategories.includes('technical') ? 'technical' : 'domain_expertise')),
-            tryMatch('visualization', baseCategories.includes('technical') ? 'technical' : 'domain_expertise')
+            tryMatch('management', 'project_management'),
+            
+            // Technical patterns
+            tryMatch('python', 'technical_skills') || tryMatch('python', 'technical'),
+            tryMatch('java', 'technical_skills') || tryMatch('java', 'technical'),
+            tryMatch('script', 'technical_skills') || tryMatch('script', 'technical'),
+            tryMatch('api', 'technical_skills') || tryMatch('api', 'technical'),
+            tryMatch('database', 'technical_skills') || tryMatch('database', 'domain_expertise')
           ].filter(Boolean)
+          
           if (heuristics.length > 0) return heuristics[0]
-          // Prefer user's existing canonical buckets
-          const preferredOrder = ['technical','tools','soft_skills','business','interpersonal']
-          for (const key of preferredOrder) {
-            if (baseCategories.includes(key)) return key
-          }
-          if (baseCategories.length > 0) return baseCategories[0]
-          // Fallback to candidate or a safe bucket
-          return candidate || 'additional_skills'
+          
+          // Fallback: use first existing category
+          return baseCategories.length > 0 ? baseCategories[0] : normalizeKey('skills')
         }
 
-        let anchored = analysisData.atomic_suggestions.map((s: any) => {
+        const anchored = analysisData.atomic_suggestions.map((s: any) => {
           const out = { ...s }
           // Ensure skills suggestions are targeted to a concrete category
           if ((out.section === 'skills') && !out.target_path) {
@@ -960,50 +1005,6 @@ Return your response as a valid JSON object only. Do not include any additional 
           }
           return out
         })
-        // Ensure each experience role has at least 2 suggestions
-        try {
-          const expCount = Array.isArray(baseResumeData.experience) ? baseResumeData.experience.length : 0
-          if (expCount > 0) {
-            for (let i = 0; i < expCount; i++) {
-              const perRole = anchored.filter((s: any) => (s.section === 'experience') && ((s.target_id || s.target_path || '').includes(`experience_${i}_achievements`)))
-              const need = Math.max(0, 2 - perRole.length)
-              for (let k = 0; k < need; k++) {
-                const addIdx = ((baseResumeData.experience?.[i]?.achievements?.length || 0) + k)
-                // Generate role-specific achievement suggestions
-                const role = baseResumeData.experience?.[i]
-                const position = role?.position || 'this role'
-                const company = role?.company || 'the company'
-                
-                const achievementTemplates = [
-                  `Delivered measurable results in ${position} role, improving efficiency by X% through data-driven solutions.`,
-                  `Collaborated with cross-functional teams to streamline processes, reducing turnaround time by X hours.`,
-                  `Implemented best practices in ${position} responsibilities, resulting in improved quality metrics.`,
-                  `Supported ${company} objectives by executing key initiatives with quantifiable impact.`,
-                  `Enhanced operational performance through systematic approach to ${position} tasks.`
-                ]
-                
-                const suggestionText = achievementTemplates[k % achievementTemplates.length]
-                
-                anchored.push({
-                  section: 'experience',
-                  suggestion_type: 'bullet',
-                  target_id: `experience_${i}_achievements_${addIdx}`,
-                  target_path: `experience[${i}].achievements[${addIdx}]`,
-                  before: '',
-                  after: suggestionText,
-                  original_content: '',
-                  suggested_content: suggestionText,
-                  rationale: 'Add quantified achievement to strengthen experience section',
-                  ats_relevance: 'Demonstrates measurable impact and results',
-                  keywords: [],
-                  confidence: 75,
-                  impact: 'medium'
-                })
-              }
-            }
-          }
-        } catch {}
-
         analysisData.atomic_suggestions = anchored
       }
 
