@@ -887,7 +887,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       }
       
       // Normalize and enrich atomic suggestions BEFORE validation so we don't drop useful ones
-      if (Array.isArray(analysisData.atomic_suggestions) && analysisData.atomic_suggestions.length > 0) {
+      if (Array.isArray(analysisData.atomic_suggestions)) {
         const normalizeKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
         const baseCategories = Object.keys(baseResumeData.skills || {}).map(normalizeKey)
 
@@ -966,7 +966,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           return baseCategories.length > 0 ? baseCategories[0] : normalizeKey('skills')
         }
 
-        const anchored = analysisData.atomic_suggestions.map((s: any) => {
+        const anchored = (analysisData.atomic_suggestions || []).map((s: any) => {
           const out = { ...s }
           // Ensure skills suggestions are targeted to a concrete category
           if ((out.section === 'skills') && !out.target_path) {
@@ -1005,7 +1005,54 @@ Return your response as a valid JSON object only. Do not include any additional 
           }
           return out
         })
-        analysisData.atomic_suggestions = anchored
+        // If the model failed to return experience suggestions, synthesize minimal ones per role
+        try {
+          const expCount = Array.isArray(baseResumeData.experience) ? baseResumeData.experience.length : 0
+          const existingExpSugg = anchored.filter((s: any) => s.section === 'experience')
+          const synthesized: any[] = []
+          if (expCount > 0) {
+            for (let i = 0; i < expCount; i++) {
+              const perRole = existingExpSugg.filter((s: any) => (s.target_id || s.target_path || '').includes(`experience.${i}.achievements.`))
+              const need = Math.max(0, 2 - perRole.length)
+              for (let k = 0; k < need; k++) {
+                const addIdx = ((baseResumeData.experience?.[i]?.achievements?.length || 0) + k)
+                const role = baseResumeData.experience?.[i]
+                const position = role?.position || 'this role'
+                const company = role?.company || 'the company'
+                const achievementTemplates = [
+                  `Delivered measurable results in ${position}, improving efficiency by X% through data-driven solutions.`,
+                  `Collaborated cross-functionally at ${company} to streamline processes, reducing turnaround time by X hours.`,
+                  `Implemented best practices in ${position} responsibilities, improving quality metrics.`,
+                  `Supported ${company} objectives by executing key initiatives with quantifiable impact.`,
+                  `Enhanced operational performance through a systematic approach to ${position} tasks.`
+                ]
+                const text = achievementTemplates[k % achievementTemplates.length]
+                const addPath = `experience.${i}.achievements.${addIdx}`
+                synthesized.push({
+                  section: 'experience',
+                  suggestion_type: 'bullet',
+                  target_id: addPath,
+                  target_path: addPath,
+                  before: '',
+                  after: text,
+                  original_content: '',
+                  suggested_content: text,
+                  rationale: 'Add quantified achievement to strengthen experience section',
+                  ats_relevance: 'Demonstrates measurable impact and results',
+                  keywords: [],
+                  confidence: 75,
+                  impact: 'medium'
+                })
+              }
+            }
+          }
+          analysisData.atomic_suggestions = [...anchored, ...synthesized]
+          if (synthesized.length > 0) {
+            console.log(`🧩 Synthesized ${synthesized.length} fallback experience suggestions across ${expCount} roles`)
+          }
+        } catch (e) {
+          // non-fatal
+        }
       }
 
       // Production: suppress verbose debug logs
