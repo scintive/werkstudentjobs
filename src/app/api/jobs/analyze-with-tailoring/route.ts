@@ -406,6 +406,7 @@ Rules:
 • PERSONAL INFO: Copy personalInfo EXACTLY as provided - DO NOT change name, email, phone, location, linkedin, or website
 • PRESERVE ALL EXISTING CONTENT: Never delete responsibilities, experiences, or projects. Only enhance/tailor the language
 • Keep ALL bullets from each role - tailor the wording to match job requirements but maintain all original responsibilities
+• If a role currently has ZERO bullets/achievements, you MUST ADD 2–3 concise, impact-first bullets for that role (no fabrication; derive from resume + JD). Anchor them as experience[ROLE_INDEX].achievements[NEXT_INDEX]
 • Professional Title: Create a tailored title that bridges the candidate's experience with the target role (e.g., "Operations Specialist → Partnership & Performance Support" for a partnership role) - NOT just copying the job title
 • Professional Summary: ALWAYS include and tailor the summary to highlight relevant experience for the specific job
 • Skills: PRESERVE ALL existing skill categories and skills. ADD new relevant skills but NEVER remove existing ones
@@ -728,13 +729,14 @@ Return your response as a valid JSON object only. Do not include any additional 
           try {
             parsed = JSON.parse(content)
           } catch {
-            const start = content.indexOf('{');
-            const end = content.lastIndexOf('}');
-            if (start >= 0 && end > start) {
-              parsed = JSON.parse(content.slice(start, end + 1));
-            } else {
-              throw new Error('Retry parse failed')
-            }
+            // Strip code fences and repair common JSON issues (trailing commas)
+            const sanitized = content
+              .replace(/```json|```/g, '')
+              .replace(/,\s*([}\]])/g, '$1')
+            const start = sanitized.indexOf('{');
+            const end = sanitized.lastIndexOf('}');
+            if (start >= 0 && end > start) parsed = JSON.parse(sanitized.slice(start, end + 1))
+            else throw new Error('Retry parse failed')
           }
           if (parsed && (Array.isArray(parsed.atomic_suggestions) ? parsed.atomic_suggestions.length > 0 : false)) {
             analysisData = parsed
