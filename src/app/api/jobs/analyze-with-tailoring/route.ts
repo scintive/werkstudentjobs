@@ -713,39 +713,117 @@ Return your response as a valid JSON object only. Do not include any additional 
       // If model returned no suggestions, immediately re-try with a cache-busting, stricter prompt (no synthetic fallbacks)
       if (!Array.isArray(analysisData.atomic_suggestions) || analysisData.atomic_suggestions.length === 0) {
         console.warn('⚠️ Zero atomic suggestions from first pass. Retrying with stricter requirements...')
-        const retryUserPrompt = userPrompt + `\n\nSTRICT_REQUIREMENTS: Return 15–25 atomic_suggestions and 6–12 skill suggestions. For EACH experience role present, include at least 2 bullet additions/rewrites anchored with target_path (experience[ROLE_INDEX].achievements[BULLET_INDEX]). Do not return empty arrays. CACHE_BUST:${Date.now()}`
+        // 2nd attempt: Atomic-only structured retry with minItems to force non-empty
+        const atomicOnlySchema: any = {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            atomic_suggestions: {
+              type: 'array',
+              minItems: 12,
+              maxItems: 30,
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom_sections','title'] },
+                  suggestion_type: { enum: ['text','bullet','addition','modification','skill_addition','skill_removal','skill_reorder','skill_replacement'] },
+                  target_path: { type: ['string','null'] },
+                  before: { type: ['string','null'] },
+                  after: { type: ['string','null'] },
+                  rationale: { type: 'string' },
+                  confidence: { type: 'number' },
+                  impact: { enum: ['high','medium','low'] }
+                },
+                required: ['section','suggestion_type','target_path','before','after','rationale','confidence','impact']
+              }
+            }
+          },
+          required: ['atomic_suggestions']
+        };
+
+        const atomicOnlyPrompt = `Return ONLY an object with key "atomic_suggestions" containing 15–25 high-quality suggestions.\n\nRules:\n• COVER ALL experience roles (2–3 bullet additions/rewrites each)\n• Anchor bullets with target_path when possible (experience[ROLE_INDEX].achievements[BULLET_INDEX])\n• Include skills adds/removals mapped to existing categories (no new categories)\n• For additions, set before to empty or null; for removals, set after to empty or null\n• Set confidence 75–95 and impact high/medium appropriately\n• No prose. No extra keys.\n\nJOB DATA:\n${JSON.stringify(analysisContext.job, null, 2)}\n\nRESUME DATA:\n${JSON.stringify(analysisContext.resume, null, 2)}\n\nCACHE_BUST:${Date.now()}`;
+
         try {
-          const retryResp = await llmService.createJsonCompletion({
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: retryUserPrompt }
-            ],
-            temperature: 0.25,
-            max_tokens: 3200,
-            model: modelName
-          })
-          const content = retryResp.choices?.[0]?.message?.content || '{}'
-          let parsed: any
-          try {
-            parsed = JSON.parse(content)
-          } catch {
-            // Strip code fences and repair common JSON issues (trailing commas)
-            const sanitized = content
-              .replace(/```json|```/g, '')
-              .replace(/,\s*([}\]])/g, '$1')
-            const start = sanitized.indexOf('{');
-            const end = sanitized.lastIndexOf('}');
-            if (start >= 0 && end > start) parsed = JSON.parse(sanitized.slice(start, end + 1))
-            else throw new Error('Retry parse failed')
-          }
-          if (parsed && (Array.isArray(parsed.atomic_suggestions) ? parsed.atomic_suggestions.length > 0 : false)) {
-            analysisData = parsed
-            console.log('✅ Retry produced atomic suggestions:', parsed.atomic_suggestions.length)
+          const retryStructured = await llmService.createJsonResponse<{ atomic_suggestions: any[] }>({
+            model: modelName,
+            system: 'You are a resume tailoring engine. Return ONLY JSON matching the provided schema.',
+            user: atomicOnlyPrompt,
+            schema: atomicOnlySchema,
+            temperature: 0.2,
+            maxTokens: 3200,
+            retries: 2
+          });
+          if (Array.isArray(retryStructured.atomic_suggestions) && retryStructured.atomic_suggestions.length > 0) {
+            analysisData.atomic_suggestions = retryStructured.atomic_suggestions;
+            console.log('✅ Atomic-only structured retry produced suggestions:', retryStructured.atomic_suggestions.length);
           } else {
-            console.warn('⚠️ Retry still produced zero suggestions; proceeding to normalization without synthetic inserts')
+            console.warn('⚠️ Atomic-only structured retry returned zero items');
           }
         } catch (retryErr) {
-          console.error('🔴 Retry attempt failed:', (retryErr as Error).message)
+          console.error('🔴 Structured atomic-only retry failed:', (retryErr as Error).message);
+        }
+
+        // If still empty, try an EXPERIENCE-ONLY fallback prompt (no schema strictness)
+        if (!Array.isArray(analysisData.atomic_suggestions) || analysisData.atomic_suggestions.length === 0) {
+          try {
+            const expOnlyPrompt = `Return ONLY this JSON object with strong experience edits across ALL roles. No prose.\n\n{
+  "atomic_suggestions": [
+    {
+      "section": "experience",
+      "suggestion_type": "bullet",
+      "target_path": "experience[ROLE_INDEX].achievements[NEXT_INDEX]",
+      "before": null,
+      "after": "Concise, impact-first bullet using ONLY facts from resume and JD",
+      "rationale": "Why this improves HM scan + ATS keyword",
+      "confidence": 85,
+      "impact": "high"
+    }
+  ]
+}\n\nRules:\n• For EACH experience role present, include 2–3 bullets\n• ALWAYS set target_path with correct ROLE_INDEX and NEXT_INDEX (append at end)\n• Use suggestion_type "bullet" for all items\n• Use before = null for additions\n• No other sections or keys\n\nJOB DATA:\n${JSON.stringify(analysisContext.job, null, 2)}\n\nRESUME DATA:\n${JSON.stringify(analysisContext.resume, null, 2)}\n\nCACHE_BUST:${Date.now()}`;
+
+            const resp = await llmService.createJsonCompletion({
+              messages: [
+                { role: 'system', content: 'You are a resume tailoring engine. Return ONLY valid JSON.' },
+                { role: 'user', content: expOnlyPrompt }
+              ],
+              temperature: 0.2,
+              max_tokens: 2200,
+              model: getConfig('OPENAI.DEFAULT_MODEL') || 'gpt-4o-mini'
+            })
+
+            const content = resp.choices?.[0]?.message?.content || '{}'
+            let parsed: any = {}
+            try {
+              parsed = JSON.parse(content)
+            } catch {
+              const start = content.indexOf('{');
+              const end = content.lastIndexOf('}');
+              if (start >= 0 && end > start) parsed = JSON.parse(content.slice(start, end + 1))
+            }
+            if (Array.isArray(parsed?.atomic_suggestions) && parsed.atomic_suggestions.length > 0) {
+              analysisData.atomic_suggestions = parsed.atomic_suggestions
+              console.log('✅ Experience-only fallback produced suggestions:', parsed.atomic_suggestions.length)
+            } else {
+              console.warn('⚠️ Experience-only fallback returned zero items')
+            }
+          } catch (expErr) {
+            console.error('🔴 Experience-only fallback failed:', (expErr as Error).message)
+          }
+        }
+
+        // If still empty, fall back to GPT skill suggestions and convert to atomic
+        if (!Array.isArray(analysisData.atomic_suggestions) || analysisData.atomic_suggestions.length === 0) {
+          try {
+            const skillsResp = await llmService.generateSkillSuggestions(analysisContext.resume, analysisContext.resume.skills || {});
+            const addFallback = Array.isArray(skillsResp?.skill_additions) ? skillsResp.skill_additions : [];
+            const removeFallback = Array.isArray(skillsResp?.skill_removals) ? skillsResp.skill_removals : [];
+            (analysisData as any).skill_additions = addFallback;
+            (analysisData as any).skill_removals = removeFallback;
+            console.log(`🟡 Used skill-suggestions fallback: additions=${addFallback.length}, removals=${removeFallback.length}`);
+          } catch (skillErr) {
+            console.error('🔴 Skill-suggestions fallback failed:', (skillErr as Error).message);
+          }
         }
       }
       
@@ -1100,6 +1178,76 @@ Return your response as a valid JSON object only. Do not include any additional 
         })
         // Do NOT synthesize "mock" suggestions; strictly use GPT output only
         analysisData.atomic_suggestions = anchored
+
+        // Ensure coverage: at least 2 bullets per experience role
+        if (Array.isArray(baseResumeData.experience) && baseResumeData.experience.length > 0) {
+          try {
+            const countByRole: Record<number, number> = {}
+            for (const s of analysisData.atomic_suggestions) {
+              if (s.section === 'experience' && typeof s.target_path === 'string') {
+                const m = s.target_path.match(/experience\.(\d+)\.achievements\.(\d+)/)
+                if (m) {
+                  const idx = parseInt(m[1], 10)
+                  countByRole[idx] = (countByRole[idx] || 0) + 1
+                }
+              }
+            }
+
+            const rolesNeedingTopUp = baseResumeData.experience
+              .map((_, idx: number) => ({ idx, have: countByRole[idx] || 0 }))
+              .filter(({ have }) => have < 2)
+
+            for (const { idx, have } of rolesNeedingTopUp) {
+              const role = baseResumeData.experience[idx] || {}
+              const nextStart = Array.isArray(role.achievements) ? role.achievements.length : 0
+              const need = Math.max(0, 2 - have)
+              if (need <= 0) continue
+
+              const expUserPrompt = `Return ONLY valid JSON with key "bullets" as an array of ${need} impact-first resume bullets for this specific role.\n\nRules:\n• Anchor strictly to the candidate's role context and the job description; no fabrication beyond plausible tasks for this role and level\n• Keep ≤ 22 words each, strong verbs, outcome-first\n• Data/analytics roles: avoid exaggerated ML/leadership claims unless clearly grounded in resume\n• Lab roles: keep responsibilities realistic to entry-level lab tasks\n• No prose outside JSON\n\nROLE CONTEXT (from resume):\n${JSON.stringify(role, null, 2)}\n\nTARGET JOB (trimmed):\n${JSON.stringify(analysisContext.job, null, 2)}\n\nOUTPUT:\n{ "bullets": ["...", "..."] }`;
+
+              try {
+                const topUpResp = await llmService.createJsonCompletion({
+                  messages: [
+                    { role: 'system', content: 'You are a concise resume bullet generator. Return ONLY JSON.' },
+                    { role: 'user', content: expUserPrompt }
+                  ],
+                  temperature: 0.2,
+                  max_tokens: 900,
+                  model: getConfig('OPENAI.DEFAULT_MODEL') || 'gpt-4o-mini'
+                })
+                const content = topUpResp.choices?.[0]?.message?.content || '{}'
+                let parsed: any = {}
+                try { parsed = JSON.parse(content) } catch {
+                  const start = content.indexOf('{');
+                  const end = content.lastIndexOf('}');
+                  if (start >= 0 && end > start) parsed = JSON.parse(content.slice(start, end + 1))
+                }
+                const bullets: string[] = Array.isArray(parsed?.bullets) ? parsed.bullets.filter((b: any) => typeof b === 'string' && b.trim().length > 0) : []
+                if (bullets.length > 0) {
+                  bullets.slice(0, need).forEach((bullet: string, j: number) => {
+                    const addPath = `experience.${idx}.achievements.${nextStart + j}`
+                    analysisData.atomic_suggestions.push({
+                      section: 'experience',
+                      suggestion_type: 'bullet',
+                      target_path: addPath,
+                      target_id: addPath,
+                      before: '',
+                      after: bullet,
+                      rationale: 'Add role-specific bullet aligned with JD',
+                      confidence: 80,
+                      impact: 'high'
+                    })
+                  })
+                  console.log(`✅ Topped up role ${idx} with ${Math.min(need, bullets.length)} bullets`)
+                }
+              } catch (e) {
+                console.warn('Top-up generation failed for role', idx, (e as Error).message)
+              }
+            }
+          } catch (coverageErr) {
+            console.warn('Experience coverage enforcement skipped due to error:', (coverageErr as Error).message)
+          }
+        }
       }
 
       // Production: suppress verbose debug logs
@@ -1114,6 +1262,19 @@ Return your response as a valid JSON object only. Do not include any additional 
           // Fallback: route unknown sections to skills if it looks like a skill op, else custom_sections
           if ((suggestionType || '').includes('skill')) return 'skills'
           return 'custom_sections'
+        }
+
+        // Map model suggestion types to DB-allowed types
+        const sanitizeType = (rawType: string | undefined | null, section: string | undefined) => {
+          const t = (rawType || '').toString().toLowerCase()
+          if (t === 'skill_add' || t === 'skill_addition' || t === 'add') return 'skill_addition'
+          if (t === 'skill_remove' || t === 'skill_removal' || t === 'remove') return 'skill_removal'
+          if (t === 'reorder' || t === 'skill_reorder') return 'reorder'
+          if (t === 'language_add' || t === 'language_addition') return 'language_addition'
+          if (t === 'bullet' || t === 'bullet_add' || t === 'bullet_addition' || (t === 'addition' && section === 'experience')) return 'bullet'
+          if (t === 'modification' || t === 'replace' || t === 'replacement' || t === 'skill_replacement' || t === 'edit' ) return 'text'
+          if (t) return t
+          return section === 'experience' ? 'bullet' : 'text'
         }
 
         const validSuggestions = analysisData.atomic_suggestions
@@ -1191,7 +1352,7 @@ Return your response as a valid JSON object only. Do not include any additional 
             variant_id: variant.id,
             job_id,
             section: sanitizeSection(s.section, s.suggestion_type),
-            suggestion_type: s.suggestion_type || 'text',
+            suggestion_type: sanitizeType(s.suggestion_type, s.section),
             target_id: s.target_id || s.target_path || null, // Map target_path to target_id
             original_content: s.before || s.original_content || '',
             suggested_content: s.after || s.suggested_content || '',

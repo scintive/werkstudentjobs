@@ -391,6 +391,28 @@ export function EnhancedSkillsManager({
     return skillsFormat
   }
 
+  // Canonicalize category keys (align UI display names to slug keys from suggestions)
+  const toCanonicalKey = (name: string) => {
+    const lower = (name || '').toLowerCase().trim()
+    const map: Record<string, string> = {
+      'technical skills': 'technical',
+      'technical & digital': 'technical',
+      'technical': 'technical',
+      'soft skills': 'soft_skills',
+      'communication & collaboration': 'communication___collaboration',
+      'business intelligence & strategy': 'business_intelligence___strategy',
+      'domain expertise': 'domain_expertise',
+      'data analysis & visualization': 'data_analysis___visualization',
+      'project management': 'project_management'
+    }
+    if (map[lower]) return map[lower]
+    return lower
+      .replace(/\s*(&|and)\s*/g, '___')
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+  }
+
   const handleAddSkill = (categoryName: string, skill: string, proficiency?: string) => {
     if (!organizedData) return
 
@@ -733,14 +755,16 @@ export function EnhancedSkillsManager({
           </div>
           <div className="space-y-2">
             {suggestions
-              .filter(s => s.type === 'skill_add' || s.type === 'skill_addition')
+              .filter(s => (s.type === 'skill_add' || s.type === 'skill_addition' || s.type === 'skill_remove' || s.type === 'skill_removal'))
               .filter(s => s.status === 'pending')
               .map(suggestion => (
                 <div key={suggestion.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-100">
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900">
-                      Add: {suggestion.suggested}
-                    </span>
+                    { (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') ? (
+                      <span className="text-sm font-medium text-gray-900">Add: {suggestion.suggested}</span>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900">Remove: {suggestion.original}</span>
+                    )}
                     {suggestion.rationale && (
                       <p className="text-xs text-gray-600 mt-1">{suggestion.rationale}</p>
                     )}
@@ -751,14 +775,34 @@ export function EnhancedSkillsManager({
                         // Accept suggestion - add skill to appropriate category
                         if (onAcceptSuggestion) {
                           onAcceptSuggestion(suggestion.id)
-                          // Also add the skill to the local state
-                          const targetCategory = suggestion.targetPath?.split('.')[1] || 'technical'
+                          // Also update local state for immediate UX
+                          const rawTarget = suggestion.targetPath?.split('.')[1] || 'technical'
                           const updatedCategories = { ...dataToUse.organized_categories }
-                          if (!updatedCategories[targetCategory]) {
-                            updatedCategories[targetCategory] = { skills: [], suggestions: [], reasoning: '' }
+                          // Find the best matching existing category by canonical key
+                          const matchKey = Object.keys(updatedCategories).find(k => toCanonicalKey(k) === rawTarget) || 
+                            Object.keys(updatedCategories).find(k => toCanonicalKey(k).includes(rawTarget)) || null
+
+                          const targetDisplayName = matchKey || Object.keys(updatedCategories)[0] || 'Technical & Digital'
+
+                          if (!updatedCategories[targetDisplayName]) {
+                            updatedCategories[targetDisplayName] = { skills: [], suggestions: [], reasoning: '' }
                           }
-                          updatedCategories[targetCategory].skills.push(suggestion.suggested)
-                          setOrganizedData({ ...dataToUse, organized_categories: updatedCategories })
+
+                          if (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') {
+                            if (suggestion.suggested) {
+                              const exists = (updatedCategories[targetDisplayName].skills || []).some(s => 
+                                (typeof s === 'string' ? s : (s as any).skill) === suggestion.suggested)
+                              if (!exists) updatedCategories[targetDisplayName].skills.push(suggestion.suggested)
+                            }
+                          } else {
+                            const toRemove = suggestion.original
+                            updatedCategories[targetDisplayName].skills = (updatedCategories[targetDisplayName].skills || []).filter(s =>
+                              (typeof s === 'string' ? s : (s as any).skill) !== toRemove
+                            )
+                          }
+
+                          const newOrganized = { ...dataToUse, organized_categories: updatedCategories }
+                          setOrganizedData(newOrganized)
                           const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
                           onSkillsChange(newSkillsFormat)
                         }

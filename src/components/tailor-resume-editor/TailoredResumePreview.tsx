@@ -711,17 +711,53 @@ export function TailoredResumePreview({
         // Apply the change at the target
         const lastPart = pathParts[pathParts.length - 1]
         const lastKey = lastPart.startsWith('[') ? parseInt(lastPart.slice(1, -1)) : lastPart
-        
-        if (suggestion.suggestion_type === 'skill_removal' || suggestion.suggestion_type === 'remove') {
-          // Remove skill or item
+        const newValue = suggestion.suggested_content || suggestion.after
+
+        if ((suggestion.section === 'skills') && (suggestion.suggestion_type === 'skill_removal' || suggestion.suggestion_type === 'remove')) {
+          const toRemove = (suggestion.original_content || suggestion.before || '').toString().trim()
+          if (typeof lastKey === 'string' && Array.isArray(current[lastKey])) {
+            current[lastKey] = current[lastKey].filter((s: any) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
+          } else if (Array.isArray(current) && typeof lastKey === 'number') {
+            // Remove by index if numeric
+            current.splice(lastKey, 1)
+          } else {
+            // Fallback: remove from all skill categories
+            if (updatedData.skills && typeof updatedData.skills === 'object') {
+              Object.keys(updatedData.skills).forEach(cat => {
+                if (Array.isArray(updatedData.skills[cat])) {
+                  updatedData.skills[cat] = updatedData.skills[cat].filter((s: any) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
+                }
+              })
+            }
+          }
+        } else if ((suggestion.section === 'skills') && (suggestion.suggestion_type === 'skill_addition' || suggestion.suggestion_type === 'addition' || suggestion.suggestion_type === 'text')) {
+          // Ensure additions get appended to the category array, not overwrite
+          if (typeof lastKey === 'string') {
+            if (!Array.isArray(current[lastKey])) current[lastKey] = Array.isArray(current[lastKey]) ? current[lastKey] : []
+            if (newValue) {
+              const arr = current[lastKey] as any[]
+              const exists = arr.some((s: any) => (typeof s === 'string' ? s : s?.skill) === newValue)
+              if (!exists) arr.push(newValue)
+            }
+          } else if (Array.isArray(current) && typeof lastKey === 'number') {
+            current[lastKey] = newValue
+          } else {
+            // Fallback to append under 'technical' if category is ambiguous
+            const category = 'technical'
+            if (!updatedData.skills) updatedData.skills = {}
+            if (!Array.isArray(updatedData.skills[category])) updatedData.skills[category] = []
+            if (newValue && !updatedData.skills[category].includes(newValue)) updatedData.skills[category].push(newValue)
+          }
+        } else if (suggestion.suggestion_type === 'skill_removal' || suggestion.suggestion_type === 'remove') {
+          // Non-skills remove: keep previous behavior
           if (Array.isArray(current) && typeof lastKey === 'number') {
             current.splice(lastKey, 1)
           } else if (current[lastKey]) {
             delete current[lastKey]
           }
         } else {
-          // Update with suggested content
-          current[lastKey] = suggestion.suggested_content || suggestion.after
+          // Update with suggested content for general cases
+          current[lastKey] = newValue
         }
       } catch (error) {
         console.warn('Failed to apply suggestion via target_path, falling back:', error)
