@@ -22,6 +22,12 @@ export function SuggestionIndicator({
   compact = false,
   className = ''
 }: SuggestionIndicatorProps) {
+  // Decide which text to show as the primary suggestion sentence
+  const displayText = (suggestion.suggested && suggestion.suggested.trim().length > 0)
+    ? suggestion.suggested
+    : (suggestion.section === 'experience'
+        ? `Add a quantified achievement aligned with the role (impact %, $, time).`
+        : (suggestion.original || 'Suggested update available'))
   const [isExpanded, setIsExpanded] = useState(false)
   
   if (compact) {
@@ -30,7 +36,7 @@ export function SuggestionIndicator({
       <div className={`inline-flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs ${className}`}>
         <Sparkles className="w-3 h-3 text-amber-500" />
         <span className="text-amber-700 font-medium truncate max-w-[150px]">
-          {suggestion.suggested}
+          {displayText}
         </span>
         <button
           onClick={() => onAccept(suggestion.id)}
@@ -87,7 +93,7 @@ export function SuggestionIndicator({
                 </div>
                 <div className="p-2 bg-green-50 rounded border border-green-200">
                   <p className="text-xs text-green-600 font-medium mb-1">Suggested:</p>
-                  <p className="text-sm text-green-800">{suggestion.suggested}</p>
+                  <p className="text-sm text-green-800">{displayText}</p>
                 </div>
               </div>
             )}
