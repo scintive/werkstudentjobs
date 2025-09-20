@@ -3,7 +3,8 @@
  * Shows inline suggestions similar to the skills suggestion UI
  */
 
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Sparkles, Check, X, Lightbulb } from 'lucide-react'
 import { UnifiedSuggestion } from '@/hooks/useUnifiedSuggestions'
 
@@ -23,6 +24,24 @@ export function SuggestionIndicator({
   className = ''
 }: SuggestionIndicatorProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 })
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
+
+  // Position the floating card using a portal to avoid clipping/overflow issues
+  useEffect(() => {
+    if (!isExpanded || !buttonRef.current) return
+    const updatePosition = () => {
+      const rect = buttonRef.current!.getBoundingClientRect()
+      setCoords({ top: rect.bottom + 8, left: rect.left, width: rect.width })
+    }
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [isExpanded])
   
   if (compact) {
     // Inline chip style for skills or short text
@@ -55,6 +74,7 @@ export function SuggestionIndicator({
     <div className={`relative ${className}`}>
       {/* Suggestion trigger */}
       <button
+        ref={buttonRef}
         onClick={() => setIsExpanded(!isExpanded)}
         className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-md transition-colors"
       >
@@ -74,9 +94,12 @@ export function SuggestionIndicator({
         </span>
       </button>
       
-      {/* Expanded suggestion card */}
-      {isExpanded && (
-        <div className="absolute z-50 top-full left-0 mt-2 p-4 bg-white border border-amber-200 rounded-lg shadow-lg w-80">
+      {/* Expanded suggestion card via portal */}
+      {isExpanded && typeof window !== 'undefined' && createPortal(
+        <div
+          className="fixed z-[9999] p-4 bg-white border border-amber-200 rounded-lg shadow-lg w-80"
+          style={{ top: coords.top, left: coords.left }}
+        >
           <div className="space-y-3">
             {/* Before/After comparison */}
             {suggestion.original && (
@@ -137,7 +160,8 @@ export function SuggestionIndicator({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

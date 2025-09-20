@@ -769,6 +769,45 @@ export function PerfectStudio({
         <div className="w-[40%] overflow-y-auto bg-white border-r border-gray-200">
           <div className="p-6 space-y-6">
             
+            {/* Suggestions Summary Banner */}
+            {suggestionsEnabled && suggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">AI Suggestions Available</h3>
+                      <p className="text-sm text-gray-600">
+                        {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} to optimize your resume
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {Object.entries(
+                      suggestions.reduce((acc, s) => {
+                        const section = s.section || 'other'
+                        acc[section] = (acc[section] || 0) + 1
+                        return acc
+                      }, {} as Record<string, number>)
+                    ).map(([section, count]) => (
+                      <span
+                        key={section}
+                        className="px-3 py-1 bg-white rounded-lg text-xs font-medium text-gray-700 border border-gray-200"
+                      >
+                        {section}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            
             {/* Personal Information */}
             <SectionCard
               title="Personal Information"
@@ -914,7 +953,7 @@ export function PerfectStudio({
                 })
               }}
             >
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                 {localData.experience.map((exp, index) => (
                   <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
                     <button
@@ -924,7 +963,7 @@ export function PerfectStudio({
                           experience: localData.experience.filter((_, i) => i !== index)
                         })
                       }}
-                      className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
+                      className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500 z-10"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

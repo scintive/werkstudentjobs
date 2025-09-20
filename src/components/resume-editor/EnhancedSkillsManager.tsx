@@ -822,7 +822,22 @@ export function EnhancedSkillsManager({
       {/* Categories - clean and minimal */}
       {dataToUse && dataToUse.organized_categories && (
         <div className="space-y-3">
-          {Object.entries(dataToUse.organized_categories).map(([categoryName, categoryDataRaw], index) => {
+          {/* Sort categories to show those with suggestions first */}
+          {Object.entries(dataToUse.organized_categories)
+            .sort(([categoryNameA], [categoryNameB]) => {
+              // Check if categories have skill suggestions
+              const aHasSuggestions = mode === 'tailor' && suggestions?.some(s => 
+                s.section === 'skills' && s.targetPath?.includes(categoryNameA)
+              )
+              const bHasSuggestions = mode === 'tailor' && suggestions?.some(s => 
+                s.section === 'skills' && s.targetPath?.includes(categoryNameB)
+              )
+              // Categories with suggestions come first
+              if (aHasSuggestions && !bHasSuggestions) return -1
+              if (!aHasSuggestions && bHasSuggestions) return 1
+              return 0
+            })
+            .map(([categoryName, categoryDataRaw], index) => {
             const categoryData: OrganizedCategory = {
               skills: Array.isArray((categoryDataRaw as any)?.skills) ? (categoryDataRaw as any).skills : [],
               suggestions: Array.isArray((categoryDataRaw as any)?.suggestions) ? (categoryDataRaw as any).suggestions : [],
