@@ -528,10 +528,14 @@ export function PerfectStudio({
             if (!draft.skills[category].includes(suggestion.suggested)) {
               draft.skills[category] = [...draft.skills[category], suggestion.suggested]
             }
-          } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal') && suggestion.targetPath) {
-            const category = suggestion.targetPath.replace(/^skills\./, '')
-            if (draft.skills && Array.isArray(draft.skills[category])) {
-              draft.skills[category] = draft.skills[category].filter((skill: string) => skill !== suggestion.original)
+          } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal')) {
+            // Remove across all categories to avoid lingering duplicates
+            if (draft.skills) {
+              Object.keys(draft.skills).forEach(cat => {
+                if (Array.isArray(draft.skills[cat])) {
+                  draft.skills[cat] = draft.skills[cat].filter((skill: string) => skill !== suggestion.original)
+                }
+              })
             }
           }
           break
@@ -583,6 +587,19 @@ export function PerfectStudio({
       </div>
     </div>
   )
+
+  // Inline Summary Suggestions
+  const InlineSummarySuggestions = () => {
+    const summaryChips = getSuggestionsForSection('summary')
+    if (!summaryChips || summaryChips.length === 0) return null
+    return (
+      <div className="mt-2 space-y-2">
+        {summaryChips.map(c => (
+          <InlineSuggestionRow key={c.id} s={c} />
+        ))}
+      </div>
+    )
+  }
 
   // Real-time preview generation
   React.useEffect(() => {
@@ -951,13 +968,8 @@ export function PerfectStudio({
                 </div>
                 {localData.enableProfessionalSummary && (
                   <div className="space-y-2">
-                    {suggestionsEnabled && getSuggestionForField('summary') && (
-                      <SuggestionIndicator
-                        suggestion={getSuggestionForField('summary')!}
-                        onAccept={acceptSuggestion}
-                        onDecline={declineSuggestion}
-                      />
-                    )}
+                    {/* Always-visible inline summary suggestions */}
+                    {suggestionsEnabled && <InlineSummarySuggestions />}
                     <EnhancedRichText
                       value={localData.professionalSummary}
                       onChange={(value) => setLocalData({

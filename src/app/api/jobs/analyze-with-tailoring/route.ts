@@ -970,6 +970,35 @@ Return your response as a valid JSON object only. Do not include any additional 
           .map((s: any) => String(s).toLowerCase())
         const jobTextForFilter = (JSON.stringify(trimmedJob || {}) + ' ' + (jobData?.description || '')).toLowerCase()
         
+        // Helpers for category mapping
+        const normKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
+        const baseCats = Object.keys(baseResumeData.skills || {}).map(normKey)
+        const resolveCategory = (candidate: string | undefined, skillName: string): string => {
+          const cand = normKey(candidate || '')
+          if (cand && baseCats.includes(cand)) return cand
+          const skill = (skillName || '').toLowerCase()
+          const tryMap = (needle: string, fallback: string) =>
+            skill.includes(needle) && baseCats.includes(normKey(fallback)) ? normKey(fallback) : ''
+          const heuristics = [
+            tryMap('sql', 'data_analysis___visualization') || tryMap('sql', 'technical'),
+            tryMap('excel', 'data_analysis___visualization') || tryMap('excel', 'tools'),
+            tryMap('tableau', 'data_analysis___visualization') || tryMap('tableau', 'tools'),
+            tryMap('power bi', 'data_analysis___visualization') || tryMap('power bi', 'tools'),
+            tryMap('data', 'data_analysis___visualization'),
+            tryMap('analys', 'data_analysis___visualization'),
+            tryMap('visualization', 'data_analysis___visualization'),
+            tryMap('business', 'business_intelligence___strategy'),
+            tryMap('strategy', 'business_intelligence___strategy'),
+            tryMap('communication', 'communication___collaboration') || tryMap('communication', 'soft_skills'),
+            tryMap('collaborat', 'communication___collaboration') || tryMap('collaborat', 'soft_skills'),
+            tryMap('project', 'project_management'),
+            tryMap('agile', 'project_management'),
+          ].filter(Boolean)
+          if (heuristics.length > 0) return heuristics[0] as string
+          // Fallback: first existing category to avoid dumping everything under technical
+          return baseCats[0] || 'technical'
+        }
+
         // Convert skills_suggestions to atomic suggestion format for storage
         const skillsSuggestionsAsAtomic = analysisData.skills_suggestions
           .map((s: any, index: number) => {
@@ -1000,11 +1029,15 @@ Return your response as a valid JSON object only. Do not include any additional 
               }
             }
             
+            // Pick category with heuristics rather than defaulting to technical
+            const skillForCat = suggestionType === 'skill_removal' ? currentSkill : newSkill
+            const finalCat = resolveCategory(s.category, skillForCat)
+
             return {
               section: 'skills',
               suggestion_type: suggestionType,
-              target_id: `${s.category || 'skills'}_${index}`,
-              target_path: `skills.${s.category || 'technical'}`,
+              target_id: `skills.${finalCat}`,
+              target_path: `skills.${finalCat}`,
               before: s.operation === 'add' ? '' : currentSkill,
               after: s.operation === 'remove' ? '' : newSkill,
               original_content: s.operation === 'add' ? '' : currentSkill,
