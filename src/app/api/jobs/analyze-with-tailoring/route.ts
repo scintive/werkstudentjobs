@@ -1303,7 +1303,13 @@ Return your response as a valid JSON object only. Do not include any additional 
           if (t === 'skill_remove' || t === 'skill_removal' || t === 'remove') return 'skill_removal'
           if (t === 'reorder' || t === 'skill_reorder') return 'reorder'
           if (t === 'language_add' || t === 'language_addition') return 'language_addition'
-          if (t === 'bullet' || t === 'bullet_add' || t === 'bullet_addition' || (t === 'addition' && section === 'experience')) return 'bullet'
+          // Normalize generic "addition" types by section
+          if (t === 'addition') {
+            if (section === 'experience') return 'bullet'
+            if (section === 'skills') return 'skill_addition'
+            return 'text'
+          }
+          if (t === 'bullet' || t === 'bullet_add' || t === 'bullet_addition') return 'bullet'
           if (t === 'modification' || t === 'replace' || t === 'replacement' || t === 'skill_replacement' || t === 'edit' ) return 'text'
           if (t) return t
           return section === 'experience' ? 'bullet' : 'text'

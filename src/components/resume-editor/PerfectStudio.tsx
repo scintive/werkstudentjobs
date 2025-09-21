@@ -464,86 +464,95 @@ export function PerfectStudio({
     }
   }, [localData.skills?.languages])
   
-  // Handle applying a suggestion to the actual data
-  const handleSuggestionApply = (suggestion: any) => {
-    // Update localData based on suggestion type and section
-    setLocalData(prev => {
-      const updated = { ...prev }
-      
-      switch(suggestion.section) {
+  // Handle applying a suggestion to the actual data and persist to variant immediately
+  const handleSuggestionApply = async (suggestion: any) => {
+    // Build updated snapshot synchronously from current localData
+    const updated = (() => {
+      const draft: any = { ...localData }
+
+      switch (suggestion.section) {
         case 'title':
-          updated.professionalTitle = suggestion.suggested
+          draft.professionalTitle = suggestion.suggested
           break
-          
+
         case 'summary':
-          updated.professionalSummary = suggestion.suggested
+          draft.professionalSummary = suggestion.suggested
           break
-          
-        case 'experience':
-          // Handle experience bullet points
+
+        case 'experience': {
           if (suggestion.targetPath) {
-            // support experience.N.achievements.M and add-if-missing
             const parts = suggestion.targetPath.split('.')
             const expIdx = parseInt(parts[1] || '0', 10)
             const achIdx = parseInt(parts[3] || '0', 10)
-            if (!updated.experience) updated.experience = []
-            if (!updated.experience[expIdx]) {
-              updated.experience[expIdx] = { position: '', company: '', duration: '', achievements: [] }
+            if (!Array.isArray(draft.experience)) draft.experience = []
+            if (!draft.experience[expIdx]) {
+              draft.experience[expIdx] = { position: '', company: '', duration: '', achievements: [] }
             }
-            const exp = updated.experience[expIdx]
-            if (!exp.achievements) exp.achievements = []
-            // if original empty (add case), push; else replace index
-            if (isNaN(achIdx) || achIdx >= exp.achievements.length) {
+            const exp = draft.experience[expIdx]
+            if (!Array.isArray(exp.achievements)) exp.achievements = []
+            if (Number.isNaN(achIdx) || achIdx >= exp.achievements.length) {
               exp.achievements.push(suggestion.suggested)
             } else {
               exp.achievements[achIdx] = suggestion.suggested
             }
           } else {
-            // Fallback: add to first role when no anchor
-            if (!updated.experience || updated.experience.length === 0) {
-              updated.experience = [{ position: '', company: '', duration: '', achievements: [] }]
+            if (!Array.isArray(draft.experience) || draft.experience.length === 0) {
+              draft.experience = [{ position: '', company: '', duration: '', achievements: [] }]
             }
-            const exp = updated.experience[0]
-            if (!exp.achievements) exp.achievements = []
+            const exp = draft.experience[0]
+            if (!Array.isArray(exp.achievements)) exp.achievements = []
             exp.achievements.push(suggestion.suggested)
           }
           break
-          
-        case 'projects':
-          // Handle project descriptions
+        }
+
+        case 'projects': {
           if (suggestion.targetPath && suggestion.targetIndex !== undefined) {
-            const [, projIndex] = suggestion.targetPath.split('.')
-            if (updated.projects && updated.projects[projIndex]) {
-              updated.projects[projIndex] = {
-                ...updated.projects[projIndex],
+            const [, projIndexStr] = suggestion.targetPath.split('.')
+            const projIndex = parseInt(projIndexStr || '0', 10)
+            if (Array.isArray(draft.projects) && draft.projects[projIndex]) {
+              draft.projects[projIndex] = {
+                ...draft.projects[projIndex],
                 description: suggestion.suggested
               }
             }
           }
           break
-          
-        case 'skills':
-          // Handle skill additions/removals
+        }
+
+        case 'skills': {
           if ((suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') && suggestion.targetPath) {
-            const category = suggestion.targetPath.replace(/^skills\./,'')
-            if (!updated.skills) updated.skills = {}
-            if (!updated.skills[category]) updated.skills[category] = []
-            if (!updated.skills[category].includes(suggestion.suggested)) {
-              updated.skills[category] = [...updated.skills[category], suggestion.suggested]
+            const category = suggestion.targetPath.replace(/^skills\./, '')
+            if (!draft.skills) draft.skills = {}
+            if (!Array.isArray(draft.skills[category])) draft.skills[category] = []
+            if (!draft.skills[category].includes(suggestion.suggested)) {
+              draft.skills[category] = [...draft.skills[category], suggestion.suggested]
             }
           } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal') && suggestion.targetPath) {
-            const category = suggestion.targetPath.replace(/^skills\./,'')
-            if (updated.skills && updated.skills[category]) {
-              updated.skills[category] = updated.skills[category].filter(
-                (skill: string) => skill !== suggestion.original
-              )
+            const category = suggestion.targetPath.replace(/^skills\./, '')
+            if (draft.skills && Array.isArray(draft.skills[category])) {
+              draft.skills[category] = draft.skills[category].filter((skill: string) => skill !== suggestion.original)
             }
           }
           break
+        }
       }
-      
-      return updated
-    })
+
+      return draft
+    })()
+
+    // Update UI immediately
+    setLocalData(updated)
+
+    // Persist to variant if available
+    try {
+      if (variantId) {
+        const { resumeVariantService } = await import('@/lib/services/resumeVariantService')
+        await resumeVariantService.updateVariant(variantId, updated)
+      }
+    } catch (e) {
+      console.warn('Failed to persist variant after applying suggestion:', (e as Error).message)
+    }
   }
 
   // Inline suggestion row (always visible)
