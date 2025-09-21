@@ -413,6 +413,14 @@ export function EnhancedSkillsManager({
       .replace(/^_|_$/g, '')
   }
 
+  // Humanize canonical category key for display (e.g., data_analysis___visualization → Data Analysis & Visualization)
+  const humanizeCategoryKey = (key: string) => {
+    if (!key) return 'New Category'
+    const withAnd = key.replace(/___/g, ' & ')
+    const spaced = withAnd.replace(/_/g, ' ')
+    return spaced.replace(/\b\w/g, c => c.toUpperCase())
+  }
+
   const handleAddSkill = (categoryName: string, skill: string, proficiency?: string) => {
     if (!organizedData) return
 
@@ -753,6 +761,47 @@ export function EnhancedSkillsManager({
               {suggestions.filter(s => s.status === 'pending').length} pending
             </span>
           </div>
+          {/* New Category Suggestions */}
+          {(() => {
+            try {
+              const existingCanon = new Set(Object.keys((dataToUse?.organized_categories)||{}).map(toCanonicalKey))
+              const incomingCanon = Array.from(new Set((suggestions||[])
+                .filter(s => s.section === 'skills' && (s.type === 'skill_add' || s.type === 'skill_addition'))
+                .map(s => (s.targetPath || '').toString().split('.')[1])
+                .filter(Boolean))) as string[]
+              const newCats = incomingCanon.filter(k => !existingCanon.has(k))
+              if (newCats.length === 0) return null
+              return (
+                <div className="mb-3">
+                  <div className="text-xs font-medium text-amber-900 mb-1">New categories suggested</div>
+                  <div className="flex flex-wrap gap-2">
+                    {newCats.map((catKey) => (
+                      <div key={catKey} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-amber-200 rounded-full text-xs">
+                        <span className="text-amber-800 font-semibold">{humanizeCategoryKey(catKey)}</span>
+                        <button
+                          onClick={() => {
+                            const displayName = humanizeCategoryKey(catKey)
+                            const updated = { ...(dataToUse?.organized_categories || {}) }
+                            if (!updated[displayName]) {
+                              updated[displayName] = { skills: [], suggestions: [], reasoning: 'AI suggested category', allowProficiency: shouldCategoryHaveProficiency(displayName) }
+                              setOrganizedData(prev => ({ ...(prev||organizedSkills), organized_categories: updated }))
+                              const newSkillsFormat = convertOrganizedToSkillsFormat(updated)
+                              onSkillsChange(newSkillsFormat)
+                            }
+                          }}
+                          className="px-2 py-0.5 bg-green-600 hover:bg-green-700 text-white rounded-full"
+                        >
+                          Create
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            } catch {
+              return null
+            }
+          })()}
           <div className="space-y-2">
             {suggestions
               .filter(s => (s.type === 'skill_add' || s.type === 'skill_addition' || s.type === 'skill_remove' || s.type === 'skill_removal'))
@@ -782,7 +831,15 @@ export function EnhancedSkillsManager({
                           const matchKey = Object.keys(updatedCategories).find(k => toCanonicalKey(k) === rawTarget) || 
                             Object.keys(updatedCategories).find(k => toCanonicalKey(k).includes(rawTarget)) || null
 
-                          const targetDisplayName = matchKey || Object.keys(updatedCategories)[0] || 'Technical & Digital'
+                          let targetDisplayName = matchKey || Object.keys(updatedCategories)[0] || 'Technical & Digital'
+                          if (!matchKey) {
+                            // Auto-create category matching target if not present
+                            const displayName = humanizeCategoryKey(rawTarget)
+                            if (!updatedCategories[displayName]) {
+                              updatedCategories[displayName] = { skills: [], suggestions: [], reasoning: 'AI suggested category', allowProficiency: shouldCategoryHaveProficiency(displayName) }
+                            }
+                            targetDisplayName = displayName
+                          }
 
                           if (!updatedCategories[targetDisplayName]) {
                             updatedCategories[targetDisplayName] = { skills: [], suggestions: [], reasoning: '' }

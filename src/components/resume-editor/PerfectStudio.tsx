@@ -47,6 +47,7 @@ import { SimpleTemplateDropdown } from './SimpleTemplateDropdown'
 import { EnhancedSkillsManager } from './EnhancedSkillsManager'
 import { useUnifiedSuggestions } from '@/hooks/useUnifiedSuggestions'
 import { SuggestionIndicator, SuggestionBadge } from './SuggestionIndicator'
+import type { UnifiedSuggestion } from '@/hooks/useUnifiedSuggestions'
 
 // Custom Section Templates
 const CUSTOM_SECTION_TEMPLATES = {
@@ -543,6 +544,35 @@ export function PerfectStudio({
     })
   }
 
+  // Inline suggestion row (always visible)
+  const InlineSuggestionRow = ({ s }: { s: UnifiedSuggestion }) => (
+    <div className="flex items-start justify-between gap-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+      <div className="flex-1">
+        {s.original && (
+          <div className="text-xs text-red-700 line-through mb-1">{s.original}</div>
+        )}
+        <div className="text-sm text-amber-900">{s.suggested}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {s.atsKeywords && s.atsKeywords.length > 0 && (
+            <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">
+              {s.atsKeywords.slice(0, 3).join(' · ')}
+            </span>
+          )}
+          <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full border border-amber-200">
+            {Math.round(s.confidence)}%
+          </span>
+        </div>
+        {s.rationale && (
+          <div className="text-[11px] text-gray-600 mt-1">{s.rationale}</div>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        <button onClick={() => acceptSuggestion(s.id)} className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs">Accept</button>
+        <button onClick={() => declineSuggestion(s.id)} className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-xs">Decline</button>
+      </div>
+    </div>
+  )
+
   // Real-time preview generation
   React.useEffect(() => {
     if (debounceTimer.current) {
@@ -1021,12 +1051,7 @@ export function PerfectStudio({
                           {getSuggestionsForSection('experience')
                             .filter(s => s.targetPath?.startsWith(`experience.${index}`))
                             .map((s, i) => (
-                              <SuggestionIndicator
-                                key={`${s.id}-${i}`}
-                                suggestion={s as any}
-                                onAccept={acceptSuggestion}
-                                onDecline={declineSuggestion}
-                              />
+                              <InlineSuggestionRow key={`${s.id}-${i}`} s={s} />
                             ))}
                         </div>
                       )}

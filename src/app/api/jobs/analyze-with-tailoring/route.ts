@@ -653,6 +653,9 @@ ${JSON.stringify(analysisContext.resume, null, 2)}
 
 Constraints:
 • Cover ALL sections: summary, title, skills, EVERY experience role (ALL of them, not just recent ones), projects, education, languages, certifications
+• MUST include an atomic suggestion to update professional title (target_path: "title") tailored to the job role (concise, role-appropriate)
+• MUST include at least one summary improvement (target_path: "summary") aligned with the job role and keywords (no generic text)
+• Propose skill_removal suggestions for resume skills clearly irrelevant to the job (only if they exist in the resume)
 • For EACH experience role present (including older roles), return 2–3 suggestions (prefer 'bullet' additions/rewrites). Anchor with target_path like experience[ROLE_INDEX].achievements[BULLET_INDEX]
 • Return 15–25 total high-value suggestions ensuring ALL experience roles get suggestions
 • Skills: ONLY suggest skills under categories the user already has. DO NOT create new categories unless explicitly needed for critical job requirements
@@ -959,42 +962,68 @@ Return your response as a valid JSON object only. Do not include any additional 
       if (analysisData.skills_suggestions && Array.isArray(analysisData.skills_suggestions)) {
         console.log(`📊 Processing ${analysisData.skills_suggestions.length} skills suggestions`);
         
+        // Compile current skills for relevance checks
+        const baseSkillsFlatForFilter = Object.values(baseResumeData.skills || {})
+          .flat()
+          .map((v: any) => (typeof v === 'string' ? v : v?.skill))
+          .filter(Boolean)
+          .map((s: any) => String(s).toLowerCase())
+        const jobTextForFilter = (JSON.stringify(trimmedJob || {}) + ' ' + (jobData?.description || '')).toLowerCase()
+        
         // Convert skills_suggestions to atomic suggestion format for storage
-        const skillsSuggestionsAsAtomic = analysisData.skills_suggestions.map((s: any, index: number) => {
-          // Determine the suggestion type based on operation
-          let suggestionType = 'skill_change';
-          if (s.operation === 'add') suggestionType = 'skill_addition';
-          else if (s.operation === 'remove') suggestionType = 'skill_removal';
-          else if (s.operation === 'alias' || s.operation === 'replace') suggestionType = 'skill_replacement';
-          else if (s.operation === 'reorder') suggestionType = 'skill_reorder';
-          
-          // Handle different field names in the skills suggestions
-          const currentSkill = s.current_skill || s.skill || s.original || '';
-          const newSkill = s.suggested_skill || s.new_skill || s.replacement || s.suggestion || '';
-          
-          return {
-            section: 'skills',
-            suggestion_type: suggestionType,
-            target_id: `${s.category || 'skills'}_${index}`,
-            target_path: `skills.${s.category || 'technical' || 'general'}`,
-            before: s.operation === 'add' ? '' : currentSkill,
-            after: s.operation === 'remove' ? '' : newSkill,
-            original_content: s.operation === 'add' ? '' : currentSkill,
-            suggested_content: s.operation === 'remove' ? '' : newSkill,
-            rationale: s.reason || s.rationale || 'Optimize skills for job match',
-            job_requirement: s.relevance || s.job_relevance || 'Job-relevant skill optimization',
-            ats_keywords: [newSkill].filter(Boolean),
-            confidence: Math.max(70, s.confidence || 85), // Ensure minimum 70 confidence
-            impact: s.impact || 'high',
-            resume_evidence: currentSkill || 'Skills section',
-            diff_html: s.operation === 'add' 
-              ? `<ins>+ ${newSkill}</ins>`
-              : s.operation === 'remove'
-              ? `<del>- ${currentSkill}</del>`
-              : `<del>${currentSkill}</del> → <ins>${newSkill}</ins>`,
-            ats_relevance: s.relevance || s.job_relevance || 'Matches job requirements'
-          };
-        });
+        const skillsSuggestionsAsAtomic = analysisData.skills_suggestions
+          .map((s: any, index: number) => {
+            // Determine the suggestion type based on operation
+            let suggestionType = 'skill_change';
+            if (s.operation === 'add') suggestionType = 'skill_addition';
+            else if (s.operation === 'remove') suggestionType = 'skill_removal';
+            else if (s.operation === 'alias' || s.operation === 'replace') suggestionType = 'skill_replacement';
+            else if (s.operation === 'reorder') suggestionType = 'skill_reorder';
+            
+            // Handle different field names in the skills suggestions
+            const currentSkill = s.current_skill || s.skill || s.original || '';
+            const newSkill = s.suggested_skill || s.new_skill || s.replacement || s.suggestion || '';
+            const newLower = String(newSkill || '').toLowerCase()
+            const curLower = String(currentSkill || '').toLowerCase()
+            
+            // Quality gates
+            if (suggestionType === 'skill_removal' && curLower && !baseSkillsFlatForFilter.includes(curLower)) {
+              return null // Don't remove skills that aren't in resume
+            }
+            if (suggestionType === 'skill_addition' && newLower && baseSkillsFlatForFilter.includes(newLower)) {
+              return null // Don't add duplicates
+            }
+            if (suggestionType === 'skill_addition' && newLower) {
+              const firstToken = newLower.split(' ')[0]
+              if (firstToken && jobTextForFilter && !jobTextForFilter.includes(firstToken)) {
+                return null // Drop off-topic additions
+              }
+            }
+            
+            return {
+              section: 'skills',
+              suggestion_type: suggestionType,
+              target_id: `${s.category || 'skills'}_${index}`,
+              target_path: `skills.${s.category || 'technical'}`,
+              before: s.operation === 'add' ? '' : currentSkill,
+              after: s.operation === 'remove' ? '' : newSkill,
+              original_content: s.operation === 'add' ? '' : currentSkill,
+              suggested_content: s.operation === 'remove' ? '' : newSkill,
+              rationale: s.reason || s.rationale || 'Optimize skills for job match',
+              job_requirement: s.relevance || s.job_relevance || 'Job-relevant skill optimization',
+              ats_keywords: [newSkill].filter(Boolean),
+              confidence: Math.max(70, s.confidence || 85), // Ensure minimum 70 confidence
+              impact: s.impact || 'high',
+              resume_evidence: currentSkill || 'Skills section',
+              diff_html: s.operation === 'add' 
+                ? `<ins>+ ${newSkill}</ins>`
+                : s.operation === 'remove'
+                ? `<del>- ${currentSkill}</del>`
+                : `<del>${currentSkill}</del> → <ins>${newSkill}</ins>`,
+              ats_relevance: s.relevance || s.job_relevance || 'Matches job requirements'
+            };
+          })
+          .filter(Boolean as any);
         
         // Add skills suggestions to atomic suggestions
         if (!analysisData.atomic_suggestions) {
@@ -1008,14 +1037,22 @@ Return your response as a valid JSON object only. Do not include any additional 
       const removals = Array.isArray((analysisData as any).skill_removals) ? (analysisData as any).skill_removals : []
       const normalizeKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
       const baseCategories = Object.keys(baseResumeData.skills || {}).map(normalizeKey)
+      const baseSkillsFlat2 = Object.values(baseResumeData.skills || {})
+        .flat()
+        .map((v: any) => (typeof v === 'string' ? v : v?.skill))
+        .filter(Boolean)
+        .map((s: any) => String(s).toLowerCase())
       const mapCategory = (cat: string) => {
         const c = normalizeKey(cat)
-        return baseCategories.includes(c) ? c : (baseCategories[0] || 'skills')
+        return c || 'skills'
       }
       if (additions.length > 0) {
         additions.forEach((item: any) => {
           const category = mapCategory(item.category)
           const target = `skills.${category}`
+          const skillLower = String(item.skill || '').toLowerCase()
+          const jobTextLocal = (JSON.stringify(trimmedJob || {}) + ' ' + (jobData?.description || '')).toLowerCase()
+          if (!item?.skill || baseSkillsFlat2.includes(skillLower) || (jobTextLocal && !jobTextLocal.includes(skillLower.split(' ')[0]))) return
           analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
           analysisData.atomic_suggestions.push({
             section: 'skills',
@@ -1038,6 +1075,8 @@ Return your response as a valid JSON object only. Do not include any additional 
         removals.forEach((item: any) => {
           const category = mapCategory(item.category)
           const target = `skills.${category}`
+          const skillLower = String(item.skill || '').toLowerCase()
+          if (!item?.skill || !baseSkillsFlat2.includes(skillLower)) return
           analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
           analysisData.atomic_suggestions.push({
             section: 'skills',
@@ -1065,7 +1104,7 @@ Return your response as a valid JSON object only. Do not include any additional 
         const pickSkillCategory = (categoryCandidate: string | undefined, skillName: string): string => {
           const candidate = normalizeKey(categoryCandidate || '')
           
-          // CRITICAL: Only use existing user categories
+          // Prefer user's existing categories when candidate matches, otherwise allow new
           if (candidate && baseCategories.includes(candidate)) return candidate
           
           // Map variations to user's existing categories
@@ -1081,7 +1120,6 @@ Return your response as a valid JSON object only. Do not include any additional 
             'communication___collaboration': ['communication', 'collaboration', 'teamwork']
           }
           
-          // Check if candidate maps to existing category
           for (const [userCat, variants] of Object.entries(categoryVariants)) {
             const userCatNorm = normalizeKey(userCat)
             if (baseCategories.includes(userCatNorm) && variants.some(v => normalizeKey(v) === candidate)) {
@@ -1089,16 +1127,13 @@ Return your response as a valid JSON object only. Do not include any additional 
             }
           }
           
-          // Pattern-based matching on skill content
+          // Heuristics to map skills to existing categories
           const skill = (skillName || '').toLowerCase()
           const tryMatch = (needle: string, fallback: string) => {
             const fallbackNorm = normalizeKey(fallback)
             return (skill.includes(needle) && baseCategories.includes(fallbackNorm)) ? fallbackNorm : ''
           }
-          
-          // Try to match skill patterns to user's existing categories
           const heuristics = [
-            // Data patterns
             tryMatch('data', 'data_analysis___visualization'),
             tryMatch('analys', 'data_analysis___visualization'),
             tryMatch('sql', 'data_analysis___visualization') || tryMatch('sql', 'technical_skills'),
@@ -1106,35 +1141,26 @@ Return your response as a valid JSON object only. Do not include any additional 
             tryMatch('tableau', 'data_analysis___visualization') || tryMatch('tableau', 'tools'),
             tryMatch('power bi', 'data_analysis___visualization') || tryMatch('power bi', 'tools'),
             tryMatch('visualization', 'data_analysis___visualization'),
-            
-            // Business patterns
             tryMatch('business', 'business_intelligence___strategy') || tryMatch('business', 'business'),
             tryMatch('strategy', 'business_intelligence___strategy'),
             tryMatch('market', 'business_intelligence___strategy'),
-            
-            // Communication patterns  
             tryMatch('communication', 'communication___collaboration') || tryMatch('communication', 'soft_skills'),
             tryMatch('collaborat', 'communication___collaboration') || tryMatch('collaborat', 'soft_skills'),
             tryMatch('team', 'communication___collaboration') || tryMatch('team', 'soft_skills'),
-            
-            // Project management patterns
             tryMatch('project', 'project_management'),
             tryMatch('agile', 'project_management'),
             tryMatch('scrum', 'project_management'),
             tryMatch('management', 'project_management'),
-            
-            // Technical patterns
             tryMatch('python', 'technical_skills') || tryMatch('python', 'technical'),
             tryMatch('java', 'technical_skills') || tryMatch('java', 'technical'),
             tryMatch('script', 'technical_skills') || tryMatch('script', 'technical'),
             tryMatch('api', 'technical_skills') || tryMatch('api', 'technical'),
             tryMatch('database', 'technical_skills') || tryMatch('database', 'domain_expertise')
           ].filter(Boolean)
-          
           if (heuristics.length > 0) return heuristics[0]
           
-          // Fallback: use first existing category
-          return baseCategories.length > 0 ? baseCategories[0] : normalizeKey('skills')
+          // Fallback: keep candidate as new category; else generic
+          return candidate || normalizeKey('skills')
         }
 
         const anchored = (analysisData.atomic_suggestions || []).map((s: any) => {
@@ -1144,6 +1170,12 @@ Return your response as a valid JSON object only. Do not include any additional 
             const skillName = out.after || out.suggested_content || out.suggestion || ''
             const finalCat = pickSkillCategory(out.category, skillName)
             out.target_path = `skills.${finalCat}`
+            out.target_id = out.target_id || out.target_path
+          }
+
+          // Ensure anchors for title/summary when missing
+          if ((out.section === 'title' || out.section === 'summary') && !out.target_path) {
+            out.target_path = out.section === 'title' ? 'title' : 'summary'
             out.target_id = out.target_id || out.target_path
           }
 
