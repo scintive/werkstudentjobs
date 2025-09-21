@@ -94,6 +94,17 @@ export function TailoredResumePreview({
     }
   }, [])
 
+  // Persist template selection and nudge a refresh tick
+  useEffect(() => {
+    if (selectedTemplate) {
+      try { localStorage.setItem('selectedTemplate', selectedTemplate) } catch {}
+      // Trigger both base and tailored previews to regenerate
+      if (immutableBaseData) generatePreviewHtml(immutableBaseData, false)
+      if (tailoredData) generatePreviewHtml(tailoredData, true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplate])
+
   // Load existing variant if currentVariantId is present
   useEffect(() => {
     const loadExistingVariant = async () => {

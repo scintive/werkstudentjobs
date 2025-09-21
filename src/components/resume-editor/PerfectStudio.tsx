@@ -367,12 +367,14 @@ export function PerfectStudio({
     }
   }, [resumeData])
   
-  // Save template preference when it changes
+  // Save template preference when it changes and trigger a preview refresh tick
   React.useEffect(() => {
     if (activeTemplate) {
-      saveNow(activeTemplate)
+      try { saveNow(activeTemplate) } catch {}
+      // Nudge preview effect by touching a harmless state value
+      setLocalData(prev => ({ ...prev }))
     }
-  }, [activeTemplate, saveNow])
+  }, [activeTemplate])
   const [previewHtml, setPreviewHtml] = React.useState('')
   const [isGeneratingPreview, setIsGeneratingPreview] = React.useState(false)
   const [selectedCustomSection, setSelectedCustomSection] = React.useState<string | null>(null)
@@ -581,14 +583,17 @@ export function PerfectStudio({
 
     debounceTimer.current = setTimeout(async () => {
       setIsGeneratingPreview(true)
-      const snapshotJson = (() => { try { return JSON.stringify(localData || {}) } catch { return '' } })()
-      // Skip duplicate work if nothing changed since last run
-      const lastPreviewJson = (debounceTimer as any).lastPreviewJson as string | undefined
-      if (lastPreviewJson && lastPreviewJson === snapshotJson) {
+      // Use a composite key that includes template and toggles to avoid skipping on theme change
+      const snapshotKey = (() => { 
+        try { return JSON.stringify({ d: localData || {}, t: activeTemplate, l: showSkillLevelsInResume }) } catch { return '' } 
+      })()
+      // Skip duplicate work if nothing significant changed since last run
+      const lastPreviewKey = (debounceTimer as any).lastPreviewKey as string | undefined
+      if (lastPreviewKey && lastPreviewKey === snapshotKey) {
         setIsGeneratingPreview(false)
         return
       }
-      ;(debounceTimer as any).lastPreviewJson = snapshotJson
+      ;(debounceTimer as any).lastPreviewKey = snapshotKey
       
       // Save current scroll position before updating
       if (iframeRef.current?.contentWindow) {
@@ -776,7 +781,9 @@ export function PerfectStudio({
               
               <SimpleTemplateDropdown
                 activeTemplate={activeTemplate}
-                onChange={setActiveTemplate}
+                onChange={(tpl) => {
+                  setActiveTemplate(tpl)
+                }}
               />
               
               <motion.button
