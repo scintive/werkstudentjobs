@@ -1369,9 +1369,11 @@ Return your response as a valid JSON object only. Do not include any additional 
               return true;
             }
             
-            // Non-skills/non-experience suggestions need stricter validation
-            // Ensure grounding (must have before content and it can't be empty) - except for additions
-            if (s.suggestion_type !== 'skill_addition' && (!originalContent || originalContent.trim().length === 0)) {
+            // Non-skills/non-experience (includes title/summary):
+            // Allow additions with empty before, but require suggested content
+            if (!suggestedContent || suggestedContent.trim().length === 0) return false;
+            // If it's a pure modification, require before content; otherwise allow
+            if ((s.suggestion_type === 'text' || s.suggestion_type === 'modification') && (!originalContent || originalContent.trim().length === 0)) {
               return false;
             }
             
@@ -1380,8 +1382,11 @@ Return your response as a valid JSON object only. Do not include any additional 
               return false;
             }
             
-            // Must have a target anchor for non-skills sections
-            if (s.section !== 'skills' && !s.target_path) return false;
+            // Must have a target anchor for non-skills sections, but tolerate for title/summary and anchor later
+            if (s.section !== 'skills' && !s.target_path) {
+              if (s.section === 'summary' || s.section === 'title') return true;
+              return false;
+            }
             // Be lenient on evidence/requirements to avoid dropping useful chips
             
             return true;
