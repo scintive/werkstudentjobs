@@ -794,12 +794,13 @@ export function PerfectStudio({
         .replace(/\[(\d+)\]/g, '.$1')
         .toLowerCase()
 
-      if (normalizedTargetPath.includes('professionaltitle')) {
+      // Handle targetPath-based suggestions first
+      if (normalizedTargetPath === 'professionaltitle' || normalizedTargetPath.includes('professionaltitle')) {
         draft.professionalTitle = suggestion.suggested
         return draft
       }
 
-      if (normalizedTargetPath.includes('professionalsummary')) {
+      if (normalizedTargetPath === 'professionalsummary' || normalizedTargetPath.includes('professionalsummary')) {
         draft.professionalSummary = suggestion.suggested
         return draft
       }

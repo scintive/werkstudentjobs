@@ -408,6 +408,7 @@ const generateSkillPlanFallback = async ({
 
 RULES:
 • Return 5–7 sharply named categories unique to the role (no generic labels like "Technical", "Soft Skills", "Business").
+• DO NOT create language-related categories - languages are handled separately.
 • Each category must map existing resume skills and introduce job-critical additions/removals so the story changes.
 • Use triple-underscore canonical slugs (e.g., client_delivery___storytelling) and title-case display names.
 • Every skill must include status (keep/add/promote/remove), rationale (≤140 chars), source (resume/job/hybrid), and confidence (0–100).
@@ -1423,7 +1424,9 @@ Return your response as a valid JSON object only. Do not include any additional 
       if (isEmptyObject(tailoredResume.skills)) {
         finalTailored.skills = baseResumeData.skills || {};
       } else if (hasCategoryPlan) {
-        finalTailored.skills = tailoredResume.skills || {};
+        // When we have a category plan, start with base skills only
+        // The plan will drive suggestions, not auto-populate skills
+        finalTailored.skills = baseResumeData.skills || {};
       } else {
         const baseSkills = baseResumeData.skills || {};
         const modelSkills = tailoredResume.skills || {};
@@ -1687,7 +1690,50 @@ Return your response as a valid JSON object only. Do not include any additional 
           })
         })
       }
-      
+
+      // Add title and summary suggestions if they differ from base
+      analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
+
+      const baseProfessionalTitle = baseResumeData.professional_title || ''
+      const tailoredProfessionalTitle = analysisData.tailored_resume?.professionalTitle || ''
+      if (tailoredProfessionalTitle && tailoredProfessionalTitle !== baseProfessionalTitle) {
+        analysisData.atomic_suggestions.push({
+          section: 'title',
+          suggestion_type: 'text',
+          target_id: 'professionalTitle',
+          target_path: 'professionalTitle',
+          before: baseProfessionalTitle,
+          after: tailoredProfessionalTitle,
+          original_content: baseProfessionalTitle,
+          suggested_content: tailoredProfessionalTitle,
+          rationale: 'Updated title to better align with target role',
+          ats_relevance: 'Improved job title alignment',
+          keywords: [],
+          confidence: 85,
+          impact: 'high'
+        })
+      }
+
+      const baseProfessionalSummary = baseResumeData.professional_summary || ''
+      const tailoredProfessionalSummary = analysisData.tailored_resume?.professionalSummary || ''
+      if (tailoredProfessionalSummary && tailoredProfessionalSummary !== baseProfessionalSummary) {
+        analysisData.atomic_suggestions.push({
+          section: 'summary',
+          suggestion_type: 'text',
+          target_id: 'professionalSummary',
+          target_path: 'professionalSummary',
+          before: baseProfessionalSummary,
+          after: tailoredProfessionalSummary,
+          original_content: baseProfessionalSummary,
+          suggested_content: tailoredProfessionalSummary,
+          rationale: 'Enhanced summary to highlight relevant experience',
+          ats_relevance: 'Better alignment with job requirements',
+          keywords: [],
+          confidence: 85,
+          impact: 'high'
+        })
+      }
+
       // Normalize and enrich atomic suggestions BEFORE validation so we don't drop useful ones
       if (Array.isArray(analysisData.atomic_suggestions)) {
         const normalizeKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')

@@ -43,28 +43,39 @@ export function SuggestionIndicator({
     }
   }, [isExpanded])
   
-  if (compact) {
-    // Inline chip style for skills or short text
+  // Auto-detect if this should be compact based on suggestion type
+  const shouldBeCompact = compact || suggestion.section === 'title' || suggestion.type === 'skill_add' || suggestion.type === 'skill_removal'
+
+  if (shouldBeCompact) {
+    // Inline chip style for skills, titles, or short text
     return (
-      <div className={`inline-flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs ${className}`}>
-        <Sparkles className="w-3 h-3 text-amber-500" />
-        <span className="text-amber-700 font-medium truncate max-w-[150px]">
-          {suggestion.suggested}
-        </span>
-        <button
-          onClick={() => onAccept(suggestion.id)}
-          className="ml-1 p-0.5 hover:bg-green-100 rounded-full transition-colors"
-          title="Accept suggestion"
-        >
-          <Check className="w-3 h-3 text-green-600" />
-        </button>
-        <button
-          onClick={() => onDecline(suggestion.id)}
-          className="ml-0.5 p-0.5 hover:bg-red-100 rounded-full transition-colors"
-          title="Decline suggestion"
-        >
-          <X className="w-3 h-3 text-red-600" />
-        </button>
+      <div className={`inline-flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-sm ${className}`}>
+        <Sparkles className="w-4 h-4 text-amber-500" />
+        <div className="flex-1">
+          {suggestion.original && (
+            <div className="text-xs text-red-700 line-through mb-1">{suggestion.original}</div>
+          )}
+          <div className="text-amber-800 font-medium">{suggestion.suggested}</div>
+          {suggestion.rationale && (
+            <div className="text-xs text-gray-600 mt-1">{suggestion.rationale}</div>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onAccept(suggestion.id)}
+            className="p-1.5 hover:bg-green-100 rounded-full transition-colors"
+            title="Accept suggestion"
+          >
+            <Check className="w-4 h-4 text-green-600" />
+          </button>
+          <button
+            onClick={() => onDecline(suggestion.id)}
+            className="p-1.5 hover:bg-red-100 rounded-full transition-colors"
+            title="Decline suggestion"
+          >
+            <X className="w-4 h-4 text-red-600" />
+          </button>
+        </div>
       </div>
     )
   }
