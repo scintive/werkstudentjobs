@@ -153,7 +153,12 @@ const buildSkillsFromPlan = (
       const normalizedEntries = Array.isArray(category?.skills)
         ? category.skills
             .map((entry: any) => normalizePlanSkillEntry(entry))
-            .filter((entry: any) => entry?.name && String(entry?.status || '').toLowerCase() !== 'remove')
+            .filter((entry: any) => {
+              if (!entry?.name) return false;
+              const status = String(entry?.status || '').toLowerCase();
+              // Only include skills that are 'keep' or 'accepted', not 'add', 'promote', or 'remove'
+              return status === 'keep' || status === 'accepted';
+            })
         : [];
 
       const deduped: any[] = [];

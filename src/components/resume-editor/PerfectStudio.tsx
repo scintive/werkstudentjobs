@@ -355,7 +355,11 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
           })
         : Array.isArray(category?.skills)
           ? category.skills
-              .filter((item: any) => String(item?.status || '').toLowerCase() !== 'remove')
+              .filter((item: any) => {
+                const status = String(item?.status || '').toLowerCase()
+                // Only include skills that are 'keep' or 'accepted', not 'add' or 'promote'
+                return status === 'keep' || status === 'accepted'
+              })
               .map((item: any) => {
                 if (item?.proficiency) {
                   return { skill: item.name || item.skill, proficiency: item.proficiency }
@@ -475,80 +479,72 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
 }
 
 const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {}) => {
+  // If no plan, return existing skills unchanged
   if (!plan || !Array.isArray(plan.categories)) return existingSkills || {}
 
-  const fromPlan: Record<string, any[]> = {}
-  const canonicalSet = new Set<string>()
-  const allSkillNames = new Set<string>() // Track all skill names to prevent duplicates
+  // Start with a copy of existing skills to preserve user data
+  const result: Record<string, any[]> = {}
+  const allSkillNames = new Set<string>() // Track all skill names globally to prevent duplicates
+  const planCategories = new Set<string>() // Track which categories come from the plan
 
+  // First, process plan categories
   plan.categories.forEach((category: any) => {
     const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
     if (!canonical) return
-    canonicalSet.add(canonical)
+    planCategories.add(canonical)
 
-    const normalizedEntries = Array.isArray(category?.skills)
-      ? category.skills
-          .map((entry: any) => normalizePlanSkillEntry(entry))
-          .filter((entry: any) => {
-            // Only include skills that are already "keep" or have been explicitly accepted
-            // Don't auto-add skills with "add" or "promote" status
-            const status = String(entry?.status || '').toLowerCase()
-            return entry?.name && status === 'keep'
-          })
-      : []
+    const categorySkills: any[] = []
 
-    const serialized = normalizedEntries.map(entry => {
-      if (entry?.proficiency) {
-        return { skill: entry.name, proficiency: entry.proficiency }
-      }
-      return entry.name
-    })
+    // Process skills from plan
+    if (Array.isArray(category?.skills)) {
+      category.skills.forEach((entry: any) => {
+        const normalized = normalizePlanSkillEntry(entry)
+        if (!normalized?.name) return
 
-    // De-duplicate by skill name while preserving proficiency objects when present
-    const unique: any[] = []
-    serialized.forEach(item => {
-      const key = (typeof item === 'string' ? item : item.skill).toLowerCase()
-      if (!key || allSkillNames.has(key)) return
-      allSkillNames.add(key)
-      unique.push(item)
-    })
-
-    if (unique.length > 0) {
-      fromPlan[canonical] = unique
-    }
-  })
-
-  // Include existing skills that are not in the plan to preserve user data
-  Object.entries(existingSkills || {}).forEach(([key, value]) => {
-    if (!Array.isArray(value) || value.length === 0) return
-    const canonical = canonicalizePlanKey(key)
-
-    // If this category exists in the plan, merge carefully
-    if (canonicalSet.has(canonical)) {
-      const existingItems = fromPlan[canonical] || []
-      const existingNames = new Set(existingItems.map((item: any) =>
-        (typeof item === 'string' ? item : item.skill).toLowerCase()
-      ))
-
-      // Add skills from existing that aren't in the plan category yet
-      value.forEach((skill: any) => {
-        const skillName = (typeof skill === 'string' ? skill : skill.skill || skill.name)
-        if (skillName && !existingNames.has(skillName.toLowerCase()) && !allSkillNames.has(skillName.toLowerCase())) {
-          existingItems.push(skill)
-          allSkillNames.add(skillName.toLowerCase())
+        const status = String(normalized.status || '').toLowerCase()
+        // Only include skills that are 'keep' or 'accepted' (user has accepted them)
+        if (status === 'keep' || status === 'accepted') {
+          const skillKey = normalized.name.toLowerCase()
+          if (!allSkillNames.has(skillKey)) {
+            allSkillNames.add(skillKey)
+            if (normalized.proficiency) {
+              categorySkills.push({ skill: normalized.name, proficiency: normalized.proficiency })
+            } else {
+              categorySkills.push(normalized.name)
+            }
+          }
         }
       })
+    }
 
-      if (existingItems.length > 0) {
-        fromPlan[canonical] = existingItems
+    // Also check if there are existing skills for this category that should be preserved
+    const existingCategorySkills = existingSkills[canonical] || []
+    existingCategorySkills.forEach((skill: any) => {
+      const skillName = (typeof skill === 'string' ? skill : skill.skill || skill.name)
+      if (skillName) {
+        const skillKey = skillName.toLowerCase()
+        // Add existing skill if not already in the plan category
+        if (!allSkillNames.has(skillKey)) {
+          allSkillNames.add(skillKey)
+          categorySkills.push(skill)
+        }
       }
-    } else {
-      // Category not in plan, keep it as-is
-      fromPlan[canonical] = [...value]
+    })
+
+    if (categorySkills.length > 0) {
+      result[canonical] = categorySkills
     }
   })
 
-  return fromPlan
+  // Preserve categories that aren't in the plan at all
+  Object.entries(existingSkills || {}).forEach(([key, value]) => {
+    const canonical = canonicalizePlanKey(key)
+    if (!planCategories.has(canonical) && Array.isArray(value) && value.length > 0) {
+      result[canonical] = [...value]
+    }
+  })
+
+  return result
 }
 
 // Template Tabs
@@ -1341,10 +1337,16 @@ export function PerfectStudio({
                 <CleanInput
                   label="Professional Title"
                   value={localData.professionalTitle}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    professionalTitle: value
-                  })}
+                  onChange={(value) => {
+                    setLocalData({
+                      ...localData,
+                      professionalTitle: value
+                    })
+                    // Auto-save professional title
+                    try {
+                      updateField('professionalTitle', value)
+                    } catch {}
+                  }}
                   icon={<Briefcase className="w-4 h-4" />}
                 />
               {suggestionsEnabled && getSuggestionForField('title') && (
