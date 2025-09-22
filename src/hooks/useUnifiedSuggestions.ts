@@ -217,7 +217,21 @@ export function useUnifiedSuggestions({
 
   const getSuggestionForField = useCallback((path: string): UnifiedSuggestion | undefined => {
     const canonical = canonicalizePath(path)
-    return suggestions.find(s => 
+
+    // For title and summary, also check section field directly
+    if (path === 'title' || path === 'professionalTitle') {
+      return suggestions.find(s =>
+        s.status === 'pending' && (s.section === 'title' || s.targetPath === 'professionalTitle' || s.targetPath === 'title')
+      )
+    }
+
+    if (path === 'summary' || path === 'professionalSummary') {
+      return suggestions.find(s =>
+        s.status === 'pending' && (s.section === 'summary' || s.targetPath === 'professionalSummary' || s.targetPath === 'summary')
+      )
+    }
+
+    return suggestions.find(s =>
       (s.status === 'pending') && (s.targetPath === canonical || s.targetPath?.startsWith(String(canonical)))
     )
   }, [suggestions])

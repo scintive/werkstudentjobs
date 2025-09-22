@@ -439,19 +439,21 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
     )
 
     if (existingIndex >= 0) {
+      // Skill already exists in plan, mark it as accepted
       category.skills[existingIndex] = {
         ...category.skills[existingIndex],
         name: skillName,
-        status: 'keep',
+        status: 'accepted', // Changed from 'keep' to 'accepted' to mark user acceptance
         rationale: category.skills[existingIndex]?.rationale || suggestion.rationale || `Adopted ${skillName} via tailoring`,
         source: category.skills[existingIndex]?.source || 'tailored',
         proficiency: category.skills[existingIndex]?.proficiency ?? null,
         confidence: category.skills[existingIndex]?.confidence ?? suggestion.confidence ?? 85
       }
     } else {
+      // New skill being added
       category.skills.push({
         name: skillName,
-        status: 'keep',
+        status: 'accepted', // Mark as accepted since user clicked accept
         rationale: suggestion.rationale || `Adopted ${skillName} via tailoring`,
         source: 'tailored',
         proficiency: null,
@@ -477,6 +479,7 @@ const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {})
 
   const fromPlan: Record<string, any[]> = {}
   const canonicalSet = new Set<string>()
+  const allSkillNames = new Set<string>() // Track all skill names to prevent duplicates
 
   plan.categories.forEach((category: any) => {
     const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
@@ -486,7 +489,12 @@ const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {})
     const normalizedEntries = Array.isArray(category?.skills)
       ? category.skills
           .map((entry: any) => normalizePlanSkillEntry(entry))
-          .filter((entry: any) => entry?.name && String(entry?.status || '').toLowerCase() !== 'remove')
+          .filter((entry: any) => {
+            // Only include skills that are already "keep" or have been explicitly accepted
+            // Don't auto-add skills with "add" or "promote" status
+            const status = String(entry?.status || '').toLowerCase()
+            return entry?.name && status === 'keep'
+          })
       : []
 
     const serialized = normalizedEntries.map(entry => {
@@ -498,11 +506,10 @@ const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {})
 
     // De-duplicate by skill name while preserving proficiency objects when present
     const unique: any[] = []
-    const seen = new Set<string>()
     serialized.forEach(item => {
-      const key = typeof item === 'string' ? item : item.skill
-      if (!key || seen.has(key.toLowerCase())) return
-      seen.add(key.toLowerCase())
+      const key = (typeof item === 'string' ? item : item.skill).toLowerCase()
+      if (!key || allSkillNames.has(key)) return
+      allSkillNames.add(key)
       unique.push(item)
     })
 
@@ -511,13 +518,32 @@ const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {})
     }
   })
 
-  // Preserve language categories if the plan omitted them entirely
+  // Include existing skills that are not in the plan to preserve user data
   Object.entries(existingSkills || {}).forEach(([key, value]) => {
     if (!Array.isArray(value) || value.length === 0) return
     const canonical = canonicalizePlanKey(key)
-    if (canonicalSet.has(canonical)) return
 
-    if (canonical.includes('language')) {
+    // If this category exists in the plan, merge carefully
+    if (canonicalSet.has(canonical)) {
+      const existingItems = fromPlan[canonical] || []
+      const existingNames = new Set(existingItems.map((item: any) =>
+        (typeof item === 'string' ? item : item.skill).toLowerCase()
+      ))
+
+      // Add skills from existing that aren't in the plan category yet
+      value.forEach((skill: any) => {
+        const skillName = (typeof skill === 'string' ? skill : skill.skill || skill.name)
+        if (skillName && !existingNames.has(skillName.toLowerCase()) && !allSkillNames.has(skillName.toLowerCase())) {
+          existingItems.push(skill)
+          allSkillNames.add(skillName.toLowerCase())
+        }
+      })
+
+      if (existingItems.length > 0) {
+        fromPlan[canonical] = existingItems
+      }
+    } else {
+      // Category not in plan, keep it as-is
       fromPlan[canonical] = [...value]
     }
   })
@@ -706,19 +732,8 @@ export function PerfectStudio({
     }
   }, [localSkillsPlan, localData?.skills])
  
-  React.useEffect(() => {
-    if (!localSkillsPlan) return
-    try {
-      const normalizedSkills = planToResumeSkills(localSkillsPlan, localData?.skills || {})
-      const currentJson = JSON.stringify(localData?.skills || {})
-      const normalizedJson = JSON.stringify(normalizedSkills || {})
-      if (currentJson !== normalizedJson) {
-        setLocalData(prev => ({ ...prev, skills: normalizedSkills }))
-      }
-    } catch (error) {
-      console.warn('Failed to synchronize skills with plan:', (error as Error).message)
-    }
-  }, [localSkillsPlan])
+  // REMOVED: Auto-sync from plan to skills was causing unwanted insertions
+  // Skills should only update when user explicitly accepts suggestions
   
   // Unified Suggestions System for Tailor Mode
   console.log('🎨 PerfectStudio rendering with:', { mode, variantId, jobId, baseResumeId })
@@ -870,29 +885,95 @@ export function PerfectStudio({
         case 'skills': {
           const previousSkillsSnapshot = draft.skills ? JSON.parse(JSON.stringify(draft.skills)) : {}
 
-          if ((suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') && suggestion.targetPath) {
-            const rawCategory = suggestion.targetPath.replace(/^skills\./, '')
-            const canonicalCategory = rawCategory.split(/[.\[]/)[0]
-            if (!draft.skills) draft.skills = {}
-            if (!Array.isArray(draft.skills[canonicalCategory])) draft.skills[canonicalCategory] = []
-            if (!draft.skills[canonicalCategory].includes(suggestion.suggested)) {
-              draft.skills[canonicalCategory] = [...draft.skills[canonicalCategory], suggestion.suggested]
-            }
-          } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal')) {
-            const targetName = suggestion.original || suggestion.before
-            if (draft.skills && targetName) {
-              Object.keys(draft.skills).forEach(cat => {
-                if (Array.isArray(draft.skills[cat])) {
-                  draft.skills[cat] = draft.skills[cat].filter((skill: string) => skill !== targetName)
-                }
-              })
-            }
-          }
-
+          // Update the plan first if we have one
           const currentPlan = draft.skillsCategoryPlan || localSkillsPlan
           if (currentPlan) {
+            // Update the plan with the accepted/rejected suggestion
             draft.skillsCategoryPlan = applySkillSuggestionToPlan(currentPlan, suggestion)
-            draft.skills = planToResumeSkills(draft.skillsCategoryPlan, previousSkillsSnapshot)
+
+            // Now rebuild skills from the updated plan
+            // This ensures accepted skills appear in the right categories
+            const updatedSkills: Record<string, any[]> = {}
+            const allSkillNames = new Set<string>() // Track to prevent duplicates
+
+            draft.skillsCategoryPlan.categories.forEach((category: any) => {
+              const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
+              if (!canonical) return
+
+              const categorySkills: any[] = []
+
+              if (Array.isArray(category?.skills)) {
+                category.skills.forEach((skill: any) => {
+                  const status = String(skill?.status || '').toLowerCase()
+                  const skillName = skill?.name || skill?.skill || skill
+
+                  // Only include skills that are 'keep' or have been explicitly accepted
+                  if (skillName && (status === 'keep' || status === 'accepted')) {
+                    const normalizedName = skillName.toLowerCase().trim()
+                    if (!allSkillNames.has(normalizedName)) {
+                      allSkillNames.add(normalizedName)
+                      if (skill?.proficiency) {
+                        categorySkills.push({ skill: skillName, proficiency: skill.proficiency })
+                      } else {
+                        categorySkills.push(skillName)
+                      }
+                    }
+                  }
+                })
+              }
+
+              if (categorySkills.length > 0) {
+                updatedSkills[canonical] = categorySkills
+              }
+            })
+
+            // Preserve existing skills that are not in the plan
+            Object.entries(previousSkillsSnapshot).forEach(([key, skills]) => {
+              const canonical = canonicalizePlanKey(key)
+              if (!updatedSkills[canonical] && Array.isArray(skills) && skills.length > 0) {
+                updatedSkills[canonical] = skills
+              }
+            })
+
+            draft.skills = updatedSkills
+          } else {
+            // No plan, do direct manipulation
+            if ((suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') && suggestion.targetPath) {
+              const rawCategory = suggestion.targetPath.replace(/^skills\./, '')
+              const canonicalCategory = rawCategory.split(/[.\[]/)[0]
+              if (!draft.skills) draft.skills = {}
+              if (!Array.isArray(draft.skills[canonicalCategory])) draft.skills[canonicalCategory] = []
+
+              // Check for duplicates across all categories before adding
+              const skillLower = suggestion.suggested.toLowerCase()
+              let alreadyExists = false
+              Object.values(draft.skills).forEach((catSkills: any) => {
+                if (Array.isArray(catSkills)) {
+                  catSkills.forEach((skill: any) => {
+                    const existingName = typeof skill === 'string' ? skill : skill.skill || skill.name
+                    if (existingName && existingName.toLowerCase() === skillLower) {
+                      alreadyExists = true
+                    }
+                  })
+                }
+              })
+
+              if (!alreadyExists) {
+                draft.skills[canonicalCategory] = [...draft.skills[canonicalCategory], suggestion.suggested]
+              }
+            } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal')) {
+              const targetName = suggestion.original || suggestion.before
+              if (draft.skills && targetName) {
+                Object.keys(draft.skills).forEach(cat => {
+                  if (Array.isArray(draft.skills[cat])) {
+                    draft.skills[cat] = draft.skills[cat].filter((skill: any) => {
+                      const skillName = typeof skill === 'string' ? skill : skill.skill || skill.name
+                      return skillName !== targetName
+                    })
+                  }
+                })
+              }
+            }
           }
           break
         }
@@ -1661,12 +1742,50 @@ export function PerfectStudio({
                 skills={localData.skills}
                 onSkillsChange={(updatedSkills) => {
                   console.log('🎯 Skills change callback triggered with:', Object.keys(updatedSkills || {}))
+
+                  // Update local data
                   setLocalData(prevData => ({
                     ...prevData,
                     skills: updatedSkills || {},
                     // Preserve languages from resumeData to prevent reset
                     languages: prevData.languages || []
                   }))
+
+                  // Update the plan to reflect the removal
+                  if (localSkillsPlan && Array.isArray(localSkillsPlan.categories)) {
+                    const updatedPlan = { ...localSkillsPlan }
+                    updatedPlan.categories = localSkillsPlan.categories.map((category: any) => {
+                      const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
+                      const updatedCategory = { ...category }
+
+                      // Remove skills that no longer exist in updatedSkills
+                      if (Array.isArray(updatedCategory.skills)) {
+                        updatedCategory.skills = updatedCategory.skills.filter((skill: any) => {
+                          const skillName = skill?.name || skill?.skill || skill
+                          if (!skillName) return false
+
+                          // Check if this skill still exists in any category of updatedSkills
+                          return Object.values(updatedSkills || {}).some((catSkills: any) => {
+                            if (!Array.isArray(catSkills)) return false
+                            return catSkills.some((s: any) => {
+                              const name = typeof s === 'string' ? s : s?.skill || s?.name
+                              return name && name.toLowerCase() === skillName.toLowerCase()
+                            })
+                          })
+                        })
+                      }
+
+                      return updatedCategory
+                    })
+
+                    setLocalSkillsPlan(updatedPlan)
+
+                    // Persist the updated plan
+                    try {
+                      updateField('skillsCategoryPlan', updatedPlan)
+                    } catch {}
+                  }
+
                   console.log('🎯 Updated localData with skills:', updatedSkills)
                 }}
                 userProfile={resumeData} // Use resumeData from context
