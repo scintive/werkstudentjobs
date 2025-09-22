@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +31,116 @@ import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveS
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
 import { PerfectStudio } from '@/components/resume-editor/PerfectStudio';
 import { RequireAuth } from '@/components/auth/RequireAuth';
+
+const canonicalizePlanKey = (value?: string | null) => {
+  if (!value) return '';
+  return value.toString().toLowerCase().trim()
+    .replace(/\s*(&|and)\s*/g, '___')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+};
+
+const humanizePlanKey = (key: string) => {
+  if (!key) return 'New Category';
+  return key
+    .replace(/___/g, ' & ')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const resolvePlanDisplayName = (category: any, canonical: string) => {
+  const raw = typeof category?.display_name === 'string' ? category.display_name.trim() : '';
+  if (!raw) return humanizePlanKey(canonical);
+  if (raw.includes('_') || raw === raw.toLowerCase()) {
+    return humanizePlanKey(canonical);
+  }
+  return raw;
+};
+
+const findSkillsForCanonical = (skillsByCategory: Record<string, any>, canonical: string, displayName: string) => {
+  if (!skillsByCategory) return null;
+
+  if (Array.isArray(skillsByCategory[canonical])) {
+    return skillsByCategory[canonical];
+  }
+
+  const matchedKey = Object.keys(skillsByCategory).find((key) => {
+    const normalized = canonicalizePlanKey(key);
+    return normalized === canonical || normalized === canonicalizePlanKey(displayName);
+  });
+
+  if (matchedKey && Array.isArray(skillsByCategory[matchedKey])) {
+    return skillsByCategory[matchedKey];
+  }
+
+  return null;
+};
+
+const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> = {}) => {
+  if (!plan || !Array.isArray(plan.categories)) return null;
+
+  const organized_categories: Record<string, any> = {};
+
+  plan.categories
+    .slice()
+    .sort((a: any, b: any) => {
+      const aPriority = typeof a?.priority === 'number' ? a.priority : 999;
+      const bPriority = typeof b?.priority === 'number' ? b.priority : 999;
+      return aPriority - bPriority;
+    })
+    .forEach((category: any) => {
+      const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name);
+      if (!canonical) return;
+
+      const displayName = resolvePlanDisplayName(category, canonical);
+
+      const existingSkills = findSkillsForCanonical(skillsByCategory, canonical, displayName);
+
+      const resolvedSkills = Array.isArray(existingSkills)
+        ? existingSkills.map((entry: any) => {
+            if (!entry) return entry;
+            if (typeof entry === 'string') return entry;
+            if (typeof entry === 'object') return { ...entry };
+            return entry;
+          })
+        : Array.isArray(category?.skills)
+          ? category.skills
+              .filter((item: any) => String(item?.status || '').toLowerCase() !== 'remove')
+              .map((item: any) => {
+                if (item?.proficiency) {
+                  return { skill: item.name || item.skill, proficiency: item.proficiency };
+                }
+                return item?.name || item?.skill || item;
+              })
+          : [];
+
+      const pendingAdditions = Array.isArray(category?.skills)
+        ? category.skills
+            .filter((item: any) => ['add', 'promote'].includes(String(item?.status || '').toLowerCase()))
+            .map((item: any) => item?.name)
+            .filter(Boolean)
+        : [];
+
+      organized_categories[displayName] = {
+        skills: resolvedSkills,
+        suggestions: pendingAdditions,
+        reasoning: category?.job_alignment || category?.rationale || '',
+        allowProficiency: resolvedSkills.some((entry: any) => typeof entry === 'object' && entry?.proficiency),
+        meta: {
+          canonicalKey: canonical,
+          planSkills: Array.isArray(category?.skills) ? category.skills : [],
+          displayName
+        }
+      };
+    });
+
+  return {
+    organized_categories,
+    strategy: plan.strategy,
+    guiding_principles: plan.guiding_principles || []
+  };
+};
 
 // Enhanced Tab configuration with visual elements
 const TABS = [
@@ -1249,10 +1359,22 @@ function ResumeStudioTab({
         credentials: 'include'
       });
 
+      let latestPlan: any | null = null;
+      let latestTailored: any = resumeData;
+
       if (analyzeResp.ok) {
         const payload = await analyzeResp.json();
-        // Use tailored resume from analysis for editor initial data
-        setTailoredResumeData(payload.tailored_resume || payload.analysisData?.tailored_resume || resumeData);
+        const planFromPayload = payload.skills_category_plan || payload.tailored_resume?.skillsCategoryPlan || null;
+        latestPlan = planFromPayload;
+
+        const tailoredResume = payload.tailored_resume || payload.analysisData?.tailored_resume || resumeData;
+        if (planFromPayload) {
+          tailoredResume.skillsCategoryPlan = planFromPayload;
+        }
+
+        latestTailored = tailoredResume;
+        setTailoredResumeData(tailoredResume);
+
         if (payload.variant_id) {
           setLocalVariantId(payload.variant_id);
           onVariantIdChange?.(payload.variant_id);
@@ -1265,49 +1387,54 @@ function ResumeStudioTab({
             .select('*')
             .eq('id', variantId)
             .maybeSingle();
-          setTailoredResumeData(variantRow?.tailored_data || resumeData);
+          latestTailored = variantRow?.tailored_data || resumeData;
+          latestPlan = latestTailored?.skillsCategoryPlan || null;
+          setTailoredResumeData(latestTailored);
         } else {
+          latestTailored = resumeData;
           setTailoredResumeData(resumeData);
         }
       }
 
-      // Generate organized skills using GPT enhancer for clean categories
-      try {
-        const enhanceResp = await fetch('/api/skills/enhance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userProfile: {
-              ...userProfile,
-              // Provide minimal context needed by enhancer
-              skills: (resumeData?.skills) || {}
-            },
-            currentSkills: resumeData?.skills || {}
-          })
-        });
-        if (enhanceResp.ok) {
-          const enhanced = await enhanceResp.json();
-          // Normalize to shape EnhancedSkillsManager expects: { organized_categories: { [cat]: { skills: [], suggestions: [], reasoning: '' } } }
-          if (enhanced.organized_skills && typeof enhanced.organized_skills === 'object') {
-            const organized_categories: Record<string, any> = {};
-            Object.entries(enhanced.organized_skills).forEach(([cat, list]) => {
-              const skills = Array.isArray(list) ? list : [];
-              organized_categories[cat] = {
-                skills,
-                suggestions: Array.isArray(enhanced.suggestions?.[cat]) ? enhanced.suggestions[cat] : [],
-                reasoning: enhanced.reasoning || ''
-              };
-            });
-            setOrganizedSkillsState({ organized_categories, reasoning: enhanced.reasoning || '' });
+      if (latestPlan) {
+        setOrganizedSkillsState(planToOrganizedSkills(latestPlan, latestTailored?.skills || {}));
+      } else {
+        // Fallback: use enhancer on tailored data if plan missing
+        try {
+          const enhanceResp = await fetch('/api/skills/enhance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userProfile: {
+                ...userProfile,
+                skills: latestTailored?.skills || {}
+              },
+              currentSkills: latestTailored?.skills || {}
+            })
+          });
+          if (enhanceResp.ok) {
+            const enhanced = await enhanceResp.json();
+            if (enhanced.organized_skills && typeof enhanced.organized_skills === 'object') {
+              const organized_categories: Record<string, any> = {};
+              Object.entries(enhanced.organized_skills).forEach(([cat, list]) => {
+                const skills = Array.isArray(list) ? list : [];
+                organized_categories[cat] = {
+                  skills,
+                  suggestions: Array.isArray(enhanced.suggestions?.[cat]) ? enhanced.suggestions[cat] : [],
+                  reasoning: enhanced.reasoning || ''
+                };
+              });
+              setOrganizedSkillsState({ organized_categories, reasoning: enhanced.reasoning || '' });
+            } else {
+              setOrganizedSkillsState(null);
+            }
           } else {
             setOrganizedSkillsState(null);
           }
-        } else {
+        } catch (e) {
+          console.error('Skills enhance failed:', e);
           setOrganizedSkillsState(null);
         }
-      } catch (e) {
-        console.error('Skills enhance failed:', e);
-        setOrganizedSkillsState(null);
       }
     } catch (error) {
       console.error('Pre-analysis failed:', error);
@@ -1317,6 +1444,13 @@ function ResumeStudioTab({
     }
   };
   
+  const organizedSkillsFromPlan = useMemo(() => {
+    if (tailoredResumeData?.skillsCategoryPlan) {
+      return planToOrganizedSkills(tailoredResumeData.skillsCategoryPlan, tailoredResumeData?.skills || {});
+    }
+    return null;
+  }, [tailoredResumeData]);
+
   // Gate editor until pre-analysis is done and we have data
   if (preparing || !tailoredResumeData) {
     return (
@@ -1348,6 +1482,7 @@ function ResumeStudioTab({
             userProfile={userProfile}
             organizedSkills={
               organizedSkillsState ||
+              organizedSkillsFromPlan ||
               ((strategy && 'organized_skills' in strategy && strategy.organized_skills) ||
                (studentStrategy && 'organized_skills' in studentStrategy && studentStrategy.organized_skills) ||
                undefined)

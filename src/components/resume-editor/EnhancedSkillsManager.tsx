@@ -265,34 +265,14 @@ export function EnhancedSkillsManager({
 
   // Initialize organized data from props ONLY - NO MORE SEPARATE API CALLS
   React.useEffect(() => {
-    console.log('🧠🎯 DEBUG - useEffect triggered with:', {
-      organizedSkills: !!organizedSkills,
-      organizedData: !!organizedData,
-      organizedSkillsKeys: organizedSkills ? Object.keys(organizedSkills) : null
-    })
-    
-    if (organizedSkills && organizedSkills.organized_categories && !organizedData) {
-      // Use pre-organized skills from profile extraction - NO API CALL
-      console.log('🧠🎯 USING PRE-ORGANIZED SKILLS - NO API CALL NEEDED!')
-      
-      // Remove language skills from categories and mark technical categories for proficiency
-      const filteredCategories = filterLanguagesFromCategories(organizedSkills.organized_categories)
-      const enhancedData = { ...organizedSkills, organized_categories: filteredCategories }
-      
-      setOrganizedData(enhancedData)
-      setExpandedCategories(new Set(Object.keys(filteredCategories || {})))
-      
-      // Convert to skills format for resume
-      const newSkillsFormat = convertOrganizedToSkillsFormat(filteredCategories)
-      // Avoid wiping skills if enhancer yielded nothing meaningful
-      if (Object.keys(newSkillsFormat).length > 0) {
-        onSkillsChange(newSkillsFormat)
-      } else {
-        console.warn('⚠️ Skipping empty skills update from organized skills')
-      }
-    }
-    // REMOVED: No fallback API call - organized skills should ALWAYS come from profile extraction
-  }, [organizedSkills, organizedData])
+    if (!organizedSkills || !organizedSkills.organized_categories) return
+
+    const filteredCategories = filterLanguagesFromCategories(organizedSkills.organized_categories)
+    const enhancedData = { ...organizedSkills, organized_categories: filteredCategories }
+
+    setOrganizedData(enhancedData)
+    setExpandedCategories(new Set(Object.keys(filteredCategories || {})))
+  }, [organizedSkills])
 
   // Convert legacy skills format to organized format
   const convertSkillsToFlatArray = React.useCallback((skillsData: any): string[] => {
@@ -368,7 +348,7 @@ export function EnhancedSkillsManager({
     Object.entries(organizedCategories).forEach(([categoryName, categoryData]) => {
       // First try canonical mapping
       const lowerName = categoryName.toLowerCase()
-      let categoryKey = canonicalCategoryMap[lowerName]
+      let categoryKey = (categoryData as any)?.meta?.canonicalKey || canonicalCategoryMap[lowerName]
       
       // If no canonical match, generate a stable key with triple underscores for '&' or 'and'
       if (!categoryKey) {
@@ -821,47 +801,8 @@ export function EnhancedSkillsManager({
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
-                        // Accept suggestion - add skill to appropriate category
                         if (onAcceptSuggestion) {
                           onAcceptSuggestion(suggestion.id)
-                          // Also update local state for immediate UX
-                          const rawTarget = suggestion.targetPath?.split('.')[1] || 'technical'
-                          const updatedCategories = { ...dataToUse.organized_categories }
-                          // Find the best matching existing category by canonical key
-                          const matchKey = Object.keys(updatedCategories).find(k => toCanonicalKey(k) === rawTarget) || 
-                            Object.keys(updatedCategories).find(k => toCanonicalKey(k).includes(rawTarget)) || null
-
-                          let targetDisplayName = matchKey || Object.keys(updatedCategories)[0] || 'Technical & Digital'
-                          if (!matchKey) {
-                            // Auto-create category matching target if not present
-                            const displayName = humanizeCategoryKey(rawTarget)
-                            if (!updatedCategories[displayName]) {
-                              updatedCategories[displayName] = { skills: [], suggestions: [], reasoning: 'AI suggested category', allowProficiency: shouldCategoryHaveProficiency(displayName) }
-                            }
-                            targetDisplayName = displayName
-                          }
-
-                          if (!updatedCategories[targetDisplayName]) {
-                            updatedCategories[targetDisplayName] = { skills: [], suggestions: [], reasoning: '' }
-                          }
-
-                          if (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') {
-                            if (suggestion.suggested) {
-                              const exists = (updatedCategories[targetDisplayName].skills || []).some(s => 
-                                (typeof s === 'string' ? s : (s as any).skill) === suggestion.suggested)
-                              if (!exists) updatedCategories[targetDisplayName].skills.push(suggestion.suggested)
-                            }
-                          } else {
-                            const toRemove = suggestion.original
-                            updatedCategories[targetDisplayName].skills = (updatedCategories[targetDisplayName].skills || []).filter(s =>
-                              (typeof s === 'string' ? s : (s as any).skill) !== toRemove
-                            )
-                          }
-
-                          const newOrganized = { ...dataToUse, organized_categories: updatedCategories }
-                          setOrganizedData(newOrganized)
-                          const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
-                          onSkillsChange(newSkillsFormat)
                         }
                       }}
                       className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors"

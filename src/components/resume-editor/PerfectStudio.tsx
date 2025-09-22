@@ -242,6 +242,289 @@ const CleanInput = ({
   )
 }
 
+const canonicalizePlanKey = (value?: string | null) => {
+  if (!value) return ''
+  return value.toString().toLowerCase().trim()
+    .replace(/\s*(&|and)\s*/g, '___')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+}
+
+const humanizePlanKey = (key: string) => {
+  if (!key) return 'New Category'
+  return key
+    .replace(/___/g, ' & ')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
+const resolvePlanDisplayName = (category: any, canonical: string) => {
+  const raw = typeof category?.display_name === 'string' ? category.display_name.trim() : ''
+  if (!raw) return humanizePlanKey(canonical)
+
+  if (raw.includes('_') || raw === raw.toLowerCase()) {
+    return humanizePlanKey(canonical)
+  }
+
+  return raw
+}
+
+const normalizePlanSkillName = (value?: string | null) => {
+  return (value || '').toString().toLowerCase().trim()
+}
+
+const normalizePlanSkillEntry = (skill: any) => {
+  if (!skill) {
+    return {
+      name: '',
+      status: 'keep',
+      rationale: '',
+      source: 'resume',
+      proficiency: null,
+      confidence: null
+    }
+  }
+
+  if (typeof skill === 'object') {
+    return {
+      name: skill.name || skill.skill || '',
+      status: skill.status || 'keep',
+      rationale: skill.rationale || '',
+      source: skill.source || 'resume',
+      proficiency: skill.proficiency ?? null,
+      confidence: skill.confidence ?? null
+    }
+  }
+
+  return {
+    name: skill,
+    status: 'keep',
+    rationale: '',
+    source: 'resume',
+    proficiency: null,
+    confidence: null
+  }
+}
+
+const findSkillsForCanonical = (skillsByCategory: Record<string, any>, canonical: string, displayName: string) => {
+  if (!skillsByCategory) return null
+
+  if (Array.isArray(skillsByCategory[canonical])) {
+    return skillsByCategory[canonical]
+  }
+
+  const matchedKey = Object.keys(skillsByCategory).find(key => {
+    const normalized = canonicalizePlanKey(key)
+    return normalized === canonical || normalized === canonicalizePlanKey(displayName)
+  })
+
+  if (matchedKey && Array.isArray(skillsByCategory[matchedKey])) {
+    return skillsByCategory[matchedKey]
+  }
+
+  return null
+}
+
+const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> = {}) => {
+  if (!plan || !Array.isArray(plan.categories)) return null
+
+  const organized_categories: Record<string, any> = {}
+
+  plan.categories
+    .slice()
+    .sort((a: any, b: any) => {
+      const aPriority = typeof a?.priority === 'number' ? a.priority : 999
+      const bPriority = typeof b?.priority === 'number' ? b.priority : 999
+      return aPriority - bPriority
+    })
+    .forEach((category: any) => {
+      const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
+      if (!canonical) return
+
+      const displayName = resolvePlanDisplayName(category, canonical)
+
+      const existingSkills = findSkillsForCanonical(skillsByCategory, canonical, displayName)
+
+      const resolvedSkills = Array.isArray(existingSkills)
+        ? existingSkills.map((entry: any) => {
+            if (entry == null) return entry
+            if (typeof entry === 'string') return entry
+            if (typeof entry === 'object') return { ...entry }
+            return entry
+          })
+        : Array.isArray(category?.skills)
+          ? category.skills
+              .filter((item: any) => String(item?.status || '').toLowerCase() !== 'remove')
+              .map((item: any) => {
+                if (item?.proficiency) {
+                  return { skill: item.name || item.skill, proficiency: item.proficiency }
+                }
+                return item?.name || item?.skill || item
+              })
+          : []
+
+      const pendingAdditions = Array.isArray(category?.skills)
+        ? category.skills
+            .filter((item: any) => ['add', 'promote'].includes(String(item?.status || '').toLowerCase()))
+            .map((item: any) => item?.name)
+            .filter(Boolean)
+        : []
+
+      organized_categories[displayName] = {
+        skills: resolvedSkills,
+        suggestions: pendingAdditions,
+        reasoning: category?.job_alignment || category?.rationale || '',
+        allowProficiency: resolvedSkills.some((entry: any) => typeof entry === 'object' && entry?.proficiency),
+        meta: {
+          canonicalKey: canonical,
+          planSkills: Array.isArray(category?.skills) ? category.skills : [],
+          displayName
+        }
+      }
+    })
+
+  return {
+    organized_categories,
+    strategy: plan.strategy,
+    guiding_principles: plan.guiding_principles || []
+  }
+}
+
+const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) => {
+  if (!plan || !Array.isArray(plan.categories)) return plan
+
+  const rawTarget = suggestion.targetPath || ''
+  const canonicalTarget = canonicalizePlanKey(
+    rawTarget.replace(/^skills\./, '').split(/[.\[]/)[0] || ''
+  )
+  if (!canonicalTarget) return plan
+
+  const clonedCategories = plan.categories.map((category: any) => {
+    const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
+    return {
+      ...category,
+      canonical_key: canonical || category?.canonical_key,
+      display_name: resolvePlanDisplayName(category, canonical),
+      skills: Array.isArray(category?.skills)
+        ? category.skills.map((skill: any) => normalizePlanSkillEntry(skill))
+        : []
+    }
+  })
+
+  let categoryIndex = clonedCategories.findIndex((cat: any) =>
+    canonicalizePlanKey(cat?.canonical_key || cat?.display_name) === canonicalTarget
+  )
+
+  if (categoryIndex === -1) {
+    const inferredDisplay = suggestion?.metadata?.categoryDisplayName || suggestion?.category || humanizePlanKey(canonicalTarget)
+    clonedCategories.push({
+      canonical_key: canonicalTarget,
+      display_name: resolvePlanDisplayName({ display_name: inferredDisplay }, canonicalTarget),
+      priority: typeof suggestion?.metadata?.categoryPriority === 'number' ? suggestion.metadata.categoryPriority : undefined,
+      job_alignment: suggestion?.rationale || '',
+      skills: []
+    })
+    categoryIndex = clonedCategories.length - 1
+  }
+
+  const category = clonedCategories[categoryIndex]
+
+  if (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') {
+    const skillName = suggestion.suggested || ''
+    if (!skillName) return plan
+    const skillKey = normalizePlanSkillName(skillName)
+    const existingIndex = category.skills.findIndex((skill: any) =>
+      normalizePlanSkillName(skill?.name || skill?.skill || skill) === skillKey
+    )
+
+    if (existingIndex >= 0) {
+      category.skills[existingIndex] = {
+        ...category.skills[existingIndex],
+        name: skillName,
+        status: 'keep',
+        rationale: category.skills[existingIndex]?.rationale || suggestion.rationale || `Adopted ${skillName} via tailoring`,
+        source: category.skills[existingIndex]?.source || 'tailored',
+        proficiency: category.skills[existingIndex]?.proficiency ?? null,
+        confidence: category.skills[existingIndex]?.confidence ?? suggestion.confidence ?? 85
+      }
+    } else {
+      category.skills.push({
+        name: skillName,
+        status: 'keep',
+        rationale: suggestion.rationale || `Adopted ${skillName} via tailoring`,
+        source: 'tailored',
+        proficiency: null,
+        confidence: suggestion.confidence ?? 85
+      })
+    }
+  } else if (suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal') {
+    const removeKey = normalizePlanSkillName(suggestion.original || suggestion.before || '')
+    if (removeKey) {
+      category.skills = category.skills.filter((skill: any) => {
+        const candidate = normalizePlanSkillName(skill?.name || skill?.skill || skill)
+        return candidate !== removeKey
+      })
+    }
+  }
+
+  clonedCategories[categoryIndex] = category
+  return { ...plan, categories: clonedCategories }
+}
+
+const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {}) => {
+  if (!plan || !Array.isArray(plan.categories)) return existingSkills || {}
+
+  const fromPlan: Record<string, any[]> = {}
+  const canonicalSet = new Set<string>()
+
+  plan.categories.forEach((category: any) => {
+    const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
+    if (!canonical) return
+    canonicalSet.add(canonical)
+
+    const normalizedEntries = Array.isArray(category?.skills)
+      ? category.skills
+          .map((entry: any) => normalizePlanSkillEntry(entry))
+          .filter((entry: any) => entry?.name && String(entry?.status || '').toLowerCase() !== 'remove')
+      : []
+
+    const serialized = normalizedEntries.map(entry => {
+      if (entry?.proficiency) {
+        return { skill: entry.name, proficiency: entry.proficiency }
+      }
+      return entry.name
+    })
+
+    // De-duplicate by skill name while preserving proficiency objects when present
+    const unique: any[] = []
+    const seen = new Set<string>()
+    serialized.forEach(item => {
+      const key = typeof item === 'string' ? item : item.skill
+      if (!key || seen.has(key.toLowerCase())) return
+      seen.add(key.toLowerCase())
+      unique.push(item)
+    })
+
+    if (unique.length > 0) {
+      fromPlan[canonical] = unique
+    }
+  })
+
+  // Preserve language categories if the plan omitted them entirely
+  Object.entries(existingSkills || {}).forEach(([key, value]) => {
+    if (!Array.isArray(value) || value.length === 0) return
+    const canonical = canonicalizePlanKey(key)
+    if (canonicalSet.has(canonical)) return
+
+    if (canonical.includes('language')) {
+      fromPlan[canonical] = [...value]
+    }
+  })
+
+  return fromPlan
+}
+
 // Template Tabs
 const TemplateTabs = ({ 
   templates, 
@@ -352,6 +635,7 @@ export function PerfectStudio({
   } = useSupabaseResumeActions()
 
   const [localData, setLocalData] = React.useState(resumeData)
+  const [localSkillsPlan, setLocalSkillsPlan] = React.useState<any>(resumeData?.skillsCategoryPlan || null)
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
   
   // Sync resumeData changes to localData (avoid loops)
@@ -362,8 +646,10 @@ export function PerfectStudio({
       if (nextJson === lastSyncedJsonRef.current) return
       lastSyncedJsonRef.current = nextJson
       setLocalData(resumeData)
+      setLocalSkillsPlan(resumeData?.skillsCategoryPlan || null)
     } catch {
       setLocalData(resumeData)
+      setLocalSkillsPlan(resumeData?.skillsCategoryPlan || null)
     }
   }, [resumeData])
   
@@ -410,6 +696,29 @@ export function PerfectStudio({
   const debounceTimer = React.useRef<NodeJS.Timeout>()
   const iframeRef = React.useRef<HTMLIFrameElement>(null)
   const savedScrollPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 })
+
+  const organizedSkillsFromPlan = React.useMemo(() => {
+    if (!localSkillsPlan) return null
+    try {
+      return planToOrganizedSkills(localSkillsPlan, (localData?.skills || {}) as Record<string, any>)
+    } catch {
+      return null
+    }
+  }, [localSkillsPlan, localData?.skills])
+ 
+  React.useEffect(() => {
+    if (!localSkillsPlan) return
+    try {
+      const normalizedSkills = planToResumeSkills(localSkillsPlan, localData?.skills || {})
+      const currentJson = JSON.stringify(localData?.skills || {})
+      const normalizedJson = JSON.stringify(normalizedSkills || {})
+      if (currentJson !== normalizedJson) {
+        setLocalData(prev => ({ ...prev, skills: normalizedSkills }))
+      }
+    } catch (error) {
+      console.warn('Failed to synchronize skills with plan:', (error as Error).message)
+    }
+  }, [localSkillsPlan])
   
   // Unified Suggestions System for Tailor Mode
   console.log('🎨 PerfectStudio rendering with:', { mode, variantId, jobId, baseResumeId })
@@ -470,6 +779,20 @@ export function PerfectStudio({
     const updated = (() => {
       const draft: any = { ...localData }
 
+      const normalizedTargetPath = (suggestion.targetPath || '')
+        .replace(/\[(\d+)\]/g, '.$1')
+        .toLowerCase()
+
+      if (normalizedTargetPath.includes('professionaltitle')) {
+        draft.professionalTitle = suggestion.suggested
+        return draft
+      }
+
+      if (normalizedTargetPath.includes('professionalsummary')) {
+        draft.professionalSummary = suggestion.suggested
+        return draft
+      }
+
       switch (suggestion.section) {
         case 'title':
           draft.professionalTitle = suggestion.suggested
@@ -480,28 +803,52 @@ export function PerfectStudio({
           break
 
         case 'experience': {
+          const ensureExperienceArray = () => {
+            if (!Array.isArray(draft.experience)) draft.experience = []
+          }
+
           if (suggestion.targetPath) {
             const parts = suggestion.targetPath.split('.')
             const expIdx = parseInt(parts[1] || '0', 10)
             const achIdx = parseInt(parts[3] || '0', 10)
-            if (!Array.isArray(draft.experience)) draft.experience = []
+            ensureExperienceArray()
             if (!draft.experience[expIdx]) {
               draft.experience[expIdx] = { position: '', company: '', duration: '', achievements: [] }
             }
             const exp = draft.experience[expIdx]
             if (!Array.isArray(exp.achievements)) exp.achievements = []
-            if (Number.isNaN(achIdx) || achIdx >= exp.achievements.length) {
-              exp.achievements.push(suggestion.suggested)
+            const isReplacement = Boolean(suggestion.original && suggestion.original.trim())
+
+            if (isReplacement) {
+              const existingMatchIdx = exp.achievements.findIndex((item: string) => item?.trim() === suggestion.original?.trim())
+              if (existingMatchIdx > -1) {
+                exp.achievements[existingMatchIdx] = suggestion.suggested
+              } else if (!Number.isNaN(achIdx) && achIdx < exp.achievements.length) {
+                exp.achievements[achIdx] = suggestion.suggested
+              } else {
+                exp.achievements.push(suggestion.suggested)
+              }
             } else {
-              exp.achievements[achIdx] = suggestion.suggested
+              const alreadyExists = exp.achievements.some((item: string) => item?.trim() === suggestion.suggested?.trim())
+              if (alreadyExists) break
+
+              if (!Number.isNaN(achIdx) && achIdx <= exp.achievements.length) {
+                exp.achievements.splice(achIdx, 0, suggestion.suggested)
+              } else {
+                exp.achievements.push(suggestion.suggested)
+              }
             }
           } else {
-            if (!Array.isArray(draft.experience) || draft.experience.length === 0) {
+            ensureExperienceArray()
+            if (draft.experience.length === 0) {
               draft.experience = [{ position: '', company: '', duration: '', achievements: [] }]
             }
             const exp = draft.experience[0]
             if (!Array.isArray(exp.achievements)) exp.achievements = []
-            exp.achievements.push(suggestion.suggested)
+            const alreadyExists = exp.achievements.some((item: string) => item?.trim() === suggestion.suggested?.trim())
+            if (!alreadyExists) {
+              exp.achievements.push(suggestion.suggested)
+            }
           }
           break
         }
@@ -521,22 +868,31 @@ export function PerfectStudio({
         }
 
         case 'skills': {
+          const previousSkillsSnapshot = draft.skills ? JSON.parse(JSON.stringify(draft.skills)) : {}
+
           if ((suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') && suggestion.targetPath) {
-            const category = suggestion.targetPath.replace(/^skills\./, '')
+            const rawCategory = suggestion.targetPath.replace(/^skills\./, '')
+            const canonicalCategory = rawCategory.split(/[.\[]/)[0]
             if (!draft.skills) draft.skills = {}
-            if (!Array.isArray(draft.skills[category])) draft.skills[category] = []
-            if (!draft.skills[category].includes(suggestion.suggested)) {
-              draft.skills[category] = [...draft.skills[category], suggestion.suggested]
+            if (!Array.isArray(draft.skills[canonicalCategory])) draft.skills[canonicalCategory] = []
+            if (!draft.skills[canonicalCategory].includes(suggestion.suggested)) {
+              draft.skills[canonicalCategory] = [...draft.skills[canonicalCategory], suggestion.suggested]
             }
           } else if ((suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal')) {
-            // Remove across all categories to avoid lingering duplicates
-            if (draft.skills) {
+            const targetName = suggestion.original || suggestion.before
+            if (draft.skills && targetName) {
               Object.keys(draft.skills).forEach(cat => {
                 if (Array.isArray(draft.skills[cat])) {
-                  draft.skills[cat] = draft.skills[cat].filter((skill: string) => skill !== suggestion.original)
+                  draft.skills[cat] = draft.skills[cat].filter((skill: string) => skill !== targetName)
                 }
               })
             }
+          }
+
+          const currentPlan = draft.skillsCategoryPlan || localSkillsPlan
+          if (currentPlan) {
+            draft.skillsCategoryPlan = applySkillSuggestionToPlan(currentPlan, suggestion)
+            draft.skills = planToResumeSkills(draft.skillsCategoryPlan, previousSkillsSnapshot)
           }
           break
         }
@@ -547,6 +903,14 @@ export function PerfectStudio({
 
     // Update UI immediately
     setLocalData(updated)
+    if (updated.skillsCategoryPlan || localSkillsPlan) {
+      setLocalSkillsPlan(updated.skillsCategoryPlan || localSkillsPlan)
+    }
+    if (updated.skills) {
+      try {
+        updateField('skills', updated.skills)
+      } catch {}
+    }
 
     // Persist to variant if available
     try {
@@ -556,6 +920,10 @@ export function PerfectStudio({
       }
     } catch (e) {
       console.warn('Failed to persist variant after applying suggestion:', (e as Error).message)
+    }
+
+    if (updated.skillsCategoryPlan) {
+      try { updateField('skillsCategoryPlan', updated.skillsCategoryPlan) } catch {}
     }
   }
 
@@ -1302,7 +1670,7 @@ export function PerfectStudio({
                   console.log('🎯 Updated localData with skills:', updatedSkills)
                 }}
                 userProfile={resumeData} // Use resumeData from context
-                organizedSkills={organizedSkills} // Pass pre-organized skills to avoid separate API call
+                organizedSkills={organizedSkillsFromPlan || organizedSkills}
                 languages={localData.languages || []}
                 // Pass suggestion props for tailor mode
                 suggestions={suggestionsEnabled ? getSuggestionsForSection('skills') : []}

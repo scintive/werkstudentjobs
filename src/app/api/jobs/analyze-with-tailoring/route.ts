@@ -17,12 +17,439 @@ const VALID_SECTIONS = new Set([
   'education', 'projects', 'certifications', 'custom_sections', 'order'
 ]);
 
+const CANONICAL_CATEGORY_OVERRIDES: Record<string, string> = {
+  'technical skills': 'technical',
+  'technical skill': 'technical',
+  'technical & digital': 'technical',
+  'technical': 'technical',
+  'tools & platforms': 'tools',
+  'platforms & tooling': 'tools',
+  'tools': 'tools',
+  'soft skills': 'soft_skills',
+  'core soft skills': 'soft_skills',
+  'professional skills': 'soft_skills',
+  'communication & collaboration': 'communication___collaboration',
+  'business intelligence & strategy': 'business_intelligence___strategy',
+  'domain expertise': 'domain_expertise',
+  'data analysis & visualization': 'data_analysis___visualization',
+  'project management': 'project_management',
+  'languages': 'languages',
+  'language': 'languages',
+  'spoken languages': 'languages'
+};
+
+const canonicalizeCategoryKey = (name: string | null | undefined) => {
+  if (!name || typeof name !== 'string') return '';
+  const lower = name.toLowerCase().trim();
+  if (CANONICAL_CATEGORY_OVERRIDES[lower]) return CANONICAL_CATEGORY_OVERRIDES[lower];
+  return lower
+    .replace(/\s*(&|and)\s*/g, '___')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+};
+
+const normalizeSkillName = (value: any): string => {
+  if (typeof value === 'string') return value.trim();
+  if (value && typeof value === 'object') {
+    if (typeof value.skill === 'string') return value.skill.trim();
+    if (typeof value.name === 'string') return value.name.trim();
+  }
+  return '';
+};
+
+const cloneSkillValue = (value: any) => {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.slice();
+  return { ...value };
+};
+
+const STATUS_NORMALIZER: Record<string, 'keep' | 'add' | 'promote' | 'remove'> = {
+  keep: 'keep',
+  retain: 'keep',
+  stay: 'keep',
+  anchor: 'keep',
+  maintain: 'keep',
+  emphasise: 'promote',
+  emphasize: 'promote',
+  spotlight: 'promote',
+  showcase: 'promote',
+  promote: 'promote',
+  elevate: 'promote',
+  highlight: 'promote',
+  add: 'add',
+  introduce: 'add',
+  expand: 'add',
+  launch: 'add',
+  new: 'add',
+  grow: 'add',
+  acquire: 'add',
+  retire: 'remove',
+  remove: 'remove',
+  drop: 'remove',
+  deprecate: 'remove',
+  sunset: 'remove',
+  trim: 'remove'
+};
+
+interface SkillPlanProcessingResult {
+  plan: any;
+  skills: Record<string, any[]>;
+  suggestions: any[];
+  skillCategoryLookup: Record<string, string>;
+  plannedCategoryKeys: string[];
+}
+
+const applySkillsCategoryPlan = ({
+  rawPlan,
+  baseSkills,
+  modelSkills,
+  existingSuggestionKeys
+}: {
+  rawPlan: any;
+  baseSkills: any;
+  modelSkills: any;
+  existingSuggestionKeys: Set<string>;
+}): SkillPlanProcessingResult | null => {
+  if (!rawPlan || !Array.isArray(rawPlan?.categories) || rawPlan.categories.length === 0) {
+    return null;
+  }
+
+  const ensureArray = (value: any) => (Array.isArray(value) ? value : []);
+  const normalizedPlan: any = {
+    strategy: typeof rawPlan.strategy === 'string' && rawPlan.strategy.trim().length > 0
+      ? rawPlan.strategy
+      : 'Realign the skills portfolio across consulting impact, analytical horsepower, tooling discipline, communication excellence, and adaptable drive.',
+    guiding_principles: ensureArray(rawPlan.guiding_principles)
+      .filter((p: any) => typeof p === 'string' && p.trim().length > 0),
+    categories: [] as any[]
+  };
+
+  const baseSkillIndex = new Map<string, { value: any; category: string; canonicalCategory: string }>();
+  Object.entries(baseSkills || {}).forEach(([categoryKey, skills]) => {
+    const canonicalCategory = canonicalizeCategoryKey(categoryKey);
+    ensureArray(skills).forEach((skill: any) => {
+      const name = normalizeSkillName(skill);
+      if (!name) return;
+      const lower = name.toLowerCase();
+      if (!baseSkillIndex.has(lower)) {
+        baseSkillIndex.set(lower, { value: skill, category: categoryKey, canonicalCategory: canonicalCategory || categoryKey });
+      }
+    });
+  });
+
+  const modelSkillIndex = new Map<string, any>();
+  Object.entries(modelSkills || {}).forEach(([categoryKey, skills]) => {
+    ensureArray(skills).forEach((skill: any) => {
+      const name = normalizeSkillName(skill);
+      if (!name) return;
+      const lower = name.toLowerCase();
+      if (!modelSkillIndex.has(lower)) {
+        modelSkillIndex.set(lower, skill);
+      }
+    });
+  });
+
+  const plannedSkills: Record<string, any[]> = {};
+  const generatedSuggestions: any[] = [];
+  const skillCategoryLookup: Record<string, string> = {};
+  const additionsForSuggestions: Array<{ canonicalKey: string; displayName: string; name: string; rationale?: string; index: number; proficiency?: any; confidence?: number }>
+    = [];
+  const removalsForSuggestions: Array<{ canonicalKey: string; name: string; rationale?: string; confidence?: number }>
+    = [];
+
+  rawPlan.categories.forEach((category: any, idx: number) => {
+    const fallbackName = `Category ${idx + 1}`;
+    const displayName = typeof category?.display_name === 'string' && category.display_name.trim().length > 0
+      ? category.display_name.trim()
+      : typeof category?.name === 'string' && category.name.trim().length > 0
+        ? category.name.trim()
+        : fallbackName;
+    const canonicalKey = canonicalizeCategoryKey(category?.canonical_key || displayName) || canonicalizeCategoryKey(displayName);
+    if (!canonicalKey) return;
+
+    const bucket: any[] = [];
+    const normalizedSkills: any[] = [];
+    const seenSkills = new Set<string>();
+    const skillsArray = ensureArray(category?.skills);
+
+    skillsArray.forEach((skillItem: any, skillIdx: number) => {
+      const name = normalizeSkillName(skillItem);
+      if (!name) return;
+      const lower = name.toLowerCase();
+      if (seenSkills.has(lower)) return;
+      seenSkills.add(lower);
+
+      const rawStatus = typeof skillItem?.status === 'string' ? skillItem.status.toLowerCase() : 'keep';
+      const normalizedStatus = STATUS_NORMALIZER[rawStatus] || 'keep';
+      const rationale = typeof skillItem?.rationale === 'string' && skillItem.rationale.trim().length > 0
+        ? skillItem.rationale
+        : `Reposition ${name} within ${displayName} to reinforce alignment.`;
+      const source = typeof skillItem?.source === 'string' ? skillItem.source : (baseSkillIndex.has(lower) ? 'resume' : 'job');
+      const confidence = typeof skillItem?.confidence === 'number' ? skillItem.confidence : null;
+      const baseEntry = baseSkillIndex.get(lower);
+      const modelEntry = modelSkillIndex.get(lower);
+
+      let finalValue: any;
+      if (baseEntry) {
+        finalValue = cloneSkillValue(baseEntry.value);
+      } else if (modelEntry) {
+        finalValue = cloneSkillValue(modelEntry);
+      } else if (skillItem && typeof skillItem === 'object' && skillItem.proficiency) {
+        finalValue = { skill: name, proficiency: skillItem.proficiency };
+      } else {
+        finalValue = name;
+      }
+
+      const proficiency = skillItem?.proficiency ?? (finalValue && typeof finalValue === 'object' && finalValue.proficiency
+        ? finalValue.proficiency
+        : null);
+
+      if (finalValue && typeof finalValue === 'object') {
+        finalValue = { ...finalValue, ...(proficiency ? { proficiency } : {}) };
+      }
+
+      if (normalizedStatus !== 'remove') {
+        bucket.push(finalValue);
+        skillCategoryLookup[lower] = canonicalKey;
+      }
+
+      normalizedSkills.push({
+        name,
+        status: normalizedStatus,
+        rationale,
+        source,
+        proficiency,
+        confidence
+      });
+
+      if (normalizedStatus === 'add' && !baseEntry) {
+        additionsForSuggestions.push({
+          canonicalKey,
+          displayName,
+          name,
+          rationale,
+          index: bucket.length - 1,
+          proficiency,
+          confidence
+        });
+      }
+
+      if (normalizedStatus === 'remove' || normalizedStatus === 'retire') {
+        const canonicalForRemoval = baseEntry?.canonicalCategory || canonicalKey;
+      removalsForSuggestions.push({
+        canonicalKey: canonicalForRemoval,
+        name,
+        rationale,
+        confidence
+      });
+      }
+    });
+
+    plannedSkills[canonicalKey] = bucket;
+    normalizedPlan.categories.push({
+      display_name: displayName,
+      canonical_key: canonicalKey,
+      job_alignment: typeof category?.job_alignment === 'string' && category.job_alignment.trim().length > 0
+        ? category.job_alignment
+        : `Demonstrate ${displayName.toLowerCase()} impact that the JD calls for.`,
+      rationale: typeof category?.rationale === 'string' && category.rationale.trim().length > 0
+        ? category.rationale
+        : `Group resume evidence and planned additions for ${displayName.toLowerCase()} so reviewers immediately see fit.`,
+      priority: typeof category?.priority === 'number' ? category.priority : idx + 1,
+      skills: normalizedSkills
+    });
+  });
+
+  // Ensure languages persist if plan omitted them
+  const planHasLanguages = normalizedPlan.categories.some((cat: any) => canonicalizeCategoryKey(cat.canonical_key || cat.display_name) === 'languages');
+  if (!planHasLanguages) {
+    const baseLanguages = ensureArray(baseSkills?.languages);
+    if (baseLanguages.length > 0) {
+      plannedSkills.languages = baseLanguages;
+      const langSkills = baseLanguages
+        .map((entry: any) => {
+          const label = normalizeSkillName(entry);
+          return label ? { name: label, status: 'keep', rationale: 'Language proficiency retained for completeness', source: 'resume' } : null;
+        })
+        .filter((s: any) => s);
+      if (langSkills.length > 0) {
+        normalizedPlan.categories.push({
+          display_name: 'Languages',
+          canonical_key: 'languages',
+          job_alignment: 'Maintain language proficiency evidence',
+          rationale: 'Preserve language capabilities while refocusing technical categories.',
+          priority: normalizedPlan.categories.length + 1,
+          skills: langSkills.map((s: any) => ({
+            ...s,
+            proficiency: null,
+            confidence: null
+          }))
+        });
+        langSkills.forEach((skill: any) => {
+          skillCategoryLookup[skill.name.toLowerCase()] = 'languages';
+        });
+      }
+    }
+  }
+
+  normalizedPlan.categories.sort((a: any, b: any) => {
+    const aPriority = typeof a.priority === 'number' ? a.priority : 999 + normalizedPlan.categories.indexOf(a);
+    const bPriority = typeof b.priority === 'number' ? b.priority : 999 + normalizedPlan.categories.indexOf(b);
+    return aPriority - bPriority;
+  });
+
+  if (!Array.isArray(normalizedPlan.guiding_principles) || normalizedPlan.guiding_principles.length === 0) {
+    const headline = normalizedPlan.categories.slice(0, 3).map((cat: any) => cat.display_name).filter(Boolean);
+    normalizedPlan.guiding_principles = headline.length > 0
+      ? headline.map((name: string) => `Lead with ${name.toLowerCase()} wins lined up with offer.`)
+      : [
+          'Lead with job-aligned impact categories.',
+          'Balance consulting collaboration with analytical horsepower.',
+          'Ground every addition in explicit JD language or resume proof.'
+        ];
+  }
+
+  additionsForSuggestions.forEach(add => {
+    const key = `add|${add.canonicalKey}|${add.name.toLowerCase()}`;
+    if (existingSuggestionKeys.has(key)) return;
+    existingSuggestionKeys.add(key);
+    generatedSuggestions.push({
+      operation: 'add',
+      category: add.canonicalKey,
+      target_path: `skills.${add.canonicalKey}[${Math.max(add.index, 0)}]`,
+      suggested_skill: add.name,
+      rationale: add.rationale || `Add ${add.name} to ${add.displayName} to match the JD focus`,
+      confidence: add.confidence ?? 85,
+      source: 'category_plan'
+    });
+  });
+
+  removalsForSuggestions.forEach(remove => {
+    const key = `remove|${remove.canonicalKey}|${remove.name.toLowerCase()}`;
+    if (existingSuggestionKeys.has(key)) return;
+    existingSuggestionKeys.add(key);
+    generatedSuggestions.push({
+      operation: 'remove',
+      category: remove.canonicalKey,
+      target_path: `skills.${remove.canonicalKey}`,
+      current_skill: remove.name,
+      rationale: remove.rationale || `Retire ${remove.name} to keep the skills focused on the target role`,
+      confidence: remove.confidence ?? 80,
+      source: 'category_plan'
+    });
+  });
+
+  const plannedCategoryKeys = Object.keys(plannedSkills);
+
+  return {
+    plan: normalizedPlan,
+    skills: plannedSkills,
+    suggestions: generatedSuggestions,
+    skillCategoryLookup,
+    plannedCategoryKeys
+  };
+};
+
+const generateSkillPlanFallback = async ({
+  job,
+  resume
+}: {
+  job: any;
+  resume: any;
+}) => {
+  try {
+    const fallbackSchema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        strategy: { type: 'string' },
+        guiding_principles: { type: 'array', items: { type: 'string' } },
+        categories: {
+          type: 'array',
+          minItems: 5,
+          maxItems: 7,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              display_name: { type: 'string' },
+              canonical_key: { type: 'string' },
+              job_alignment: { type: 'string' },
+              rationale: { type: 'string' },
+              priority: { type: 'number' },
+              skills: {
+                type: 'array',
+                minItems: 4,
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    name: { type: 'string' },
+                    status: { enum: ['keep','add','promote','remove'] },
+                    rationale: { type: 'string' },
+                    source: { enum: ['resume','job','hybrid'] },
+                    proficiency: { type: ['string','null'] },
+                    confidence: { type: ['number','null'] }
+                  },
+                  required: ['name','status','rationale','source','proficiency','confidence']
+                }
+              }
+            },
+            required: ['display_name','canonical_key','job_alignment','rationale','priority','skills']
+          }
+        }
+      },
+      required: ['strategy','guiding_principles','categories']
+    };
+
+    const systemPrompt = 'You are a specialist career assistant who reshapes résumés for specific jobs. Return ONLY strict JSON matching the provided schema.';
+    const userPrompt = `Design a skills_category_plan that reorganizes the candidate's skills for this job.
+
+RULES:
+• Return 5–7 sharply named categories unique to the role (no generic labels like "Technical", "Soft Skills", "Business").
+• Each category must map existing resume skills and introduce job-critical additions/removals so the story changes.
+• Use triple-underscore canonical slugs (e.g., client_delivery___storytelling) and title-case display names.
+• Every skill must include status (keep/add/promote/remove), rationale (≤140 chars), source (resume/job/hybrid), and confidence (0–100).
+• Spread the candidate's resume skills across the new categories so nothing relevant is lost; retire irrelevant resume skills.
+• Introduce 8–12 additions drawn from the job description to strengthen alignment.
+• Include 3 guiding_principles that explain how the categories win this job.
+
+JOB SNAPSHOT:
+${JSON.stringify(job, null, 2)}
+
+RESUME SKILLS SNAPSHOT:
+${JSON.stringify(resume.skills || {}, null, 2)}
+`;
+
+    const plan = await llmService.createJsonResponse({
+      model: getConfig('OPENAI.DEFAULT_MODEL') || 'gpt-4o-mini',
+      system: systemPrompt,
+      user: userPrompt,
+      schema: fallbackSchema,
+      temperature: 0.2,
+      maxTokens: 1200,
+      retries: 1
+    });
+
+    if (!plan || !Array.isArray(plan?.categories) || plan.categories.length === 0) {
+      console.warn('⚠️ Skill plan fallback returned empty categories');
+      return null;
+    }
+
+    return plan;
+  } catch (error) {
+    console.error('⚠️ Skill plan fallback failed:', (error as Error).message);
+    return null;
+  }
+};
+
 /**
  * POST /api/jobs/analyze-with-tailoring
  * Production-safe endpoint with RLS, no service role
  */
 export async function POST(request: NextRequest) {
-  const logContext = { stage: 'init', job_id: null, base_resume_id: null, variant_id: null };
+  const logContext = { stage: 'init', job_id: null, base_resume_id: null, variant_id: null, user_id: null as string | null };
   
   try {
     // 1. INPUT VALIDATION
@@ -95,6 +522,7 @@ export async function POST(request: NextRequest) {
     }
     
     const userId = user.id;
+    logContext.user_id = userId;
     console.log('🎯 UNIFIED ANALYSIS: Authenticated user:', userId);
     
     // 3. GENERATE FINGERPRINT for cache stability
@@ -314,20 +742,32 @@ export async function POST(request: NextRequest) {
       .eq('variant_id', variant.id)
       .order('created_at', { ascending: true });
     
-    if (!suggestionsError && existingSuggestions && existingSuggestions.length > 0) {
+    const hasPersistedPlan = Array.isArray((variant as any)?.tailored_data?.skillsCategoryPlan?.categories) &&
+      (variant as any).tailored_data.skillsCategoryPlan.categories.length > 0;
+
+    if (!force_refresh && !suggestionsError && existingSuggestions && existingSuggestions.length > 0 && hasPersistedPlan) {
       console.log(`📋 Found ${existingSuggestions.length} existing suggestions for variant ${variant.id}`);
       return NextResponse.json({
         success: true,
         strategy: {},
         tailored_resume: variant.tailored_data,
         atomic_suggestions: existingSuggestions,
+        skills_category_plan: variant.tailored_data?.skillsCategoryPlan || null,
         variant_id: variant.id,
         base_resume_id,
         job_id,
         existing_suggestions: true
       });
     }
-    
+
+    if (!suggestionsError && existingSuggestions && existingSuggestions.length > 0) {
+      console.log(`🧹 Clearing ${existingSuggestions.length} stale suggestions for variant ${variant.id}`);
+      await db
+        .from('resume_suggestions')
+        .delete()
+        .eq('variant_id', variant.id);
+    }
+
     // 7. CHECK FINGERPRINT-BASED CACHE (after fetching data)
     const currentFingerprint = generateFingerprint(jobData, baseResume);
     if (!force_refresh) {
@@ -409,7 +849,8 @@ Rules:
 • If a role currently has ZERO bullets/achievements, you MUST ADD 2–3 concise, impact-first bullets for that role (no fabrication; derive from resume + JD). Anchor them as experience[ROLE_INDEX].achievements[NEXT_INDEX]
 • Professional Title: Create a tailored title that bridges the candidate's experience with the target role (e.g., "Operations Specialist → Partnership & Performance Support" for a partnership role) - NOT just copying the job title
 • Professional Summary: ALWAYS include and tailor the summary to highlight relevant experience for the specific job
-• Skills: PRESERVE ALL existing skill categories and skills. ADD new relevant skills but NEVER remove existing ones
+• Skills: Build a job-specific category system. Re-cluster related skills into sharp categories, create/rename buckets where needed, spotlight the most hire-me-now capabilities, and retire/merge anything that weakens alignment (always justify)
+• Skills Category Plan: Return a structured plan that lists each category (display + canonical key), why it matters, and every skill with a status of keep/add/promote/retire so downstream systems can render the transformation deterministically
 • Atomic only (one bullet/tag/title tweak per suggestion)
 • Taste: outcome-first phrasing, strong verbs, remove filler, tense consistency; bullets ideally ≤22 words
 • Evidence-linked: each suggestion must include resume evidence and the JD phrase/keyword it improves
@@ -465,6 +906,23 @@ OUTPUT FORMAT (JSON):
       }
     }
   ],
+  "skills_category_plan": {
+    "strategy": "One sentence on how the skill slate will win this job",
+    "guiding_principles": ["Principle 1", "Principle 2"],
+    "categories": [
+      {
+        "display_name": "Customer Success Command",
+        "canonical_key": "customer_success___command",
+        "job_alignment": "Owns customer lifecycle metrics called out in the JD",
+        "priority": 1,
+        "skills": [
+          { "name": "Customer Journey Mapping", "status": "add", "rationale": "JD highlights lifecycle design", "source": "job" },
+          { "name": "Salesforce", "status": "keep", "rationale": "Already in resume and core to role", "source": "resume" },
+          { "name": "Legacy ERP", "status": "retire", "rationale": "Not referenced and distracts from SaaS focus", "source": "resume" }
+        ]
+      }
+    ]
+  },
   "skills_suggestions": [
     {
       "operation": "remove|alias|reorder|add",
@@ -612,6 +1070,46 @@ OUTPUT FORMAT (JSON):
             },
             required: ['personalInfo','professionalTitle','professionalSummary','enableProfessionalSummary','skills','experience','education','projects','certifications','languages','customSections']
           },
+          skills_category_plan: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              strategy: { type: 'string' },
+              guiding_principles: { type: 'array', items: { type: 'string' } },
+              categories: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    display_name: { type: 'string' },
+                    canonical_key: { type: 'string' },
+                    job_alignment: { type: 'string' },
+                    priority: { type: ['number','null'] },
+                    rationale: { type: 'string' },
+                    skills: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        additionalProperties: false,
+                        properties: {
+                          name: { type: 'string' },
+                          status: { enum: ['keep','add','promote','elevate','retire','remove','merge','spotlight'] },
+                          rationale: { type: 'string' },
+                          source: { type: 'string' },
+                          proficiency: { type: ['string','null'] },
+                          confidence: { type: ['number','null'] }
+                        },
+                        required: ['name','status','rationale','source','proficiency','confidence']
+                      }
+                    }
+                  },
+                  required: ['display_name','canonical_key','job_alignment','priority','rationale','skills']
+                }
+              }
+            },
+            required: ['strategy','guiding_principles','categories']
+          },
           atomic_suggestions: {
             type: 'array',
             items: {
@@ -637,7 +1135,7 @@ OUTPUT FORMAT (JSON):
             }
           }
         },
-        required: ['strategy','tailored_resume','atomic_suggestions']
+        required: ['strategy','tailored_resume','skills_category_plan','atomic_suggestions']
       };
 
       // Use the new UX-focused prompt
@@ -658,7 +1156,15 @@ Constraints:
 • Propose skill_removal suggestions for resume skills clearly irrelevant to the job (only if they exist in the resume)
 • For EACH experience role present (including older roles), return 2–3 suggestions (prefer 'bullet' additions/rewrites). Anchor with target_path like experience[ROLE_INDEX].achievements[BULLET_INDEX]
 • Return 15–25 total high-value suggestions ensuring ALL experience roles get suggestions
-• Skills: ONLY suggest skills under categories the user already has. DO NOT create new categories unless explicitly needed for critical job requirements
+• Professional Summary edits must produce 4–5 sentences (roughly 80–110 words) that tie the candidate’s experience to this role’s outcomes; no bullet fragments or short blurbs
+• Skills: Execute the skills_category_plan you produce—create/rename categories to mirror the job domain, map every existing resume skill into the strongest bucket, and introduce the 12–20 additions that change the story
+• Skills Category Plan must include 5–7 sharply named categories unique to this job. Avoid generic labels such as "Technical & Digital", "Soft Skills", or "Business"—tie each heading to consulting/project support context (e.g., "Client Delivery Ops", "Analytical Storytelling")
+• Each category needs ≥4 skills and at least one addition or retirement so the UI stays dense and actionable
+• Every skill in the plan must include: name, status (keep/add/promote/remove), rationale, source (resume vs job vs research), proficiency, and confidence (use null where not applicable)
+• Every skill in the resume must have an explicit plan status and every new category must list its anchor skills with canonical keys
+• Each category in the plan must include display_name, canonical_key (triple-underscore slug), job_alignment summary, rationale (why the category exists for this job), priority, and the full skill list following the schema
+• Provide 3–4 guiding_principles that describe how the new skills architecture wins this job (concise bullet phrases)
+• If proficiency or confidence aren’t meaningful for a skill, output them explicitly as null (never omit required fields)
 • Every item must include target_path, before, after, diff_html, rationale, resume_evidence, job_requirement, ats_keywords, impact, confidence
 
 Return your response as a valid JSON object only. Do not include any additional text or explanation outside the JSON structure.`;
@@ -848,7 +1354,51 @@ Return your response as a valid JSON object only. Do not include any additional 
       if (!analysisData) analysisData = {};
       analysisData.strategy = ensureObject(analysisData.strategy);
       analysisData.tailored_resume = ensureObject(analysisData.tailored_resume);
-      
+      const ensureArrayLocal = (value: any) => (Array.isArray(value) ? value : []);
+      if (!Array.isArray(analysisData.skills_suggestions)) {
+        analysisData.skills_suggestions = ensureArrayLocal(analysisData.skills_suggestions);
+      }
+
+      const existingSkillSuggestionKeys = new Set<string>();
+      ensureArrayLocal(analysisData.skills_suggestions).forEach((s: any) => {
+        if (!s) return;
+        const operation = typeof s.operation === 'string' ? s.operation.toLowerCase() : '';
+        const categoryKey = canonicalizeCategoryKey(s.category || '');
+        const nameCandidate = normalizeSkillName(s.suggested_skill || s.new_skill || s.current_skill || s.skill || s.before || s.after);
+        if (operation && categoryKey && nameCandidate) {
+          existingSkillSuggestionKeys.add(`${operation}|${categoryKey}|${nameCandidate.toLowerCase()}`);
+        }
+      });
+
+      let hasCategoryPlan = false;
+      let skillCategoryLookup: Record<string, string> = {};
+      let plannedCategoryKeys: string[] = [];
+
+      if (!analysisData.skills_category_plan || !Array.isArray(analysisData.skills_category_plan?.categories) || analysisData.skills_category_plan.categories.length === 0) {
+        const fallbackPlan = await generateSkillPlanFallback({ job: analysisContext.job, resume: analysisContext.resume });
+        if (fallbackPlan) {
+          analysisData.skills_category_plan = fallbackPlan;
+        }
+      }
+
+      const planProcessingResult = applySkillsCategoryPlan({
+        rawPlan: analysisData.skills_category_plan,
+        baseSkills: baseResume?.skills || {},
+        modelSkills: analysisData.tailored_resume?.skills || {},
+        existingSuggestionKeys: existingSkillSuggestionKeys
+      });
+
+      if (planProcessingResult) {
+        hasCategoryPlan = true;
+        analysisData.skills_category_plan = planProcessingResult.plan;
+        analysisData.tailored_resume.skills = planProcessingResult.skills;
+        skillCategoryLookup = planProcessingResult.skillCategoryLookup;
+        plannedCategoryKeys = planProcessingResult.plannedCategoryKeys;
+        if (planProcessingResult.suggestions.length > 0) {
+          analysisData.skills_suggestions = ensureArrayLocal(analysisData.skills_suggestions).concat(planProcessingResult.suggestions);
+        }
+      }
+
       // Safe merge with base resume - never drop populated base sections
       const tailoredResume = analysisData.tailored_resume;
       const baseResumeData = baseResume; // baseResume is already the data object from Supabase
@@ -872,12 +1422,13 @@ Return your response as a valid JSON object only. Do not include any additional 
       // Skills: merge with base, never drop categories, and normalize languages into array on top level too
       if (isEmptyObject(tailoredResume.skills)) {
         finalTailored.skills = baseResumeData.skills || {};
+      } else if (hasCategoryPlan) {
+        finalTailored.skills = tailoredResume.skills || {};
       } else {
         const baseSkills = baseResumeData.skills || {};
         const modelSkills = tailoredResume.skills || {};
         finalTailored.skills = {};
-        
-        // Merge each category, preferring model over base but never dropping
+
         const allCategories = new Set([...Object.keys(baseSkills), ...Object.keys(modelSkills)]);
         for (const category of allCategories) {
           if (isEmptyArray(modelSkills[category])) {
@@ -973,12 +1524,20 @@ Return your response as a valid JSON object only. Do not include any additional 
         // Helpers for category mapping
         const normKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
         const baseCats = Object.keys(baseResumeData.skills || {}).map(normKey)
+        const planCats = plannedCategoryKeys.map(normKey)
+        const combinedCats = Array.from(new Set([...baseCats, ...planCats]))
+        const lookupCategoryForSkill = (skillName: string) => {
+          const key = (skillName || '').toLowerCase()
+          return skillCategoryLookup[key]
+        }
         const resolveCategory = (candidate: string | undefined, skillName: string): string => {
           const cand = normKey(candidate || '')
-          if (cand && baseCats.includes(cand)) return cand
+          if (cand && combinedCats.includes(cand)) return cand
+          const planned = lookupCategoryForSkill(skillName)
+          if (planned) return planned
           const skill = (skillName || '').toLowerCase()
           const tryMap = (needle: string, fallback: string) =>
-            skill.includes(needle) && baseCats.includes(normKey(fallback)) ? normKey(fallback) : ''
+            skill.includes(needle) && combinedCats.includes(normKey(fallback)) ? normKey(fallback) : ''
           const heuristics = [
             tryMap('sql', 'data_analysis___visualization') || tryMap('sql', 'technical'),
             tryMap('excel', 'data_analysis___visualization') || tryMap('excel', 'tools'),
@@ -996,7 +1555,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           ].filter(Boolean)
           if (heuristics.length > 0) return heuristics[0] as string
           // Fallback: first existing category to avoid dumping everything under technical
-          return baseCats[0] || 'technical'
+          return combinedCats[0] || 'technical'
         }
 
         // Convert skills_suggestions to atomic suggestion format for storage
@@ -1538,7 +2097,10 @@ Return your response as a valid JSON object only. Do not include any additional 
         ...(analysisData.tailored_resume || analysisContext.resume),
         personalInfo: baseResume.personal_info, // Force original personal info
       };
-      
+      if (analysisData.skills_category_plan) {
+        tailoredDataWithOriginalInfo.skillsCategoryPlan = analysisData.skills_category_plan;
+      }
+
       const { error: variantUpdateError } = await db
         .from('resume_variants')
         .update({
@@ -1559,6 +2121,7 @@ Return your response as a valid JSON object only. Do not include any additional 
         tailored_resume: tailoredDataWithOriginalInfo, // Use the version with preserved personal info
         atomic_suggestions: analysisData.atomic_suggestions || [],
         skills_suggestions: analysisData.skills_suggestions || [],
+        skills_category_plan: analysisData.skills_category_plan || null,
         variant_id: variant.id,
         base_resume_id,
         job_id,
@@ -1646,14 +2209,13 @@ Return your response as a valid JSON object only. Do not include any additional 
     // Single unified error log with detailed info
     console.error("UNIFIED_ANALYSIS_ERROR", {
       stage: logContext.stage || 'unknown',
-      job_id,
-      base_resume_id,
+      job_id: logContext.job_id,
+      base_resume_id: logContext.base_resume_id,
       variant_id: logContext.variant_id || null,
       code: 'internal_error',
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      userId,
-      sessionId
+      user_id: logContext.user_id,
     });
     
     return NextResponse.json(

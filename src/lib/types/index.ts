@@ -172,6 +172,7 @@ export interface ResumeData {
       details?: string[];
     }>;
   }>;
+  skillsCategoryPlan?: any;
 }
 
 export interface TemplateConfig {
