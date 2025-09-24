@@ -872,7 +872,7 @@ OUTPUT FORMAT (JSON):
   "tailored_resume": {
     "personalInfo": { "KEEP EXACTLY AS IN ORIGINAL - DO NOT MODIFY" },
     "professionalTitle": "Tailored title bridging current role to target position (NOT just the job title)",
-    "professionalSummary": "Enhanced summary highlighting relevant experience for the specific job",
+    "professionalSummary": "Comprehensive 3-4 sentence summary that: (1) Opens with user's proven experience and core expertise, (2) Highlights 2-3 specific achievements or skills that directly match this job, (3) Demonstrates how their background uniquely positions them for this role, (4) Shows career growth and ambition. Make it personal and specific to the user's actual experience.",
     "enableProfessionalSummary": true,
     "skills": { 
       "technical": ["skill1", "skill2"], 
@@ -1671,7 +1671,22 @@ Return your response as a valid JSON object only. Do not include any additional 
           const category = mapCategory(item.category)
           const target = `skills.${category}`
           const skillLower = String(item.skill || '').toLowerCase()
-          if (!item?.skill || !baseSkillsFlat2.includes(skillLower)) return
+          // STRICT validation: only suggest removal if skill actually exists in user's profile
+          const skillExists = baseSkillsFlat2.some(userSkill =>
+            userSkill.toLowerCase() === skillLower ||
+            userSkill.toLowerCase().includes(skillLower) ||
+            skillLower.includes(userSkill.toLowerCase())
+          )
+          console.log('🔍 Skill removal check:', {
+            skill: item.skill,
+            skillLower,
+            skillExists,
+            userSkills: baseSkillsFlat2.slice(0, 5) + '...'
+          })
+          if (!item?.skill || !skillExists) {
+            console.log('❌ Skipping removal suggestion - skill not found in user profile')
+            return
+          }
           analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
           analysisData.atomic_suggestions.push({
             section: 'skills',

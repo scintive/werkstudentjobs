@@ -24,7 +24,6 @@ import {
   RefreshCw,
   Trash2
 } from 'lucide-react'
-import { SkillsSuggestionsPanel } from './SkillsSuggestionsPanel'
 
 interface EnhancedSkillsManagerProps {
   skills: any // Current skills object
@@ -732,45 +731,59 @@ export function EnhancedSkillsManager({
       {/* Content */}
       <div className="p-6 space-y-4">
 
-      {/* Tailor Mode Suggestions - Revolutionary New UI */}
-      {(() => {
-        console.log('🎨 EnhancedSkillsManager suggestions check:', {
-          mode,
-          suggestionsLength: suggestions?.length || 0,
-          skillSuggestions: suggestions?.filter(s => s.section === 'skills').length || 0,
-          allSections: suggestions?.map(s => s.section) || []
-        });
-        const skillSuggestions = suggestions?.filter(s => s.section === 'skills') || [];
-
-        if (mode === 'tailor' && skillSuggestions.length > 0) {
-          return (
-            <SkillsSuggestionsPanel
-              suggestions={skillSuggestions.map(s => ({
-              id: s.id,
-              type: s.type as any,
-              category: s.targetPath?.split('.')[1],
-              categoryDisplayName: s.targetPath ? humanizeCategoryKey(s.targetPath.split('.')[1] || '') : undefined,
-              skill: s.type === 'skill_remove' || s.type === 'skill_removal' ? s.original : s.suggested,
-              suggested: s.suggested,
-              original: s.original,
-              rationale: s.rationale,
-              confidence: s.confidence,
-              impact: s.confidence >= 85 ? 'high' : s.confidence >= 70 ? 'medium' : 'low',
-              status: s.status as any
-            }))}
-          onAccept={onAcceptSuggestion || (() => {})}
-          onDecline={onDeclineSuggestion || (() => {})}
-          onAcceptAll={() => {
-            suggestions
-              .filter(s => s.section === 'skills' && s.status === 'pending')
-              .forEach(s => onAcceptSuggestion?.(s.id))
-          }}
-        />
-          );
-        }
-
-        return null;
-      })()}
+      {/* Tailor Mode Suggestions - Simple & Intuitive UI */}
+      {mode === 'tailor' && suggestions && suggestions.length > 0 && (
+        <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">AI Skills Optimization</h3>
+            <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+              {suggestions.filter(s => s.section === 'skills' && s.status === 'pending').length} pending
+            </span>
+          </div>
+          <div className="space-y-2">
+            {suggestions
+              .filter(s => s.section === 'skills' && (s.type === 'skill_add' || s.type === 'skill_addition' || s.type === 'skill_remove' || s.type === 'skill_removal'))
+              .filter(s => s.status === 'pending')
+              .map(suggestion => (
+                <div key={suggestion.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
+                  <div className="flex-1">
+                    { (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') ? (
+                      <span className="text-sm font-medium text-green-700">✓ Add: {suggestion.suggested}</span>
+                    ) : (
+                      <span className="text-sm font-medium text-red-700">✗ Remove: {suggestion.original}</span>
+                    )}
+                    {suggestion.rationale && (
+                      <p className="text-xs text-gray-600 mt-1">{suggestion.rationale}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (onAcceptSuggestion) {
+                          onAcceptSuggestion(suggestion.id)
+                        }
+                      }}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium transition-colors"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (onDeclineSuggestion) {
+                          onDeclineSuggestion(suggestion.id)
+                        }
+                      }}
+                      className="px-3 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded text-sm font-medium transition-colors"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Add Category Form */}
       {showAddCategory && (
