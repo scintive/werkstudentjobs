@@ -264,15 +264,19 @@ export function EnhancedSkillsManager({
   }, [normalizedLanguages.length])
 
   // Initialize organized data from props ONLY - NO MORE SEPARATE API CALLS
+  // Track if we've already initialized to avoid overwriting user changes
+  const [hasInitialized, setHasInitialized] = React.useState(false)
+
   React.useEffect(() => {
-    if (!organizedSkills || !organizedSkills.organized_categories) return
+    if (!organizedSkills || !organizedSkills.organized_categories || hasInitialized) return
 
     const filteredCategories = filterLanguagesFromCategories(organizedSkills.organized_categories)
     const enhancedData = { ...organizedSkills, organized_categories: filteredCategories }
 
     setOrganizedData(enhancedData)
     setExpandedCategories(new Set(Object.keys(filteredCategories || {})))
-  }, [organizedSkills])
+    setHasInitialized(true) // Mark as initialized to prevent future overwrites
+  }, [organizedSkills, hasInitialized])
 
   // Convert legacy skills format to organized format
   const convertSkillsToFlatArray = React.useCallback((skillsData: any): string[] => {
@@ -346,10 +350,15 @@ export function EnhancedSkillsManager({
     }
 
     Object.entries(organizedCategories).forEach(([categoryName, categoryData]) => {
-      // First try canonical mapping
+      // Skip languages - they have their own separate section
       const lowerName = categoryName.toLowerCase()
+      if (lowerName === 'languages' || lowerName.includes('language')) {
+        return // Don't include languages in skills
+      }
+
+      // First try canonical mapping
       let categoryKey = (categoryData as any)?.meta?.canonicalKey || canonicalCategoryMap[lowerName]
-      
+
       // If no canonical match, generate a stable key with triple underscores for '&' or 'and'
       if (!categoryKey) {
         categoryKey = categoryName
@@ -359,7 +368,12 @@ export function EnhancedSkillsManager({
           .replace(/_+/g, '_') // Collapse multiple underscores
           .replace(/^_|_$/g, '') // Trim leading/trailing underscores
       }
-      
+
+      // Skip if this would create a duplicate of an existing category
+      if (categoryKey === 'technical' && skillsFormat['content_creation']) {
+        categoryKey = 'technical_skills' // Avoid duplicate naming
+      }
+
       // Preserve objects as-is for technical categories; flatten to strings for non-technical to avoid downstream rendering bugs
       skillsFormat[categoryKey] = categoryData.skills.map(skill => {
         if (typeof skill === 'string') return skill
@@ -396,6 +410,26 @@ export function EnhancedSkillsManager({
   // Humanize canonical category key for display (e.g., data_analysis___visualization → Data Analysis & Visualization)
   const humanizeCategoryKey = (key: string) => {
     if (!key) return 'New Category'
+
+    // Special mappings for common categories to avoid duplicates/confusion
+    const specialMappings: Record<string, string> = {
+      'technical': 'Technical Skills',
+      'technical_skills': 'Technical Skills',
+      'content_creation': 'Content Creation Mastery',
+      'collaboration_communication': 'Collaboration & Communication',
+      'problem_solving_critical_thinking': 'Problem Solving & Critical Thinking',
+      'project_leadership_project_management': 'Project Leadership',
+      'location_shooting_expertise': 'Location & Shooting Expertise',
+      'audience_engagement_techniques': 'Audience Engagement',
+      'performance_optimization': 'Performance Optimization',
+      'practical_application': 'Practical Application'
+    }
+
+    const lowerKey = key.toLowerCase()
+    if (specialMappings[lowerKey]) {
+      return specialMappings[lowerKey]
+    }
+
     const withAnd = key.replace(/___/g, ' & ')
     const spaced = withAnd.replace(/_/g, ' ')
     return spaced.replace(/\b\w/g, c => c.toUpperCase())
