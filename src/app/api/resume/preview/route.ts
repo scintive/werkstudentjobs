@@ -195,22 +195,9 @@ const buildSkillsFromPlan = (
       }
     });
 
-  // Preserve languages if the plan omitted them entirely
-  const hasLanguageCategory = Array.from(canonicalSet).some((key) => key.includes('language'));
-  if (!hasLanguageCategory && Array.isArray(languages) && languages.length > 0) {
-    const serializedLanguages = languages
-      .map((entry: any) => {
-        if (typeof entry === 'string') return entry;
-        const name = (entry?.language ?? entry?.name ?? '').toString().trim();
-        const level = (entry?.proficiency ?? entry?.level ?? '').toString().trim();
-        return name ? (level ? `${name} (${level})` : name) : '';
-      })
-      .filter(Boolean);
-
-    if (serializedLanguages.length > 0) {
-      skillsMap['Languages'] = serializedLanguages;
-    }
-  }
+  // REMOVED: Languages should NOT be added to skills map
+  // Languages are displayed in a separate dedicated section in templates
+  // Adding them here causes duplication
 
   return { skillsMap, canonicalSet };
 };
@@ -361,19 +348,16 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       skills[displayName] = processSkillArray(skillArray as any[], displayName);
     });
   } else {
-    // Preserve any residual language arrays that may live in resumeData.skills
+    // Preserve any residual skill arrays that may live in resumeData.skills
+    // BUT EXCLUDE LANGUAGES - they are handled separately to avoid duplication
     Object.entries((resumeData as any).skills).forEach(([categoryKey, skillArray]) => {
       if (!Array.isArray(skillArray) || skillArray.length === 0) return;
       const canonical = canonicalizePlanKey(categoryKey);
       if (planCanonicalSet.has(canonical)) return;
 
-      if (canonical.includes('language')) {
-        const displayName = categoryKey
-          .replace(/___/g, ' & ')
-          .split('_')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-        skills[displayName] = processSkillArray(skillArray as any[], displayName);
+      // Skip language categories - they are displayed in a separate Languages section
+      if (canonical.includes('language') || categoryKey.toLowerCase().includes('language')) {
+        return; // Don't add languages to skills map
       }
     });
   }

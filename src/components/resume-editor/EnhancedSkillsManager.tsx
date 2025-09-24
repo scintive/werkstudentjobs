@@ -2,15 +2,15 @@
 
 import * as React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Plus, 
-  X, 
-  Sparkles, 
-  Code2, 
-  Palette, 
-  Target, 
-  Users, 
-  Globe2, 
+import {
+  Plus,
+  X,
+  Sparkles,
+  Code2,
+  Palette,
+  Target,
+  Users,
+  Globe2,
   Award,
   Wand2,
   Check,
@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Trash2
 } from 'lucide-react'
+import { SkillsSuggestionsPanel } from './SkillsSuggestionsPanel'
 
 interface EnhancedSkillsManagerProps {
   skills: any // Current skills object
@@ -731,101 +732,32 @@ export function EnhancedSkillsManager({
       {/* Content */}
       <div className="p-6 space-y-4">
 
-      {/* Tailor Mode Suggestions */}
+      {/* Tailor Mode Suggestions - Revolutionary New UI */}
       {mode === 'tailor' && suggestions && suggestions.length > 0 && (
-        <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-5 w-5 text-amber-600" />
-            <h3 className="text-sm font-semibold text-amber-900">AI Suggestions</h3>
-            <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
-              {suggestions.filter(s => s.status === 'pending').length} pending
-            </span>
-          </div>
-          {/* New Category Suggestions */}
-          {(() => {
-            try {
-              const existingCanon = new Set(Object.keys((dataToUse?.organized_categories)||{}).map(toCanonicalKey))
-              const incomingCanon = Array.from(new Set((suggestions||[])
-                .filter(s => s.section === 'skills' && (s.type === 'skill_add' || s.type === 'skill_addition'))
-                .map(s => (s.targetPath || '').toString().split('.')[1])
-                .filter(Boolean))) as string[]
-              const newCats = incomingCanon.filter(k => !existingCanon.has(k))
-              if (newCats.length === 0) return null
-              return (
-                <div className="mb-3">
-                  <div className="text-xs font-medium text-amber-900 mb-1">New categories suggested</div>
-                  <div className="flex flex-wrap gap-2">
-                    {newCats.map((catKey) => (
-                      <div key={catKey} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-amber-200 rounded-full text-xs">
-                        <span className="text-amber-800 font-semibold">{humanizeCategoryKey(catKey)}</span>
-                        <button
-                          onClick={() => {
-                            const displayName = humanizeCategoryKey(catKey)
-                            const updated = { ...(dataToUse?.organized_categories || {}) }
-                            if (!updated[displayName]) {
-                              updated[displayName] = { skills: [], suggestions: [], reasoning: 'AI suggested category', allowProficiency: shouldCategoryHaveProficiency(displayName) }
-                              setOrganizedData(prev => ({ ...(prev||organizedSkills), organized_categories: updated }))
-                              const newSkillsFormat = convertOrganizedToSkillsFormat(updated)
-                              onSkillsChange(newSkillsFormat)
-                            }
-                          }}
-                          className="px-2 py-0.5 bg-green-600 hover:bg-green-700 text-white rounded-full"
-                        >
-                          Create
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            } catch {
-              return null
-            }
-          })()}
-          <div className="space-y-2">
-            {suggestions
-              .filter(s => (s.type === 'skill_add' || s.type === 'skill_addition' || s.type === 'skill_remove' || s.type === 'skill_removal'))
-              .filter(s => s.status === 'pending')
-              .map(suggestion => (
-                <div key={suggestion.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-100">
-                  <div className="flex-1">
-                    { (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') ? (
-                      <span className="text-sm font-medium text-gray-900">Add: {suggestion.suggested}</span>
-                    ) : (
-                      <span className="text-sm font-medium text-gray-900">Remove: {suggestion.original}</span>
-                    )}
-                    {suggestion.rationale && (
-                      <p className="text-xs text-gray-600 mt-1">{suggestion.rationale}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        if (onAcceptSuggestion) {
-                          onAcceptSuggestion(suggestion.id)
-                        }
-                      }}
-                      className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors"
-                      title="Accept suggestion"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (onDeclineSuggestion) {
-                          onDeclineSuggestion(suggestion.id)
-                        }
-                      }}
-                      className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
-                      title="Decline suggestion"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
+        <SkillsSuggestionsPanel
+          suggestions={suggestions
+            .filter(s => s.section === 'skills')
+            .map(s => ({
+              id: s.id,
+              type: s.type as any,
+              category: s.targetPath?.split('.')[1],
+              categoryDisplayName: s.targetPath ? humanizeCategoryKey(s.targetPath.split('.')[1] || '') : undefined,
+              skill: s.type === 'skill_remove' || s.type === 'skill_removal' ? s.original : s.suggested,
+              suggested: s.suggested,
+              original: s.original,
+              rationale: s.rationale,
+              confidence: s.confidence,
+              impact: s.confidence >= 85 ? 'high' : s.confidence >= 70 ? 'medium' : 'low',
+              status: s.status as any
+            }))}
+          onAccept={onAcceptSuggestion || (() => {})}
+          onDecline={onDeclineSuggestion || (() => {})}
+          onAcceptAll={() => {
+            suggestions
+              .filter(s => s.section === 'skills' && s.status === 'pending')
+              .forEach(s => onAcceptSuggestion?.(s.id))
+          }}
+        />
       )}
 
       {/* Add Category Form */}

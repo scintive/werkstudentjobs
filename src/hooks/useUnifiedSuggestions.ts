@@ -111,7 +111,9 @@ export function useUnifiedSuggestions({
       const transformed: UnifiedSuggestion[] = (data || []).map(s => ({
         id: s.id,
         variantId: s.variant_id,
-        section: (s.section === 'professionalSummary' ? 'summary' : s.section),
+        section: (s.section === 'professionalSummary' ? 'summary' :
+                  s.section === 'professionalTitle' ? 'title' :
+                  s.section),
         type: (s.suggestion_type === 'skill_addition' ? 'skill_add' : s.suggestion_type === 'skill_removal' ? 'skill_remove' : (s.suggestion_type || 'enhancement')),
         targetPath: canonicalizePath((s as any).target_id || (s as any).target_path),
         original: s.original_content,

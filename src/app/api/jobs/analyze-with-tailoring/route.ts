@@ -1696,37 +1696,44 @@ Return your response as a valid JSON object only. Do not include any additional 
 
       const baseProfessionalTitle = baseResumeData.professional_title || ''
       const tailoredProfessionalTitle = analysisData.tailored_resume?.professionalTitle || ''
-      if (tailoredProfessionalTitle && tailoredProfessionalTitle !== baseProfessionalTitle) {
-        analysisData.atomic_suggestions.push({
-          section: 'title',
-          suggestion_type: 'text',
-          target_id: 'professionalTitle',
-          target_path: 'professionalTitle',
-          before: baseProfessionalTitle,
-          after: tailoredProfessionalTitle,
-          original_content: baseProfessionalTitle,
-          suggested_content: tailoredProfessionalTitle,
-          rationale: 'Updated title to better align with target role',
-          ats_relevance: 'Improved job title alignment',
-          keywords: [],
-          confidence: 85,
-          impact: 'high'
-        })
+      // ALWAYS generate title suggestion if we have a tailored title or if base is empty
+      if (tailoredProfessionalTitle || !baseProfessionalTitle) {
+        // Only add if they're actually different OR if base was empty
+        if (tailoredProfessionalTitle !== baseProfessionalTitle) {
+          analysisData.atomic_suggestions.push({
+            section: 'title',
+            suggestion_type: 'text',
+            target_id: 'professionalTitle',
+            target_path: 'professionalTitle',
+            before: baseProfessionalTitle,
+            after: tailoredProfessionalTitle || `${job.title} Professional`, // Fallback if LLM didn't generate
+            original_content: baseProfessionalTitle,
+            suggested_content: tailoredProfessionalTitle || `${job.title} Professional`,
+            rationale: tailoredProfessionalTitle ? 'Updated title to better align with target role' : 'Added professional title aligned with target position',
+            ats_relevance: 'Improved job title alignment',
+            keywords: [],
+            confidence: tailoredProfessionalTitle ? 85 : 75,
+            impact: 'high'
+          })
+        }
       }
 
       const baseProfessionalSummary = baseResumeData.professional_summary || ''
       const tailoredProfessionalSummary = analysisData.tailored_resume?.professionalSummary || ''
-      if (tailoredProfessionalSummary && tailoredProfessionalSummary !== baseProfessionalSummary) {
-        analysisData.atomic_suggestions.push({
-          section: 'summary',
-          suggestion_type: 'text',
-          target_id: 'professionalSummary',
-          target_path: 'professionalSummary',
-          before: baseProfessionalSummary,
-          after: tailoredProfessionalSummary,
-          original_content: baseProfessionalSummary,
-          suggested_content: tailoredProfessionalSummary,
-          rationale: 'Enhanced summary to highlight relevant experience',
+      // ALWAYS generate summary suggestion if we have a tailored summary or if base is empty
+      if (tailoredProfessionalSummary || !baseProfessionalSummary) {
+        // Only add if they're actually different OR if base was empty
+        if (tailoredProfessionalSummary !== baseProfessionalSummary) {
+          analysisData.atomic_suggestions.push({
+            section: 'summary',
+            suggestion_type: 'text',
+            target_id: 'professionalSummary',
+            target_path: 'professionalSummary',
+            before: baseProfessionalSummary,
+            after: tailoredProfessionalSummary || `Experienced professional seeking ${job.title} role. ${baseResumeData.experience?.[0]?.achievements?.[0] || ''}`,
+            original_content: baseProfessionalSummary,
+            suggested_content: tailoredProfessionalSummary || `Experienced professional seeking ${job.title} role. ${baseResumeData.experience?.[0]?.achievements?.[0] || ''}`,
+            rationale: tailoredProfessionalSummary ? 'Enhanced summary to highlight relevant experience' : 'Added professional summary for improved ATS matching',
           ats_relevance: 'Better alignment with job requirements',
           keywords: [],
           confidence: 85,
@@ -1924,11 +1931,13 @@ Return your response as a valid JSON object only. Do not include any additional 
       
       if (analysisData.atomic_suggestions?.length > 0) {
         // Normalize and validate suggestions with new structure
-        const allowedSections = new Set(['summary','experience','skills','languages','education','projects','certifications','custom_sections'])
+        // IMPORTANT: 'title' is now allowed to ensure professional title suggestions work properly
+        const allowedSections = new Set(['title','summary','experience','skills','languages','education','projects','certifications','custom_sections'])
         const sanitizeSection = (raw: string, suggestionType?: string) => {
-          const s = (raw === 'professionalSummary') ? 'summary' : (raw || '')
+          const s = (raw === 'professionalSummary') ? 'summary' :
+                    (raw === 'professionalTitle') ? 'title' :
+                    (raw || '')
           if (allowedSections.has(s)) return s
-          if (s === 'title') return 'summary' // DB does not allow 'title'
           // Fallback: route unknown sections to skills if it looks like a skill op, else custom_sections
           if ((suggestionType || '').includes('skill')) return 'skills'
           return 'custom_sections'
