@@ -1696,44 +1696,39 @@ Return your response as a valid JSON object only. Do not include any additional 
 
       const baseProfessionalTitle = baseResumeData.professional_title || ''
       const tailoredProfessionalTitle = analysisData.tailored_resume?.professionalTitle || ''
-      // ALWAYS generate title suggestion if we have a tailored title or if base is empty
-      if (tailoredProfessionalTitle || !baseProfessionalTitle) {
-        // Only add if they're actually different OR if base was empty
-        if (tailoredProfessionalTitle !== baseProfessionalTitle) {
-          analysisData.atomic_suggestions.push({
-            section: 'title',
-            suggestion_type: 'text',
-            target_id: 'professionalTitle',
-            target_path: 'professionalTitle',
-            before: baseProfessionalTitle,
-            after: tailoredProfessionalTitle || `${job.title} Professional`, // Fallback if LLM didn't generate
-            original_content: baseProfessionalTitle,
-            suggested_content: tailoredProfessionalTitle || `${job.title} Professional`,
-            rationale: tailoredProfessionalTitle ? 'Updated title to better align with target role' : 'Added professional title aligned with target position',
-            ats_relevance: 'Improved job title alignment',
-            keywords: [],
-            confidence: tailoredProfessionalTitle ? 85 : 75,
-            impact: 'high'
-          })
-        }
+      // Only generate title suggestion if LLM provided one and it's different
+      if (tailoredProfessionalTitle && tailoredProfessionalTitle !== baseProfessionalTitle) {
+        analysisData.atomic_suggestions.push({
+          section: 'title',
+          suggestion_type: 'text',
+          target_id: 'professionalTitle',
+          target_path: 'professionalTitle',
+          before: baseProfessionalTitle,
+          after: tailoredProfessionalTitle,
+          original_content: baseProfessionalTitle,
+          suggested_content: tailoredProfessionalTitle,
+          rationale: 'Updated title to better align with target role',
+          ats_relevance: 'Improved job title alignment',
+          keywords: [],
+          confidence: 85,
+          impact: 'high'
+        })
       }
 
       const baseProfessionalSummary = baseResumeData.professional_summary || ''
       const tailoredProfessionalSummary = analysisData.tailored_resume?.professionalSummary || ''
-      // ALWAYS generate summary suggestion if we have a tailored summary or if base is empty
-      if (tailoredProfessionalSummary || !baseProfessionalSummary) {
-        // Only add if they're actually different OR if base was empty
-        if (tailoredProfessionalSummary !== baseProfessionalSummary) {
-          analysisData.atomic_suggestions.push({
-            section: 'summary',
-            suggestion_type: 'text',
-            target_id: 'professionalSummary',
-            target_path: 'professionalSummary',
-            before: baseProfessionalSummary,
-            after: tailoredProfessionalSummary || `Experienced professional seeking ${job.title} role. ${baseResumeData.experience?.[0]?.achievements?.[0] || ''}`,
-            original_content: baseProfessionalSummary,
-            suggested_content: tailoredProfessionalSummary || `Experienced professional seeking ${job.title} role. ${baseResumeData.experience?.[0]?.achievements?.[0] || ''}`,
-            rationale: tailoredProfessionalSummary ? 'Enhanced summary to highlight relevant experience' : 'Added professional summary for improved ATS matching',
+      // Only generate summary suggestion if LLM provided one and it's different
+      if (tailoredProfessionalSummary && tailoredProfessionalSummary !== baseProfessionalSummary) {
+        analysisData.atomic_suggestions.push({
+          section: 'summary',
+          suggestion_type: 'text',
+          target_id: 'professionalSummary',
+          target_path: 'professionalSummary',
+          before: baseProfessionalSummary,
+          after: tailoredProfessionalSummary,
+          original_content: baseProfessionalSummary,
+          suggested_content: tailoredProfessionalSummary,
+          rationale: 'Enhanced summary to highlight relevant experience',
           ats_relevance: 'Better alignment with job requirements',
           keywords: [],
           confidence: 85,

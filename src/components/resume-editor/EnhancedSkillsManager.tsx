@@ -733,11 +733,19 @@ export function EnhancedSkillsManager({
       <div className="p-6 space-y-4">
 
       {/* Tailor Mode Suggestions - Revolutionary New UI */}
-      {mode === 'tailor' && suggestions && suggestions.length > 0 && (
-        <SkillsSuggestionsPanel
-          suggestions={suggestions
-            .filter(s => s.section === 'skills')
-            .map(s => ({
+      {(() => {
+        console.log('🎨 EnhancedSkillsManager suggestions check:', {
+          mode,
+          suggestionsLength: suggestions?.length || 0,
+          skillSuggestions: suggestions?.filter(s => s.section === 'skills').length || 0,
+          allSections: suggestions?.map(s => s.section) || []
+        });
+        const skillSuggestions = suggestions?.filter(s => s.section === 'skills') || [];
+
+        if (mode === 'tailor' && skillSuggestions.length > 0) {
+          return (
+            <SkillsSuggestionsPanel
+              suggestions={skillSuggestions.map(s => ({
               id: s.id,
               type: s.type as any,
               category: s.targetPath?.split('.')[1],
@@ -758,7 +766,11 @@ export function EnhancedSkillsManager({
               .forEach(s => onAcceptSuggestion?.(s.id))
           }}
         />
-      )}
+          );
+        }
+
+        return null;
+      })()}
 
       {/* Add Category Form */}
       {showAddCategory && (
