@@ -86,8 +86,8 @@ export default function DashboardPage() {
             setCompleteness(Math.round((rec.profile_completeness || 0) * 100))
             setBaseResumeId(rec.id)
 
-            // Fetch resume variants with job info
-            const { data: variants } = await supabase
+            // Fetch resume variants with job info - try both base_resume_id and user_id
+            let { data: variants } = await supabase
               .from('resume_variants')
               .select(`
                 id,
@@ -104,6 +104,29 @@ export default function DashboardPage() {
               .eq('base_resume_id', rec.id)
               .order('updated_at', { ascending: false })
               .limit(5)
+
+            // If no variants found by base_resume_id, try user_id
+            if (!variants || variants.length === 0) {
+              const { data: variantsByUser } = await supabase
+                .from('resume_variants')
+                .select(`
+                  id,
+                  job_id,
+                  variant_name,
+                  match_score,
+                  created_at,
+                  updated_at,
+                  jobs (
+                    title,
+                    company_name
+                  )
+                `)
+                .eq('user_id', userId)
+                .order('updated_at', { ascending: false })
+                .limit(5)
+
+              variants = variantsByUser
+            }
 
             if (variants) {
               setResumeVariants(variants as ResumeVariant[])
