@@ -53,7 +53,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { label: 'Job Browser', href: '/jobs', icon: Briefcase },
     { label: 'Tailor Resume', href: '/jobs?tailor=1', icon: Target },
     { label: 'Cover Letters', href: '/cover-letters', icon: PenTool },
-    { label: 'Analytics', href: '/analytics', icon: BarChart },
   ]
 
   const secondaryNavItems: NavItem[] = [
@@ -166,62 +165,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
 
-          {/* User Info Section */}
-          {userEmail && (
-            <div className={cn(
-              "p-4 border-b border-gray-100",
-              collapsed && "px-2"
-            )}>
-              {!collapsed ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-semibold">
-                        {userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {userName || 'User'}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">{userEmail}</p>
-                    </div>
-                  </div>
-
-                  {/* Profile Completeness */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Profile</span>
-                      <span className="text-gray-900 font-medium">{profileCompleteness}%</span>
-                    </div>
-                    <Progress value={profileCompleteness} className="h-1.5" />
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <p className="text-lg font-semibold text-gray-900">{variantCount}</p>
-                      <p className="text-xs text-gray-600">Tailored</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <p className="text-lg font-semibold text-gray-900">
-                        {profileCompleteness >= 80 ? '✓' : '○'}
-                      </p>
-                      <p className="text-xs text-gray-600">Ready</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-center">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-                    <span className="text-white font-semibold">
-                      {userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Main Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
