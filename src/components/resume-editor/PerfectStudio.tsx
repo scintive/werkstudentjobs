@@ -41,10 +41,12 @@ import {
 } from 'lucide-react'
 import { useResumeActions } from '@/lib/contexts/ResumeContext'
 import { useSupabaseResumeContext, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext'
+import { supabase } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { EnhancedRichText } from './enhanced-rich-text'
 import { SimpleTemplateDropdown } from './SimpleTemplateDropdown'
 import { EnhancedSkillsManager } from './EnhancedSkillsManager'
+import { TailorEnhancedSkillsManager } from '../tailor-resume-editor/TailorEnhancedSkillsManager'
 import { useUnifiedSuggestions } from '@/hooks/useUnifiedSuggestions'
 import { SuggestionIndicator, SuggestionBadge } from './SuggestionIndicator'
 import type { UnifiedSuggestion } from '@/hooks/useUnifiedSuggestions'
@@ -644,8 +646,8 @@ export function PerfectStudio({
   baseResumeId
 }: PerfectStudioProps) {
   const { resumeData } = useSupabaseResumeContext()
-  const { 
-    updatePersonalInfo, 
+  const {
+    updatePersonalInfo,
     updateField,
     addExperience,
     removeExperience,
@@ -655,6 +657,69 @@ export function PerfectStudio({
     removeSkill,
     saveNow
   } = useSupabaseResumeActions()
+
+  // For tailor mode: load organized skills from variant's skillsCategoryPlan
+  const [organizedSkills, setOrganizedSkills] = React.useState<any>(null)
+  const [loadingOrganizedSkills, setLoadingOrganizedSkills] = React.useState(false)
+
+  // Load organized skills from variant's skillsCategoryPlan when in tailor mode
+  React.useEffect(() => {
+    if (mode === 'tailor' && variantId && !organizedSkills && !loadingOrganizedSkills) {
+      setLoadingOrganizedSkills(true)
+      console.log('🧠 Loading organized skills from variant:', variantId)
+
+      supabase
+        .from('resume_variants')
+        .select('tailored_data')
+        .eq('id', variantId)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('❌ Failed to load variant tailored_data:', error)
+            return
+          }
+
+          const skillsCategoryPlan = data?.tailored_data?.skillsCategoryPlan
+          if (skillsCategoryPlan?.categories) {
+            console.log('✅ Found skillsCategoryPlan with categories:', skillsCategoryPlan.categories.length)
+
+            // Convert skillsCategoryPlan to organized_categories format
+            const organized_categories: Record<string, any> = {}
+
+            skillsCategoryPlan.categories.forEach((category: any) => {
+              const categoryKey = category.canonical_key || category.display_name?.toLowerCase().replace(/\s+/g, '_')
+              if (categoryKey && category.skills) {
+                organized_categories[categoryKey] = {
+                  display_name: category.display_name,
+                  skills: category.skills
+                    .filter((skill: any) => skill.status !== 'remove')
+                    .map((skill: any) => skill.name || skill.skill || skill),
+                  category_rationale: category.rationale,
+                  job_alignment: category.job_alignment
+                }
+              }
+            })
+
+            const organizedData = {
+              organized_categories,
+              profile_analysis: {
+                strengths: [],
+                gaps: [],
+                recommendations: skillsCategoryPlan.guiding_principles || []
+              }
+            }
+
+            console.log('🎯 Converted to organized skills:', Object.keys(organized_categories))
+            setOrganizedSkills(organizedData)
+          } else {
+            console.log('⚠️ No skillsCategoryPlan found in variant data')
+          }
+        })
+        .finally(() => {
+          setLoadingOrganizedSkills(false)
+        })
+    }
+  }, [mode, variantId, organizedSkills, loadingOrganizedSkills])
 
   const [localData, setLocalData] = React.useState(resumeData)
   const [localSkillsPlan, setLocalSkillsPlan] = React.useState<any>(resumeData?.skillsCategoryPlan || null)
@@ -1285,7 +1350,7 @@ export function PerfectStudio({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
                     {Object.entries(
                       suggestions.reduce((acc, s) => {
                         const section = s.section || 'other'
@@ -1295,7 +1360,7 @@ export function PerfectStudio({
                     ).map(([section, count]) => (
                       <span
                         key={section}
-                        className="px-3 py-1 bg-white rounded-lg text-xs font-medium text-gray-700 border border-gray-200"
+                        className="px-3 py-1 bg-white rounded-lg text-xs font-medium text-gray-700 border border-gray-200 whitespace-nowrap"
                       >
                         {section}: {count}
                       </span>
@@ -1729,10 +1794,28 @@ export function PerfectStudio({
               onToggle={() => toggleSection('skills')}
               color="from-emerald-500 to-teal-500"
             >
-              <EnhancedSkillsManager
-                skills={localData.skills}
-                mode={mode}
-                onSkillsChange={(updatedSkills) => {
+              {mode === 'tailor' ? (
+                <TailorEnhancedSkillsManager
+                  skills={localData.skills || {}}
+                  onSkillsChange={(updatedSkills) => {
+                    console.log('🎯 Tailor skills change callback triggered with:', Object.keys(updatedSkills || {}))
+                    // Update local data
+                    setLocalData(prevData => ({
+                      ...prevData,
+                      skills: updatedSkills || {},
+                      languages: prevData.languages || []
+                    }))
+                  }}
+                  organizedSkills={organizedSkills}
+                  jobData={jobData}
+                  strategy={jobData ? { ats_keywords: jobData.keywords || [] } : undefined}
+                  aiMode={true}
+                />
+              ) : (
+                <EnhancedSkillsManager
+                  skills={localData.skills}
+                  mode={mode}
+                  onSkillsChange={(updatedSkills) => {
                   console.log('🎯 Skills change callback triggered with:', Object.keys(updatedSkills || {}))
                   console.log('🎯 Current mode:', mode, '- Should save to DB:', mode !== 'tailor')
 
@@ -1803,9 +1886,10 @@ export function PerfectStudio({
                   }))
                   console.log('🌍 Updated localData languages to prevent reset')
                 }}
-                showSkillLevelsInResume={showSkillLevelsInResume}
-                onShowSkillLevelsChange={setShowSkillLevelsInResume}
-              />
+                  showSkillLevelsInResume={showSkillLevelsInResume}
+                  onShowSkillLevelsChange={setShowSkillLevelsInResume}
+                />
+              )}
             </SectionCard>
 
             {/* Certifications */}

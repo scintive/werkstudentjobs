@@ -1062,7 +1062,7 @@ Return ONLY a JSON array of skill names:
       try {
         // Use new responses.create API with schema validation
         const result = await this.createJsonResponse<{suggestions: string[]}>({
-          model: 'gpt-3.5-turbo', // Using gpt-3.5-turbo for cheap/simple skill suggestions
+          model: 'gpt-4o-mini', // Using gpt-4o-mini for structured outputs support (json_schema)
           system: 'You are a career consultant. Generate skill suggestions for the specified category.',
           user: categoryPrompt,
           schema: CategorySuggestionsSchema,
