@@ -2,7 +2,7 @@ import "@/lib/polyfills/url-canparse";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
+import AppLayout from "@/components/layout/AppLayout";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -33,10 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
-        <div className="min-h-screen bg-background">
-          <Header />
+        <AppLayout>
           {children}
-        </div>
+        </AppLayout>
       </body>
     </html>
   );
