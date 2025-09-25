@@ -209,10 +209,10 @@ const applySkillsCategoryPlan = ({
         finalValue = { ...finalValue, ...(proficiency ? { proficiency } : {}) };
       }
 
-      if (normalizedStatus !== 'remove') {
-        bucket.push(finalValue);
-        skillCategoryLookup[lower] = canonicalKey;
-      }
+      // Always include skills in the plan, even if marked for removal
+      // Removal should be a suggestion, not automatic
+      bucket.push(finalValue);
+      skillCategoryLookup[lower] = canonicalKey;
 
       normalizedSkills.push({
         name,
@@ -412,6 +412,8 @@ RULES:
 • Each category must map existing resume skills and introduce job-critical additions/removals so the story changes.
 • Use triple-underscore canonical slugs (e.g., client_delivery___storytelling) and title-case display names.
 • Every skill must include status (keep/add/promote/remove), rationale (≤140 chars), source (resume/job/hybrid), and confidence (0–100).
+• NEVER suggest generic, vague skills that lack specificity: "Problem Solving", "Communication", "Teamwork", "Leadership", "Multitasking", "Attention to Detail", "Time Management", "Critical Thinking", "Adaptability", "Flexibility", "Self-motivated", "Strong work ethic", "Fast learner", or similar soft skills. Instead, suggest specific tools, technologies, methodologies, or measurable competencies.
+• Focus on concrete, demonstrable skills: specific software (Excel, Figma, Python), platforms (Google Ads, Salesforce), methodologies (Agile, SCRUM), or technical abilities (SQL queries, A/B testing, Content writing).
 • Spread the candidate's resume skills across the new categories so nothing relevant is lost; retire irrelevant resume skills.
 • Introduce 8–12 additions drawn from the job description to strengthen alignment.
 • Include 3 guiding_principles that explain how the categories win this job.
@@ -872,7 +874,7 @@ OUTPUT FORMAT (JSON):
   "tailored_resume": {
     "personalInfo": { "KEEP EXACTLY AS IN ORIGINAL - DO NOT MODIFY" },
     "professionalTitle": "Tailored title bridging current role to target position (NOT just the job title)",
-    "professionalSummary": "Comprehensive 3-4 sentence summary that: (1) Opens with user's proven experience and core expertise, (2) Highlights 2-3 specific achievements or skills that directly match this job, (3) Demonstrates how their background uniquely positions them for this role, (4) Shows career growth and ambition. Make it personal and specific to the user's actual experience.",
+    "professionalSummary": "Comprehensive 5-6 sentence summary (120-150 words) that: (1) Opens with user's proven experience and core expertise, (2) Highlights 2-3 specific achievements or skills that directly match this job, (3) Demonstrates how their background uniquely positions them for this role, (4) Shows career growth and ambition, (5) Lists 3-4 relevant skills/tools for the target role, (6) Mentions notable projects or specialized training. Make it personal and specific to the user's actual experience with quantified achievements.",
     "enableProfessionalSummary": true,
     "skills": { 
       "technical": ["skill1", "skill2"], 
@@ -1152,14 +1154,41 @@ ${JSON.stringify(analysisContext.resume, null, 2)}
 
 Constraints:
 • Cover ALL sections: summary, title, skills, EVERY experience role (ALL of them, not just recent ones), projects, education, languages, certifications
-• MUST include an atomic suggestion to update professional title (target_path: "title") tailored to the job role (concise, role-appropriate)
-• MUST include at least one summary improvement (target_path: "summary") aligned with the job role and keywords (no generic text)
+• MANDATORY: Include exactly 1 professional title suggestion with section:"title", suggestion_type:"text", before:(current title or empty), after:(new tailored title)
+• MANDATORY: Include exactly 1 professional summary suggestion with section:"summary", suggestion_type:"text", before:(current summary or empty), after:(new 5-6 sentence tailored summary)
 • Propose skill_removal suggestions for resume skills clearly irrelevant to the job (only if they exist in the resume)
 • For EACH experience role present (including older roles), return 2–3 suggestions (prefer 'bullet' additions/rewrites). Anchor with target_path like experience[ROLE_INDEX].achievements[BULLET_INDEX]
 • Return 15–25 total high-value suggestions ensuring ALL experience roles get suggestions
-• Professional Summary edits must produce 4–5 sentences (roughly 80–110 words) that tie the candidate’s experience to this role’s outcomes; no bullet fragments or short blurbs
-• Skills: Execute the skills_category_plan you produce—create/rename categories to mirror the job domain, map every existing resume skill into the strongest bucket, and introduce the 12–20 additions that change the story
-• Skills Category Plan must include 5–7 sharply named categories unique to this job. Avoid generic labels such as "Technical & Digital", "Soft Skills", or "Business"—tie each heading to consulting/project support context (e.g., "Client Delivery Ops", "Analytical Storytelling")
+• Professional Summary: ALWAYS generate a tailored summary of 5–6 sentences (120–150 words) that:
+  1. Starts with years of experience or education background
+  2. Describes current/recent role and key responsibilities
+  3. Includes quantified achievements with metrics
+  4. Lists 3–4 relevant skills/tools for the target role
+  5. Mentions notable projects or specialized training
+  6. Ends with value proposition aligned to the job
+• Professional Title: ALWAYS generate a tailored title that bridges candidate's experience with target role
+• Skills: Create categories that mirror the job domain. For content/creative roles, MUST include:
+  - Specific editing/creation tools (CapCut, Final Cut Pro, Adobe Premiere, After Effects, DaVinci Resolve for video; Photoshop, Illustrator for design)
+  - Platform expertise (TikTok, YouTube, Instagram, etc.)
+  - Content-specific skills (storyboarding, color grading, motion graphics)
+  Map existing skills appropriately and add 8–12 job-critical skills including industry-standard tools
+• Skills Category Plan must include 5–7 sharply named categories unique to this job. NEVER use generic labels like "Technical & Digital", "Technical Skills", "Soft Skills", "Business Skills", or just "Skills". Use specific, professional category names that work universally for Werkstudent positions:
+
+UNIVERSAL WERKSTUDENT CATEGORY EXAMPLES (choose most relevant):
+  - "Digital Marketing Tools" (for marketing roles: Google Ads, Meta Ads, Analytics, SEMrush)
+  - "Data Analysis & Visualization" (for data roles: Excel, Tableau, Python, SQL, Power BI)
+  - "Content Creation & Design" (for content roles: Adobe Creative Suite, Figma, Canva, Video editing)
+  - "Software Development" (for tech roles: Programming languages, frameworks, version control)
+  - "Project Management & Operations" (for ops roles: Asana, Notion, Slack, Process optimization)
+  - "Customer Relations & Support" (for service roles: CRM systems, Zendesk, Customer communication, Account management)
+  - "Research & Analysis Methods" (for research roles: Survey tools, Statistical analysis, Documentation)
+  - "Sales & Business Development" (for sales roles: CRM, Lead generation, Negotiation, Pipeline management)
+
+ROLE-SPECIFIC EXAMPLES:
+  - Content creators: "Video Production Tools", "Content Platform Expertise", "Audience Engagement Analytics", "Visual Design Software"
+  - Developers: "Frontend Frameworks", "Backend Technologies", "Cloud Infrastructure", "Development Tools"
+  - Analysts: "Data Visualization Platforms", "Statistical Analysis Tools", "Business Intelligence", "Database Systems"
+  - Marketing: "Digital Advertising Platforms", "Marketing Analytics Tools", "Content Management Systems", "SEO & SEM Tools"
 • Each category needs ≥4 skills and at least one addition or retirement so the UI stays dense and actionable
 • Every skill in the plan must include: name, status (keep/add/promote/remove), rationale, source (resume vs job vs research), proficiency, and confidence (use null where not applicable)
 • Every skill in the resume must have an explicit plan status and every new category must list its anchor skills with canonical keys
@@ -1512,16 +1541,16 @@ Return your response as a valid JSON object only. Do not include any additional 
       // 9. PERSIST SUGGESTIONS (atomic replace with auth client)
       logContext.stage = 'persist_suggestions';
       
+      // Compile current skills for validation - SINGLE SOURCE OF TRUTH (needed for all validation paths)
+      const baseSkillsFlat = Object.values(baseResumeData.skills || {})
+        .flat()
+        .map((v: any) => (typeof v === 'string' ? v : v?.skill))
+        .filter(Boolean)
+        .map((s: any) => String(s).toLowerCase())
+
       // Process skills_suggestions and explicit add/remove lists
       if (analysisData.skills_suggestions && Array.isArray(analysisData.skills_suggestions)) {
-        console.log(`📊 Processing ${analysisData.skills_suggestions.length} skills suggestions`);
-        
-        // Compile current skills for relevance checks
-        const baseSkillsFlatForFilter = Object.values(baseResumeData.skills || {})
-          .flat()
-          .map((v: any) => (typeof v === 'string' ? v : v?.skill))
-          .filter(Boolean)
-          .map((s: any) => String(s).toLowerCase())
+        console.log(`📊 Processing ${analysisData.skills_suggestions.length} skills suggestions`)
         const jobTextForFilter = (JSON.stringify(trimmedJob || {}) + ' ' + (jobData?.description || '')).toLowerCase()
         
         // Helpers for category mapping
@@ -1577,11 +1606,13 @@ Return your response as a valid JSON object only. Do not include any additional 
             const newLower = String(newSkill || '').toLowerCase()
             const curLower = String(currentSkill || '').toLowerCase()
             
-            // Quality gates
-            if (suggestionType === 'skill_removal' && curLower && !baseSkillsFlatForFilter.includes(curLower)) {
+            // Quality gates - STRICT validation using single source of truth
+            if (suggestionType === 'skill_removal' && curLower && !baseSkillsFlat.includes(curLower)) {
+              console.log('❌ Skipping skill removal - skill not found in user profile:', curLower)
               return null // Don't remove skills that aren't in resume
             }
-            if (suggestionType === 'skill_addition' && newLower && baseSkillsFlatForFilter.includes(newLower)) {
+            if (suggestionType === 'skill_addition' && newLower && baseSkillsFlat.includes(newLower)) {
+              console.log('❌ Skipping skill addition - already exists in user profile:', newLower)
               return null // Don't add duplicates
             }
             if (suggestionType === 'skill_addition' && newLower) {
@@ -1632,11 +1663,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       const removals = Array.isArray((analysisData as any).skill_removals) ? (analysisData as any).skill_removals : []
       const normalizeKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
       const baseCategories = Object.keys(baseResumeData.skills || {}).map(normalizeKey)
-      const baseSkillsFlat2 = Object.values(baseResumeData.skills || {})
-        .flat()
-        .map((v: any) => (typeof v === 'string' ? v : v?.skill))
-        .filter(Boolean)
-        .map((s: any) => String(s).toLowerCase())
+      // Use the same unified skill array for consistency
       const mapCategory = (cat: string) => {
         const c = normalizeKey(cat)
         return c || 'skills'
@@ -1672,7 +1699,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           const target = `skills.${category}`
           const skillLower = String(item.skill || '').toLowerCase()
           // STRICT validation: only suggest removal if skill actually exists in user's profile
-          const skillExists = baseSkillsFlat2.some(userSkill =>
+          const skillExists = baseSkillsFlat.some(userSkill =>
             userSkill.toLowerCase() === skillLower ||
             userSkill.toLowerCase().includes(skillLower) ||
             skillLower.includes(userSkill.toLowerCase())
@@ -1681,7 +1708,7 @@ Return your response as a valid JSON object only. Do not include any additional 
             skill: item.skill,
             skillLower,
             skillExists,
-            userSkills: baseSkillsFlat2.slice(0, 5) + '...'
+            userSkills: baseSkillsFlat.slice(0, 5) + '...'
           })
           if (!item?.skill || !skillExists) {
             console.log('❌ Skipping removal suggestion - skill not found in user profile')
@@ -2065,14 +2092,30 @@ Return your response as a valid JSON object only. Do not include any additional 
             applied_at: null
           }));
         
+        // Deduplicate suggestions before saving
+        const suggestionSignatures = new Set<string>();
+        const deduplicatedSuggestions = validSuggestions.filter((s: any) => {
+          // Create a signature for skills to avoid duplicates like "Social Media Strategy" appearing twice
+          const sig = s.section === 'skills'
+            ? `${s.section}|${s.suggestion_type}|${(s.suggested_content || '').toLowerCase().trim()}`
+            : `${s.section}|${s.target_id || ''}|${(s.original_content || '').trim()}|${(s.suggested_content || '').trim()}`;
+
+          if (suggestionSignatures.has(sig)) {
+            console.log(`🚫 Duplicate suggestion filtered: ${s.suggested_content || s.original_content}`);
+            return false;
+          }
+          suggestionSignatures.add(sig);
+          return true;
+        });
+
         // Log metrics for debugging
-        console.log(`📊 SUGGESTION METRICS: Generated ${analysisData.atomic_suggestions?.length || 0} suggestions, kept ${validSuggestions.length} after validation`);
+        console.log(`📊 SUGGESTION METRICS: Generated ${analysisData.atomic_suggestions?.length || 0} suggestions, kept ${deduplicatedSuggestions.length} after validation and deduplication`);
         
         // Log validation drops by section
         const droppedBySection: Record<string, number> = {};
         analysisData.atomic_suggestions?.forEach((s: any) => {
           const section = s.section === 'professionalSummary' ? 'summary' : s.section;
-          if (!validSuggestions.find((v: any) => v.target_id === (s.target_id || s.target_path) && v.section === section)) {
+          if (!deduplicatedSuggestions.find((v: any) => v.target_id === (s.target_id || s.target_path) && v.section === section)) {
             droppedBySection[section] = (droppedBySection[section] || 0) + 1;
           }
         });
@@ -2084,7 +2127,7 @@ Return your response as a valid JSON object only. Do not include any additional 
         
         // Idempotent suggestion updates using upsert
         // This prevents duplicate suggestions on re-runs
-        if (validSuggestions.length > 0) {
+        if (deduplicatedSuggestions.length > 0) {
           // First, get existing suggestions to determine which to update vs insert
           const { data: existingSuggestions } = await db
             .from('resume_suggestions')
@@ -2101,7 +2144,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           const toInsert: any[] = [];
           const toUpdate: any[] = [];
           
-          validSuggestions.forEach(suggestion => {
+          deduplicatedSuggestions.forEach(suggestion => {
             const key = `${suggestion.section || ''}|${suggestion.target_id || ''}|${(suggestion.original_content || '').trim()}|${(suggestion.suggested_content || '').trim()}`;
             const existingId = existingMap.get(key);
             if (existingId) {
@@ -2138,7 +2181,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           
           // Clean up orphaned suggestions (ones not in current batch)
           const currentKeys = new Set(
-            validSuggestions.map(s => `${s.section || ''}|${s.target_id || ''}|${(s.original_content || '').trim()}|${(s.suggested_content || '').trim()}`)
+            deduplicatedSuggestions.map(s => `${s.section || ''}|${s.target_id || ''}|${(s.original_content || '').trim()}|${(s.suggested_content || '').trim()}`)
           );
           const toDelete = Array.from(existingMap.entries())
             .filter(([key]) => !currentKeys.has(key))

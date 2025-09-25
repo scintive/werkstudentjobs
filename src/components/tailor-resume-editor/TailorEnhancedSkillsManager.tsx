@@ -149,6 +149,9 @@ export function TailorEnhancedSkillsManager({
   const [aiSuggestions, setAISuggestions] = React.useState<Record<string, string[]>>({})
   const [jobOptimizedSkills, setJobOptimizedSkills] = React.useState<string[]>([])
 
+  // Flag to prevent automatic reorganization during individual suggestion processing
+  const [skipAutoReorganization, setSkipAutoReorganization] = React.useState(false)
+
   // Enhanced initialization with AI analysis
   React.useEffect(() => {
     const initializeSkills = async () => {
@@ -168,13 +171,16 @@ export function TailorEnhancedSkillsManager({
           autoExpanded[key] = category.jobRelevance === 'high' || true // Default to expanded
         })
         setExpandedCategories(autoExpanded)
-      } else if (Object.keys(skills).length > 0) {
+      } else if (Object.keys(skills).length > 0 && !skipAutoReorganization) {
+        console.log('🧠 Auto-reorganization triggered (skills changed, no organized data, not skipping)')
         await organizeExistingSkills()
+      } else if (skipAutoReorganization) {
+        console.log('🚫 Skipping auto-reorganization due to individual suggestion processing')
       }
     }
 
     initializeSkills()
-  }, [skills, organizedSkills, jobData, strategy, aiMode])
+  }, [skills, organizedSkills, jobData, strategy, aiMode, skipAutoReorganization])
 
   const analyzeJobRelevance = async (skillsData: OrganizedSkillsResponse) => {
     if (!jobData || !strategy) return skillsData
@@ -343,47 +349,123 @@ export function TailorEnhancedSkillsManager({
   }
 
   const addSkillToCategory = (categoryKey: string, skill: string) => {
-    if (!skill.trim() || !organizedData) return
+    console.log('🔧 ADD SKILL TO CATEGORY CALLED:', {
+      categoryKey,
+      skill,
+      hasOrganizedData: !!organizedData,
+      skillToAdd: skill.trim()
+    })
+
+    if (!skill.trim() || !organizedData) {
+      console.log('❌ ADD SKILL FAILED: Missing skill or organized data')
+      return
+    }
+
+    // CRITICAL: Set flag to prevent automatic reorganization during individual processing
+    console.log('🚫 Setting skipAutoReorganization = true to prevent AI reorganization')
+    setSkipAutoReorganization(true)
 
     const updatedData = { ...organizedData }
     const category = updatedData.organized_categories[categoryKey]
-    
-    if (category && !category.skills.some(s => 
+
+    if (category && !category.skills.some(s =>
       (typeof s === 'string' ? s : s.skill).toLowerCase() === skill.toLowerCase()
     )) {
+      console.log('✅ ADDING SINGLE SKILL TO CATEGORY:', {
+        categoryKey,
+        skill: skill.trim(),
+        currentSkillsInCategory: category.skills.length,
+        skillsBeforeAdd: category.skills.map(s => typeof s === 'string' ? s : s.skill)
+      })
+
       category.skills.push(skill.trim())
       setOrganizedData(updatedData)
+
+      console.log('📝 SKILLS AFTER ADD:', {
+        categoryKey,
+        skillsAfterAdd: category.skills.map(s => typeof s === 'string' ? s : s.skill),
+        totalSkillsInCategory: category.skills.length
+      })
+
       syncWithSkillsObject(updatedData)
+
+      // Reset flag after a short delay to allow sync to complete
+      setTimeout(() => {
+        console.log('✅ Resetting skipAutoReorganization = false after individual skill processing')
+        setSkipAutoReorganization(false)
+      }, 100)
+    } else {
+      console.log('⚠️ SKILL NOT ADDED: Either category missing or skill already exists')
+      // Reset flag even if skill wasn't added
+      setSkipAutoReorganization(false)
     }
-    
+
     setNewSkillInputs(prev => ({ ...prev, [categoryKey]: '' }))
   }
 
   const removeSkillFromCategory = (categoryKey: string, skillIndex: number) => {
+    console.log('🚨🚨 INDIVIDUAL SKILL REMOVAL CLICKED:', {
+      categoryKey,
+      skillIndex,
+      skillBeingRemoved: organizedData?.organized_categories[categoryKey]?.skills[skillIndex],
+      allSkillsInCategory: organizedData?.organized_categories[categoryKey]?.skills,
+      totalCategories: Object.keys(organizedData?.organized_categories || {}).length
+    })
+
     if (!organizedData) return
+
+    // CRITICAL: Set flag to prevent automatic reorganization during individual processing
+    console.log('🚫 Setting skipAutoReorganization = true to prevent AI reorganization during removal')
+    setSkipAutoReorganization(true)
 
     const updatedData = { ...organizedData }
     updatedData.organized_categories[categoryKey].skills.splice(skillIndex, 1)
     setOrganizedData(updatedData)
     syncWithSkillsObject(updatedData)
+
+    // Reset flag after a short delay to allow sync to complete
+    setTimeout(() => {
+      console.log('✅ Resetting skipAutoReorganization = false after individual skill removal')
+      setSkipAutoReorganization(false)
+    }, 100)
+
+    console.log('✅ INDIVIDUAL SKILL REMOVAL COMPLETE')
   }
 
   const syncWithSkillsObject = (data: OrganizedSkillsResponse) => {
+    console.log('🔄 SYNC WITH SKILLS OBJECT CALLED:', {
+      dataKeys: Object.keys(data.organized_categories || {}),
+      hasOnSkillsChange: !!onSkillsChange,
+      totalCategoriesBeingSync: Object.keys(data.organized_categories || {}).length
+    })
+
     const skillsObject: any = {}
-    
+
     Object.entries(data.organized_categories).forEach(([categoryKey, category]) => {
       const displayName = categoryKey
         .replace(/___/g, ' & ')
         .split('_')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
-      
-      skillsObject[displayName] = category.skills.map(skill => 
+
+      skillsObject[displayName] = category.skills.map(skill =>
         typeof skill === 'string' ? skill : skill.skill
       )
+
+      console.log(`📝 Category "${displayName}" (${categoryKey}):`, {
+        skillCount: skillsObject[displayName].length,
+        skills: skillsObject[displayName]
+      })
     })
-    
+
+    console.log('📤 CALLING onSkillsChange with COMPLETE skills object:', {
+      categories: Object.keys(skillsObject),
+      totalSkillsAcrossAllCategories: Object.values(skillsObject).reduce((total, skills) => total + (skills as string[]).length, 0),
+      completeSkillsObject: skillsObject
+    })
+
     onSkillsChange(skillsObject)
+    console.log('✅ SYNC WITH SKILLS OBJECT COMPLETE')
   }
 
   const generateAISuggestions = async (categoryKey: string) => {
@@ -669,7 +751,21 @@ export function TailorEnhancedSkillsManager({
                               {aiSuggestions[categoryKey].map((suggestion, i) => (
                                 <motion.button
                                   key={i}
-                                  onClick={() => addSkillToCategory(categoryKey, suggestion)}
+                                  onClick={() => {
+                                    console.log('🚨🚨 INDIVIDUAL SUGGESTION APPLY CLICKED:', {
+                                      categoryKey,
+                                      suggestion,
+                                      allSuggestionsInCategory: aiSuggestions[categoryKey],
+                                      suggestionIndex: i
+                                    })
+                                    addSkillToCategory(categoryKey, suggestion)
+
+                                    // Remove this specific suggestion from AI suggestions after adding
+                                    setAISuggestions(prev => ({
+                                      ...prev,
+                                      [categoryKey]: prev[categoryKey]?.filter((_, index) => index !== i) || []
+                                    }))
+                                  }}
                                   className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-purple-50 border border-purple-300 rounded-lg text-sm font-medium text-purple-700 transition-colors"
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}

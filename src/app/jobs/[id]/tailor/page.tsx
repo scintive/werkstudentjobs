@@ -1318,7 +1318,6 @@ function ResumeStudioTab({
 }: any) {
   const [localVariantId, setLocalVariantId] = useState<string | null>(null);
   const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
-  const [organizedSkillsState, setOrganizedSkillsState] = useState<any | null>(null);
   const [preparing, setPreparing] = useState<boolean>(true);
   
   // Trigger pre-analysis (which upserts/returns variant id server-side)
@@ -1397,7 +1396,8 @@ function ResumeStudioTab({
       }
 
       if (latestPlan) {
-        setOrganizedSkillsState(planToOrganizedSkills(latestPlan, latestTailored?.skills || {}));
+        // Skills are now handled directly in EnhancedSkillsManager component
+        console.log('✅ Skills plan loaded successfully');
       } else {
         // Fallback: use enhancer on tailored data if plan missing
         try {
@@ -1424,16 +1424,17 @@ function ResumeStudioTab({
                   reasoning: enhanced.reasoning || ''
                 };
               });
-              setOrganizedSkillsState({ organized_categories, reasoning: enhanced.reasoning || '' });
+              // Skills are now handled directly in EnhancedSkillsManager component
+              console.log('✅ Skills enhanced successfully');
             } else {
-              setOrganizedSkillsState(null);
+              console.log('⚠️ No enhanced skills returned');
             }
           } else {
-            setOrganizedSkillsState(null);
+            console.log('⚠️ Skills enhancement not available');
           }
         } catch (e) {
           console.error('Skills enhance failed:', e);
-          setOrganizedSkillsState(null);
+          console.log('⚠️ Skills enhancement failed');
         }
       }
     } catch (error) {
@@ -1444,12 +1445,6 @@ function ResumeStudioTab({
     }
   };
   
-  const organizedSkillsFromPlan = useMemo(() => {
-    if (tailoredResumeData?.skillsCategoryPlan) {
-      return planToOrganizedSkills(tailoredResumeData.skillsCategoryPlan, tailoredResumeData?.skills || {});
-    }
-    return null;
-  }, [tailoredResumeData]);
 
   // Gate editor until pre-analysis is done and we have data
   if (preparing || !tailoredResumeData) {
@@ -1480,13 +1475,6 @@ function ResumeStudioTab({
             baseResumeId={resumeId}
             variantId={localVariantId}
             userProfile={userProfile}
-            organizedSkills={
-              organizedSkillsState ||
-              organizedSkillsFromPlan ||
-              ((strategy && 'organized_skills' in strategy && strategy.organized_skills) ||
-               (studentStrategy && 'organized_skills' in studentStrategy && studentStrategy.organized_skills) ||
-               undefined)
-            }
           />
         </SupabaseResumeProvider>
       ) : (

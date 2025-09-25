@@ -75,30 +75,55 @@ export function useSuggestionManager() {
   }, [])
 
   const acceptSuggestion = useCallback(async (suggestionId: string) => {
-    const suggestion = suggestions.find(s => s.id === suggestionId)
-    if (!suggestion || !currentVariantData.current || !variantId.current) return
+    console.log('🚨🚨 SUGGESTION MANAGER ACCEPT CALLED:', {
+      suggestionId,
+      totalSuggestions: suggestions.length,
+      allSuggestionIds: suggestions.map(s => s.id),
+      appliedCount: appliedSuggestions.size,
+      declinedCount: declinedSuggestions.size
+    })
 
+    const suggestion = suggestions.find(s => s.id === suggestionId)
+    if (!suggestion || !currentVariantData.current || !variantId.current) {
+      console.error('❌ ACCEPT FAILED - Missing data:', {
+        hasSuggestion: !!suggestion,
+        hasVariantData: !!currentVariantData.current,
+        hasVariantId: !!variantId.current
+      })
+      return
+    }
+
+    console.log('📝 ACCEPTING SUGGESTION:', suggestion)
     setLoading(true)
     setError(null)
 
     try {
+      console.log('🔄 Starting optimistic update for accept')
       // Optimistic update
-      setAppliedSuggestions(prev => new Set([...prev, suggestionId]))
+      setAppliedSuggestions(prev => {
+        const newSet = new Set([...prev, suggestionId])
+        console.log('📝 Updated applied suggestions:', Array.from(newSet))
+        return newSet
+      })
       setDeclinedSuggestions(prev => {
         const newSet = new Set(prev)
         newSet.delete(suggestionId)
+        console.log('📝 Removed from declined suggestions:', Array.from(newSet))
         return newSet
       })
 
       // Apply suggestion to variant data
+      console.log('🔄 Applying suggestion to variant data')
       const updatedData = applySuggestionToData(currentVariantData.current, suggestion)
       currentVariantData.current = updatedData
 
       // Persist to backend
+      console.log('🌐 Persisting accept to backend')
       await Promise.all([
         tailorAnalysisService.applySuggestion(suggestionId, 'accept'),
         tailorAnalysisService.updateVariant(variantId.current, updatedData)
       ])
+      console.log('✅ ACCEPT SUGGESTION COMPLETE')
 
     } catch (err) {
       // Revert optimistic update on error
@@ -114,12 +139,28 @@ export function useSuggestionManager() {
   }, [suggestions])
 
   const declineSuggestion = useCallback(async (suggestionId: string) => {
+    console.log('🚨🚨 SUGGESTION MANAGER DECLINE CALLED:', {
+      suggestionId,
+      totalSuggestions: suggestions.length,
+      allSuggestionIds: suggestions.map(s => s.id),
+      appliedCount: appliedSuggestions.size,
+      declinedCount: declinedSuggestions.size
+    })
+
+    const suggestion = suggestions.find(s => s.id === suggestionId)
+    console.log('📝 DECLINING SUGGESTION:', suggestion)
+
     setLoading(true)
     setError(null)
 
     try {
+      console.log('🔄 Starting optimistic update for decline')
       // Optimistic update
-      setDeclinedSuggestions(prev => new Set([...prev, suggestionId]))
+      setDeclinedSuggestions(prev => {
+        const newSet = new Set([...prev, suggestionId])
+        console.log('📝 Updated declined suggestions:', Array.from(newSet))
+        return newSet
+      })
       setAppliedSuggestions(prev => {
         const newSet = new Set(prev)
         newSet.delete(suggestionId)
@@ -127,7 +168,9 @@ export function useSuggestionManager() {
       })
 
       // Persist to backend
+      console.log('🌐 Persisting decline to backend via tailorAnalysisService')
       await tailorAnalysisService.applySuggestion(suggestionId, 'decline')
+      console.log('✅ DECLINE SUGGESTION COMPLETE')
 
     } catch (err) {
       // Revert optimistic update on error
@@ -186,18 +229,30 @@ export function useSuggestionManager() {
  * Pure function that doesn't mutate original data
  */
 function applySuggestionToData(data: any, suggestion: Suggestion): any {
+  console.log('🔄 APPLYING SUGGESTION TO DATA:', {
+    suggestionId: suggestion.id,
+    section: suggestion.section,
+    type: suggestion.suggestion_type,
+    targetPath: suggestion.target_path,
+    before: suggestion.before?.substring(0, 50),
+    after: suggestion.after?.substring(0, 50)
+  })
+
   const newData = JSON.parse(JSON.stringify(data)) // Deep clone
 
   try {
     if (suggestion.target_path) {
+      console.log('📍 Using target_path for precise update:', suggestion.target_path)
       // Use target_path for precise updates
       applyByTargetPath(newData, suggestion.target_path, suggestion.after)
     } else {
+      console.log('📂 Using section-based update for section:', suggestion.section)
       // Fallback to section-based updates
       applyBySection(newData, suggestion)
     }
+    console.log('✅ Successfully applied suggestion to data')
   } catch (error) {
-    console.error('Error applying suggestion:', error)
+    console.error('❌ Error applying suggestion:', error)
   }
 
   return newData
@@ -239,19 +294,36 @@ function applyBySection(data: any, suggestion: Suggestion): void {
       data.professionalTitle = suggestion.after
       break
     case 'skills':
-      if (suggestion.suggestion_type === 'skill_addition') {
+      console.log('🔧 PROCESSING SKILLS SUGGESTION:', {
+        type: suggestion.type,
+        suggestion_type: suggestion.suggestion_type,
+        before: suggestion.before,
+        after: suggestion.after,
+        currentSkillsKeys: Object.keys(data.skills || {})
+      })
+
+      // Fix: Check the normalized 'type' field instead of 'suggestion_type'
+      if (suggestion.type === 'skill_add' || suggestion.suggestion_type === 'skill_addition') {
         // Add skill to appropriate category
         const category = 'technical' // Default category
         if (!data.skills[category]) data.skills[category] = []
+        console.log(`➕ Adding skill "${suggestion.after}" to category "${category}"`)
         data.skills[category].push(suggestion.after)
-      } else if (suggestion.suggestion_type === 'skill_removal') {
+      } else if (suggestion.type === 'skill_remove' || suggestion.suggestion_type === 'skill_removal') {
         // Remove skill from all categories
+        console.log(`➖ Removing skill "${suggestion.before}" from ALL categories`)
         Object.keys(data.skills).forEach(category => {
-          data.skills[category] = data.skills[category].filter((skill: string) => 
+          const originalCount = data.skills[category]?.length || 0
+          data.skills[category] = data.skills[category].filter((skill: string) =>
             skill !== suggestion.before
           )
+          const newCount = data.skills[category]?.length || 0
+          if (originalCount !== newCount) {
+            console.log(`🗑️ Removed "${suggestion.before}" from category "${category}" (${originalCount} → ${newCount})`)
+          }
         })
       }
+      console.log('✅ Skills processing complete')
       break
     default:
       console.warn('Unhandled suggestion section:', suggestion.section)

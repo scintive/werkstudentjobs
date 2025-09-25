@@ -178,6 +178,7 @@ const buildSkillsFromPlan = (
 
       // Fallback: merge any matching skills from the existing snapshot when plan omits explicit entries
       if (deduped.length === 0 && Array.isArray(existingSkills[canonical])) {
+        console.log(`📥 Using fallback skills for category ${canonical}:`, existingSkills[canonical])
         const fallbackList = existingSkills[canonical]
           .map((entry: any) => {
             if (typeof entry === 'string') return entry;
@@ -187,7 +188,17 @@ const buildSkillsFromPlan = (
             return entry?.skill || entry?.name || entry;
           })
           .filter(Boolean);
-        deduped.push(...fallbackList);
+
+        // Deduplicate fallback skills to prevent multiple entries
+        const fallbackSeen = new Set<string>();
+        const uniqueFallback = fallbackList.filter(skill => {
+          const key = (typeof skill === 'string' ? skill : skill.skill)?.toLowerCase();
+          if (!key || fallbackSeen.has(key)) return false;
+          fallbackSeen.add(key);
+          return true;
+        });
+
+        deduped.push(...uniqueFallback);
       }
 
       if (deduped.length > 0) {
@@ -272,22 +283,8 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
   if (!resumeData.skills || typeof resumeData.skills !== 'object') {
     (resumeData as any).skills = {};
   }
-  // Format skills - support both legacy and new universal categories
-  // When showSkillLevelsInResume is true, preserve skill objects with proficiency
+  // SIMPLIFIED: Use only legacy skills format as single source of truth
   const skills: { [key: string]: any[] } = {};
-
-  const { skillsMap: planSkills, canonicalSet: planCanonicalSet } = buildSkillsFromPlan(
-    (resumeData as any).skillsCategoryPlan,
-    (resumeData as any).skills || {},
-    showSkillLevelsInResume,
-    (resumeData as any).languages || []
-  );
-
-  const planActive = !!planSkills;
-
-  if (planSkills) {
-    Object.assign(skills, planSkills);
-  }
 
   const processSkillArray = (skillArray: any[], categoryName: string) => {
     const shouldHaveProficiency = showSkillLevelsInResume && shouldCategoryHaveProficiency(categoryName);
@@ -307,60 +304,52 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
     });
   };
 
-  if (!planActive) {
-    if ((resumeData as any).skills.core?.length) skills['Core Skills'] = processSkillArray((resumeData as any).skills.core, 'Core Skills');
-    if ((resumeData as any).skills.technical?.length) skills['Technical & Digital'] = processSkillArray((resumeData as any).skills.technical, 'Technical & Digital');
-    if ((resumeData as any).skills.creative?.length) skills['Creative & Design'] = processSkillArray((resumeData as any).skills.creative, 'Creative & Design');
-    if ((resumeData as any).skills.business?.length) skills['Business & Strategy'] = processSkillArray((resumeData as any).skills.business, 'Business & Strategy');
-    if ((resumeData as any).skills.interpersonal?.length) skills['Communication & Leadership'] = processSkillArray((resumeData as any).skills.interpersonal, 'Communication & Leadership');
-    if ((resumeData as any).skills.specialized?.length) skills['Specialized'] = processSkillArray((resumeData as any).skills.specialized, 'Specialized');
+  // Process ALL skills from resumeData.skills - SIMPLE AND CONSISTENT
+  if ((resumeData as any).skills.core?.length) skills['Core Skills'] = processSkillArray((resumeData as any).skills.core, 'Core Skills');
+  if ((resumeData as any).skills.technical?.length) skills['Technical & Digital'] = processSkillArray((resumeData as any).skills.technical, 'Technical & Digital');
+  if ((resumeData as any).skills.creative?.length) skills['Creative & Design'] = processSkillArray((resumeData as any).skills.creative, 'Creative & Design');
+  if ((resumeData as any).skills.business?.length) skills['Business & Strategy'] = processSkillArray((resumeData as any).skills.business, 'Business & Strategy');
+  if ((resumeData as any).skills.interpersonal?.length) skills['Communication & Leadership'] = processSkillArray((resumeData as any).skills.interpersonal, 'Communication & Leadership');
+  if ((resumeData as any).skills.specialized?.length) skills['Specialized'] = processSkillArray((resumeData as any).skills.specialized, 'Specialized');
 
-    if ((resumeData as any).skills.tools?.length) {
-      const processedTools = processSkillArray((resumeData as any).skills.tools, 'Tools');
-      if (skills['Technical & Digital']) {
-        skills['Technical & Digital'].push(...processedTools);
-      } else {
-        skills['Tools & Platforms'] = processedTools;
-      }
+  if ((resumeData as any).skills.tools?.length) {
+    const processedTools = processSkillArray((resumeData as any).skills.tools, 'Tools');
+    if (skills['Technical & Digital']) {
+      skills['Technical & Digital'].push(...processedTools);
+    } else {
+      skills['Tools & Platforms'] = processedTools;
     }
-    if ((resumeData as any).skills.soft_skills?.length) {
-      const processedSoftSkills = processSkillArray((resumeData as any).skills.soft_skills, 'Soft Skills');
-      if (skills['Communication & Leadership']) {
-        skills['Communication & Leadership'].push(...processedSoftSkills);
-      } else {
-        skills['Soft Skills'] = processedSoftSkills;
-      }
-    }
-
-    const knownCategories = new Set(['core', 'technical', 'creative', 'business', 'interpersonal', 'languages', 'specialized', 'tools', 'soft_skills']);
-
-    Object.entries((resumeData as any).skills).forEach(([categoryKey, skillArray]) => {
-      if (knownCategories.has(categoryKey) || !Array.isArray(skillArray) || skillArray.length === 0) {
-        return;
-      }
-
-      const displayName = categoryKey
-        .replace(/___/g, ' & ')
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-
-      skills[displayName] = processSkillArray(skillArray as any[], displayName);
-    });
-  } else {
-    // Preserve any residual skill arrays that may live in resumeData.skills
-    // BUT EXCLUDE LANGUAGES - they are handled separately to avoid duplication
-    Object.entries((resumeData as any).skills).forEach(([categoryKey, skillArray]) => {
-      if (!Array.isArray(skillArray) || skillArray.length === 0) return;
-      const canonical = canonicalizePlanKey(categoryKey);
-      if (planCanonicalSet.has(canonical)) return;
-
-      // Skip language categories - they are displayed in a separate Languages section
-      if (canonical.includes('language') || categoryKey.toLowerCase().includes('language')) {
-        return; // Don't add languages to skills map
-      }
-    });
   }
+  if ((resumeData as any).skills.soft_skills?.length) {
+    const processedSoftSkills = processSkillArray((resumeData as any).skills.soft_skills, 'Soft Skills');
+    if (skills['Communication & Leadership']) {
+      skills['Communication & Leadership'].push(...processedSoftSkills);
+    } else {
+      skills['Soft Skills'] = processedSoftSkills;
+    }
+  }
+
+  const knownCategories = new Set(['core', 'technical', 'creative', 'business', 'interpersonal', 'languages', 'specialized', 'tools', 'soft_skills']);
+
+  // Process any custom categories (this handles AI-generated categories that made it into resumeData.skills)
+  Object.entries((resumeData as any).skills).forEach(([categoryKey, skillArray]) => {
+    if (knownCategories.has(categoryKey) || !Array.isArray(skillArray) || skillArray.length === 0) {
+      return;
+    }
+
+    // Skip language categories - they are displayed in a separate Languages section
+    if (categoryKey.toLowerCase().includes('language')) {
+      return;
+    }
+
+    const displayName = categoryKey
+      .replace(/___/g, ' & ')
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    skills[displayName] = processSkillArray(skillArray as any[], displayName);
+  });
 
   // Minimal: keep templates clean
 

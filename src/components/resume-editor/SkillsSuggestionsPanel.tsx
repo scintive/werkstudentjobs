@@ -210,8 +210,8 @@ export const SkillsSuggestionsPanel: React.FC<SkillsSuggestionsPanelProps> = ({
                     className="border-t border-amber-100"
                   >
                     <div className="p-4 space-y-2">
-                      {/* Additions */}
-                      {items.additions.map((suggestion) => (
+                      {/* Removals - Show these first per user feedback */}
+                      {items.removals.map((suggestion) => (
                         <SkillSuggestionCard
                           key={suggestion.id}
                           suggestion={suggestion}
@@ -223,8 +223,8 @@ export const SkillsSuggestionsPanel: React.FC<SkillsSuggestionsPanelProps> = ({
                         />
                       ))}
 
-                      {/* Removals */}
-                      {items.removals.map((suggestion) => (
+                      {/* Additions - Show these after removals */}
+                      {items.additions.map((suggestion) => (
                         <SkillSuggestionCard
                           key={suggestion.id}
                           suggestion={suggestion}

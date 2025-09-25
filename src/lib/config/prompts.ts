@@ -62,12 +62,15 @@ Malformed JSON:
 4. Make it ATS-searchable and recruiter-memorable
 5. NEVER use generic "Professional" - always be specific
 
-**PROFESSIONAL SUMMARY GENERATION (2-4 SENTENCES, 60-80 WORDS):**
-1. Start: "X+ years of experience in [domain]" 
-2. Include quantified achievement with metrics/percentages
-3. List 2-3 key relevant skills/technologies
-4. End with value proposition for employers
-5. Focus on measurable impact and results
+**PROFESSIONAL SUMMARY GENERATION (5-6 SENTENCES, 120-150 WORDS):**
+1. Start: "X+ years of experience in [domain]" or educational background if new graduate
+2. Describe current/most recent role and key responsibilities (1-2 sentences)
+3. Include 1-2 quantified achievements with specific metrics/percentages from experience
+4. List 3-4 key relevant skills/technologies that define expertise
+5. Mention any notable projects, certifications, or specialized training
+6. End with clear value proposition and career goals that benefit employers
+7. Focus on measurable impact, growth trajectory, and unique strengths
+8. Reference specific industries or companies worked with when relevant
 
 **CRITICAL DATA EXTRACTION GUIDELINES:**
 
@@ -112,7 +115,7 @@ Required JSON structure:
     }
   },
   "professional_title": string, // REQUIRED: 2-3 words, specific domain expertise (e.g., "Senior Data Scientist", "Operations Specialist")
-  "professional_summary": string, // REQUIRED: 2-4 sentences with metrics and value proposition
+  "professional_summary": string, // REQUIRED: 5-6 sentences (120-150 words) with experience details, metrics, and value proposition
   "education": [{
     "degree": string, // e.g., "G.C.E Advanced Level", "BSc", etc.
     "field_of_study": string,

@@ -150,25 +150,38 @@ export function useUnifiedSuggestions({
   }
 
   const acceptSuggestion = useCallback(async (suggestionId: string) => {
+    console.log('✅ ACCEPT SUGGESTION CALLED:', suggestionId)
+    console.log('🔍 Current applied changes before accept:', Array.from(appliedChanges.current))
+
     const suggestion = suggestions.find(s => s.id === suggestionId)
-    if (!suggestion) return
-    
-    // Update status in state
-    setSuggestions(prev => prev.map(s => 
-      s.id === suggestionId 
-        ? { ...s, status: 'accepted' as const, appliedAt: new Date().toISOString() }
-        : s
-    ))
-    
+    if (!suggestion) {
+      console.error('❌ Suggestion not found:', suggestionId)
+      return
+    }
+
+    console.log('📝 Accepting suggestion:', suggestion)
+
+    // CRITICAL: Only update this specific suggestion
+    setSuggestions(prev => {
+      const updated = prev.map(s =>
+        s.id === suggestionId
+          ? { ...s, status: 'accepted' as const, appliedAt: new Date().toISOString() }
+          : s
+      )
+      console.log('📝 Updated suggestions after accept:', updated.filter(s => s.status === 'accepted'))
+      return updated
+    })
+
     // Track the change
     appliedChanges.current.add(suggestionId)
-    
+    console.log('✅ Added to applied changes:', suggestionId)
+
     // Update in database if we have a variant
     if (variantId) {
       try {
         await supabase
           .from('resume_suggestions')
-          .update({ 
+          .update({
             accepted: true,
             applied_at: new Date().toISOString()
           })
@@ -177,30 +190,51 @@ export function useUnifiedSuggestions({
         console.error('Failed to update suggestion status:', error)
       }
     }
-    
+
     // Notify parent to update the actual data
     if (onDataChange) {
+      console.log('📣 Calling onDataChange for SINGLE accepted suggestion:', {
+        suggestionId: suggestion.id,
+        type: suggestion.type,
+        suggested: suggestion.suggested,
+        section: suggestion.section
+      })
+      console.log('⚠️  ONLY THIS ONE SKILL SHOULD BE ADDED:', suggestion.suggested)
       onDataChange(suggestion)
     }
+
+    console.log('✅ ACCEPT SUGGESTION COMPLETE')
   }, [suggestions, variantId, onDataChange])
 
   const declineSuggestion = useCallback(async (suggestionId: string) => {
-    // Update status in state
-    setSuggestions(prev => prev.map(s => 
-      s.id === suggestionId 
-        ? { ...s, status: 'declined' as const }
-        : s
-    ))
-    
-    // Remove from applied changes
+    console.log('🚨 DECLINE SUGGESTION CALLED:', suggestionId)
+    console.log('🔍 Current applied changes before decline:', Array.from(appliedChanges.current))
+
+    const suggestion = suggestions.find(s => s.id === suggestionId)
+    console.log('📝 Declining suggestion:', suggestion)
+
+    // CRITICAL: Only update this specific suggestion, DO NOT touch others
+    setSuggestions(prev => {
+      const updated = prev.map(s =>
+        s.id === suggestionId
+          ? { ...s, status: 'declined' as const }
+          : s
+      )
+      console.log('📝 Updated suggestions after decline:', updated.filter(s => s.status !== 'pending'))
+      return updated
+    })
+
+    // Remove from applied changes (this should only affect the declined suggestion)
+    const wasApplied = appliedChanges.current.has(suggestionId)
     appliedChanges.current.delete(suggestionId)
-    
+    console.log('🗑️ Removed from applied changes:', suggestionId, 'was applied:', wasApplied)
+
     // Update in database if we have a variant
     if (variantId) {
       try {
         await supabase
           .from('resume_suggestions')
-          .update({ 
+          .update({
             accepted: false,
             applied_at: new Date().toISOString()
           })
@@ -209,7 +243,9 @@ export function useUnifiedSuggestions({
         console.error('Failed to update suggestion status:', error)
       }
     }
-  }, [variantId])
+
+    console.log('✅ DECLINE SUGGESTION COMPLETE - NO OTHER SUGGESTIONS SHOULD BE AFFECTED')
+  }, [variantId, suggestions])
 
   const getSuggestionsForSection = useCallback((section: string): UnifiedSuggestion[] => {
     return suggestions.filter(s => 

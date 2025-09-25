@@ -619,10 +619,10 @@ export function InlineSuggestionOverlay({
           </div>
           <div class="diff-actions">
             <button class="diff-btn diff-accept" data-action="accept" data-suggestion-id="${suggestion.id}">
-              ✓ Accept (A)
+              Apply
             </button>
             <button class="diff-btn diff-decline" data-action="decline" data-suggestion-id="${suggestion.id}">
-              ✗ Decline (X)
+              Skip
             </button>
           </div>
         `
@@ -642,6 +642,7 @@ export function InlineSuggestionOverlay({
 
         if (acceptBtn) {
           acceptBtn.addEventListener('click', (e) => {
+            console.log('🚨 INLINE OVERLAY ACCEPT CLICKED:', suggestion.id, suggestion)
             e.preventDefault()
             e.stopPropagation()
 
@@ -660,6 +661,7 @@ export function InlineSuggestionOverlay({
               })
             }, 1000)
 
+            console.log('📞 Calling onAccept for suggestion:', suggestion.id)
             onAccept(suggestion.id)
             overlay.remove()
           })
@@ -667,8 +669,10 @@ export function InlineSuggestionOverlay({
 
         if (declineBtn) {
           declineBtn.addEventListener('click', (e) => {
+            console.log('🚨 INLINE OVERLAY DECLINE/SKIP CLICKED:', suggestion.id, suggestion)
             e.preventDefault()
             e.stopPropagation()
+            console.log('📞 Calling onDecline for suggestion:', suggestion.id)
             onDecline(suggestion.id)
             overlay.remove()
           })

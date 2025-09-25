@@ -185,10 +185,17 @@ class TailorAnalysisService {
    * Apply a suggestion (accept/decline)
    */
   async applySuggestion(suggestionId: string, action: 'accept' | 'decline'): Promise<void> {
+    console.log(`🚨🚨 TAILOR ANALYSIS SERVICE ${action.toUpperCase()} CALLED:`, {
+      suggestionId,
+      action,
+      timestamp: new Date().toISOString()
+    })
+
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      console.log(`🔄 Updating suggestion ${suggestionId} to status ${action}`)
       const { error } = await supabase
         .from('resume_suggestions')
         .update({ 
@@ -202,9 +209,9 @@ class TailorAnalysisService {
         throw new Error(`Failed to ${action} suggestion: ${error.message}`)
       }
 
-      console.log(`✅ Suggestion ${action}ed:`, suggestionId)
+      console.log(`✅ TAILOR ANALYSIS SERVICE: Suggestion ${action}ed successfully:`, suggestionId)
     } catch (error) {
-      console.error(`Error ${action}ing suggestion:`, error)
+      console.error(`❌ TAILOR ANALYSIS SERVICE: Error ${action}ing suggestion:`, error)
       throw error
     }
   }

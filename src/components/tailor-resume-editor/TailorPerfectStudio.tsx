@@ -1042,13 +1042,28 @@ export const TailorPerfectStudio = ({
                 updateResumeData({ skills: { ...resumeData.skills, languages: asStrings } })
               }}
             />
-            {aiMode && skillsSuggestion && skillDiff && (
+            {/* Disabled bulk skill suggestions - skills are handled individually in TailorEnhancedSkillsManager */}
+            {false && aiMode && skillsSuggestion && skillDiff && (
               <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="font-semibold text-indigo-800 text-sm">AI Skill Suggestions</div>
                   <div className="flex gap-1">
-                    <button onClick={() => onSuggestionAccept?.(skillsSuggestion.id)} className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs hover:bg-indigo-700">Apply All</button>
-                    <button onClick={() => onSuggestionReject?.(skillsSuggestion.id)} className="px-2.5 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs hover:bg-gray-300">Dismiss</button>
+                    <button onClick={() => {
+                      console.log('🚨🚨 TAILOR PERFECT STUDIO: APPLY ALL SKILLS CLICKED:', {
+                        suggestionId: skillsSuggestion.id,
+                        skillsSuggestion: skillsSuggestion,
+                        skillDiff: skillDiff
+                      })
+                      onSuggestionAccept?.(skillsSuggestion.id)
+                    }} className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs hover:bg-indigo-700">Apply All</button>
+                    <button onClick={() => {
+                      console.log('🚨🚨 TAILOR PERFECT STUDIO: DISMISS SKILLS CLICKED:', {
+                        suggestionId: skillsSuggestion.id,
+                        skillsSuggestion: skillsSuggestion,
+                        skillDiff: skillDiff
+                      })
+                      onSuggestionReject?.(skillsSuggestion.id)
+                    }} className="px-2.5 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs hover:bg-gray-300">Skip</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

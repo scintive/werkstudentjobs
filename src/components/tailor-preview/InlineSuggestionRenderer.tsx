@@ -295,14 +295,24 @@ export function InlineSuggestionRenderer({
         font-weight: 500;
         transition: all 0.2s;
       `
-      acceptBtn.innerHTML = '✓ Accept'
+      acceptBtn.innerHTML = 'Apply'
       acceptBtn.onmouseover = () => acceptBtn.style.background = '#059669'
       acceptBtn.onmouseout = () => acceptBtn.style.background = '#10b981'
       acceptBtn.onclick = (e) => {
         e.stopPropagation()
+        console.log('🚨🚨 GRAMMARLY ACCEPT BUTTON CLICKED:', {
+          suggestionId: suggestion.id,
+          section: suggestion.section,
+          before: suggestion.before,
+          after: suggestion.after,
+          allSuggestions: suggestions.length,
+          appliedSuggestions: appliedSuggestions.size,
+          declinedSuggestions: declinedSuggestions.size
+        })
         onAccept(suggestion.id)
         highlight.remove()
         targetElement.textContent = beforeText + suggestion.after + afterText
+        console.log('✅ GRAMMARLY ACCEPT COMPLETE')
       }
 
       // Decline button
@@ -318,15 +328,26 @@ export function InlineSuggestionRenderer({
         font-weight: 500;
         transition: all 0.2s;
       `
-      declineBtn.innerHTML = '✕ Dismiss'
+      declineBtn.innerHTML = 'Skip'
       declineBtn.onmouseover = () => declineBtn.style.background = '#dc2626'
       declineBtn.onmouseout = () => declineBtn.style.background = '#ef4444'
       declineBtn.onclick = (e) => {
         e.stopPropagation()
+        console.log('🚨🚨 GRAMMARLY DECLINE BUTTON CLICKED:', {
+          suggestionId: suggestion.id,
+          section: suggestion.section,
+          before: suggestion.before,
+          after: suggestion.after,
+          allSuggestions: suggestions.length,
+          appliedSuggestions: appliedSuggestions.size,
+          declinedSuggestions: declinedSuggestions.size
+        })
+        console.log('🔍 All suggestion IDs before decline:', suggestions.map(s => s.id))
         onDecline(suggestion.id)
         highlight.style.background = 'none'
         highlight.style.borderBottom = 'none'
         suggestionCard.remove()
+        console.log('✅ GRAMMARLY DECLINE COMPLETE')
       }
 
       actions.appendChild(acceptBtn)

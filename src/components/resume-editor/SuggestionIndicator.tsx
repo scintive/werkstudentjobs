@@ -62,14 +62,34 @@ export function SuggestionIndicator({
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => onAccept(suggestion.id)}
+            onClick={() => {
+              console.log('🚨🚨 SUGGESTION INDICATOR ACCEPT CLICKED (COMPACT):', {
+                suggestionId: suggestion.id,
+                section: suggestion.section,
+                type: suggestion.type,
+                original: suggestion.original,
+                suggested: suggestion.suggested,
+                confidence: suggestion.confidence
+              })
+              onAccept(suggestion.id)
+            }}
             className="p-1.5 hover:bg-green-100 rounded-full transition-colors"
             title="Accept suggestion"
           >
             <Check className="w-4 h-4 text-green-600" />
           </button>
           <button
-            onClick={() => onDecline(suggestion.id)}
+            onClick={() => {
+              console.log('🚨🚨 SUGGESTION INDICATOR DECLINE CLICKED (COMPACT):', {
+                suggestionId: suggestion.id,
+                section: suggestion.section,
+                type: suggestion.type,
+                original: suggestion.original,
+                suggested: suggestion.suggested,
+                confidence: suggestion.confidence
+              })
+              onDecline(suggestion.id)
+            }}
             className="p-1.5 hover:bg-red-100 rounded-full transition-colors"
             title="Decline suggestion"
           >
@@ -155,23 +175,39 @@ export function SuggestionIndicator({
             <div className="flex gap-2 pt-2 border-t">
               <button
                 onClick={() => {
+                  console.log('🚨🚨 SUGGESTION INDICATOR ACCEPT CLICKED (EXPANDED):', {
+                    suggestionId: suggestion.id,
+                    section: suggestion.section,
+                    type: suggestion.type,
+                    original: suggestion.original,
+                    suggested: suggestion.suggested,
+                    confidence: suggestion.confidence
+                  })
                   onAccept(suggestion.id)
                   setIsExpanded(false)
                 }}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-sm font-medium"
               >
                 <Check className="w-4 h-4" />
-                Accept
+                Apply
               </button>
               <button
                 onClick={() => {
+                  console.log('🚨🚨 SUGGESTION INDICATOR DECLINE CLICKED (EXPANDED):', {
+                    suggestionId: suggestion.id,
+                    section: suggestion.section,
+                    type: suggestion.type,
+                    original: suggestion.original,
+                    suggested: suggestion.suggested,
+                    confidence: suggestion.confidence
+                  })
                   onDecline(suggestion.id)
                   setIsExpanded(false)
                 }}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-sm font-medium"
               >
                 <X className="w-4 h-4" />
-                Decline
+                Skip
               </button>
             </div>
           </div>

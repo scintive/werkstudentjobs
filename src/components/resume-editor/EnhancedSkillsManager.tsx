@@ -26,10 +26,9 @@ import {
 } from 'lucide-react'
 
 interface EnhancedSkillsManagerProps {
-  skills: any // Current skills object
+  skills: any // Current skills object from resume data
   onSkillsChange: (skills: any) => void
   userProfile?: any
-  organizedSkills?: any // Pre-organized skills from profile extraction
   languages?: Language[] // Separate language data with proficiency
   onLanguagesChange?: (languages: Language[]) => void
   onShowSkillLevelsChange?: (show: boolean) => void // Callback for skill level toggle
@@ -54,6 +53,7 @@ interface OrganizedCategory {
   suggestions: string[]
   reasoning: string
   allowProficiency?: boolean // Enable proficiency for technical skills
+  priority?: number // Priority for consistent ordering with preview (lower = first)
 }
 
 interface OrganizedSkillsResponse {
@@ -114,6 +114,45 @@ function getCategoryIcon(categoryName: string): React.ElementType {
   }
   
   return Sparkles // Default icon
+}
+
+// Consistent category priority mapping for preview alignment
+function getCategoryPriority(categoryName: string): number {
+  const name = categoryName.toLowerCase().trim()
+
+  // Priority mapping based on typical resume importance order
+  const priorityMap: Record<string, number> = {
+    'core skills': 1,
+    'technical skills': 1,
+    'programming': 1,
+    'software development': 1,
+    'data analysis': 2,
+    'data visualization': 2,
+    'digital marketing': 2,
+    'content creation': 3,
+    'design': 3,
+    'project management': 4,
+    'business': 4,
+    'communication': 5,
+    'leadership': 5,
+    'customer service': 6,
+    'research': 6,
+    'tools': 7,
+    'platforms': 7,
+    'soft skills': 8,
+    'other': 9,
+    'languages': 10 // Languages handled separately but included for completeness
+  }
+
+  // Find best match based on category name keywords
+  for (const [keyword, priority] of Object.entries(priorityMap)) {
+    if (name.includes(keyword) || keyword.includes(name)) {
+      return priority
+    }
+  }
+
+  // Default priority for unknown categories
+  return 5
 }
 
 // Intelligent proficiency categorization function
@@ -197,11 +236,10 @@ function mapLanguageProficiency(oldProficiency: string): string {
   return mapping[oldProficiency] || 'Professional working'
 }
 
-export function EnhancedSkillsManager({ 
-  skills, 
-  onSkillsChange, 
+export function EnhancedSkillsManager({
+  skills,
+  onSkillsChange,
   userProfile, 
-  organizedSkills, 
   languages = [], 
   onLanguagesChange, 
   onShowSkillLevelsChange,
@@ -238,6 +276,7 @@ export function EnhancedSkillsManager({
   const [loadingSuggestions, setLoadingSuggestions] = React.useState<Record<string, boolean>>({})
   const [newSkillInput, setNewSkillInput] = React.useState<Record<string, string>>({})
   const [showAddSkill, setShowAddSkill] = React.useState<Record<string, boolean>>({})
+  const [isInternalUpdate, setIsInternalUpdate] = React.useState(false)
   const [newCategoryName, setNewCategoryName] = React.useState('')
   const [showAddCategory, setShowAddCategory] = React.useState(false)
   const [showAddLanguage, setShowAddLanguage] = React.useState(false)
@@ -263,20 +302,43 @@ export function EnhancedSkillsManager({
     }
   }, [normalizedLanguages.length])
 
-  // Initialize organized data from props ONLY - NO MORE SEPARATE API CALLS
-  // Track if we've already initialized to avoid overwriting user changes
-  const [hasInitialized, setHasInitialized] = React.useState(false)
-
+  // SIMPLIFIED: Initialize from legacy skills format directly
   React.useEffect(() => {
-    if (!organizedSkills || !organizedSkills.organized_categories || hasInitialized) return
+    if (!skills || Object.keys(skills).length === 0) return
 
-    const filteredCategories = filterLanguagesFromCategories(organizedSkills.organized_categories)
-    const enhancedData = { ...organizedSkills, organized_categories: filteredCategories }
+    // Don't rebuild organized data if the change came from internal operations like category deletion
+    if (isInternalUpdate) {
+      setIsInternalUpdate(false)
+      return
+    }
 
-    setOrganizedData(enhancedData)
-    setExpandedCategories(new Set(Object.keys(filteredCategories || {})))
-    setHasInitialized(true) // Mark as initialized to prevent future overwrites
-  }, [organizedSkills, hasInitialized])
+    // Convert legacy skills format to organized format for display
+    const organizedCategories: Record<string, OrganizedCategory> = {}
+
+    Object.entries(skills).forEach(([categoryKey, skillsList]) => {
+      if (!Array.isArray(skillsList) || skillsList.length === 0) return
+
+      // Skip languages - they have their own section
+      if (categoryKey.toLowerCase().includes('language')) return
+
+      const displayName = categoryKey
+        .replace(/___/g, ' & ')
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+
+      organizedCategories[displayName] = {
+        skills: skillsList.map(skill => typeof skill === 'string' ? skill : skill),
+        suggestions: [],
+        reasoning: '',
+        allowProficiency: shouldCategoryHaveProficiency(displayName),
+        priority: getCategoryPriority(displayName)
+      }
+    })
+
+    setOrganizedData({ organized_categories: organizedCategories })
+    setExpandedCategories(new Set(Object.keys(organizedCategories)))
+  }, [skills])
 
   // Convert legacy skills format to organized format
   const convertSkillsToFlatArray = React.useCallback((skillsData: any): string[] => {
@@ -327,58 +389,43 @@ export function EnhancedSkillsManager({
   const convertOrganizedToSkillsFormat = (organizedCategories: Record<string, OrganizedCategory>) => {
     const skillsFormat: Record<string, any[]> = {}
 
-    // Canonical category mapping to prevent drift
-    const canonicalCategoryMap: Record<string, string> = {
-      'technical skills': 'technical',
-      'technical & digital': 'technical',
-      'technical': 'technical',
-      'soft skills': 'soft_skills',
-      'soft': 'soft_skills',
-      'interpersonal': 'interpersonal',
-      'communication': 'interpersonal',
-      'communication & collaboration': 'interpersonal',
-      'tools': 'tools',
-      'tools & platforms': 'tools',
+    // SIMPLIFIED: Direct mapping to legacy format - same logic as preview
+    const categoryMapping: Record<string, string> = {
       'core skills': 'core',
-      'core': 'core',
-      'business': 'business',
-      'business intelligence & strategy': 'business',
-      'creative': 'creative',
-      'specialized': 'specialized',
-      'languages': 'languages',
-      'data analysis & visualization': 'technical'
+      'technical & digital': 'technical',
+      'technical skills': 'technical',
+      'creative & design': 'creative',
+      'business & strategy': 'business',
+      'communication & leadership': 'interpersonal',
+      'tools & platforms': 'tools',
+      'soft skills': 'soft_skills',
+      'specialized': 'specialized'
     }
 
     Object.entries(organizedCategories).forEach(([categoryName, categoryData]) => {
       // Skip languages - they have their own separate section
-      const lowerName = categoryName.toLowerCase()
-      if (lowerName === 'languages' || lowerName.includes('language')) {
-        return // Don't include languages in skills
+      if (categoryName.toLowerCase().includes('language')) {
+        return
       }
 
-      // First try canonical mapping
-      let categoryKey = (categoryData as any)?.meta?.canonicalKey || canonicalCategoryMap[lowerName]
+      // Map to legacy category key or use custom key
+      const lowerName = categoryName.toLowerCase()
+      let categoryKey = categoryMapping[lowerName]
 
-      // If no canonical match, generate a stable key with triple underscores for '&' or 'and'
       if (!categoryKey) {
+        // For custom categories, create key from display name
         categoryKey = categoryName
           .toLowerCase()
-          .replace(/\s*(&|and)\s*/g, '___') // Convert '&' or 'and' to triple underscores
-          .replace(/[^a-z0-9_]/g, '_') // Replace other non-alphanumeric with single underscore
-          .replace(/_+/g, '_') // Collapse multiple underscores
-          .replace(/^_|_$/g, '') // Trim leading/trailing underscores
+          .replace(/\s*(&|and)\s*/g, '___')
+          .replace(/[^a-z0-9_]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '')
       }
 
-      // Skip if this would create a duplicate of an existing category
-      if (categoryKey === 'technical' && skillsFormat['content_creation']) {
-        categoryKey = 'technical_skills' // Avoid duplicate naming
-      }
-
-      // Preserve objects as-is for technical categories; flatten to strings for non-technical to avoid downstream rendering bugs
+      // Simple conversion - keep skills as they are
       skillsFormat[categoryKey] = categoryData.skills.map(skill => {
         if (typeof skill === 'string') return skill
-        // If category allows proficiency, keep object; otherwise use the name string
-        return categoryData.allowProficiency ? skill : (skill as any).skill
+        return (skill as any).skill || skill
       })
     })
 
@@ -463,9 +510,13 @@ export function EnhancedSkillsManager({
       const newOrganizedData = { ...organizedData, organized_categories: updatedCategories }
       setOrganizedData(newOrganizedData)
       
-      // Update skills for resume
-      const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
-      onSkillsChange(newSkillsFormat)
+      // Update skills for resume - DON'T modify base resume in tailor mode!
+      if (mode !== 'tailor') {
+        const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
+        onSkillsChange(newSkillsFormat)
+      } else {
+        console.log('🚫 Tailor mode: Preventing base resume skills modification')
+      }
     }
   }
 
@@ -483,9 +534,13 @@ export function EnhancedSkillsManager({
       const newOrganizedData = { ...organizedData, organized_categories: updatedCategories }
       setOrganizedData(newOrganizedData)
       
-      // Update skills for resume
-      const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
-      onSkillsChange(newSkillsFormat)
+      // Update skills for resume - DON'T modify base resume in tailor mode!
+      if (mode !== 'tailor') {
+        const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
+        onSkillsChange(newSkillsFormat)
+      } else {
+        console.log('🚫 Tailor mode: Preventing base resume skills modification')
+      }
     }
   }
 
@@ -595,9 +650,13 @@ export function EnhancedSkillsManager({
       const newOrganizedData = { ...organizedData, organized_categories: updatedCategories }
       setOrganizedData(newOrganizedData)
       
-      // Update skills for resume
-      const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
-      onSkillsChange(newSkillsFormat)
+      // Update skills for resume - DON'T modify base resume in tailor mode!
+      if (mode !== 'tailor') {
+        const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
+        onSkillsChange(newSkillsFormat)
+      } else {
+        console.log('🚫 Tailor mode: Preventing base resume skills modification')
+      }
     }
   }
 
@@ -606,12 +665,13 @@ export function EnhancedSkillsManager({
 
     const updatedCategories = { ...organizedData.organized_categories }
     delete updatedCategories[categoryName]
-    
+
     const newOrganizedData = { ...organizedData, organized_categories: updatedCategories }
     setOrganizedData(newOrganizedData)
-    
-    // Update skills for resume
+
+    // Update skills for resume and mark as internal update to prevent useEffect rebuild
     const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
+    setIsInternalUpdate(true)
     onSkillsChange(newSkillsFormat)
     
     // Remove from expanded categories
@@ -668,8 +728,8 @@ export function EnhancedSkillsManager({
     )
   }
 
-  // Show loading state only if we don't have organized skills from props
-  if (!organizedSkills || !organizedSkills.organized_categories) {
+  // Show loading state only if we don't have organized data
+  if (!organizedData || !organizedData.organized_categories || Object.keys(organizedData.organized_categories).length === 0) {
     return (
       <div className="text-center py-12">
         <Brain className="mx-auto h-16 w-16 text-gray-400 mb-4" />
@@ -682,9 +742,9 @@ export function EnhancedSkillsManager({
       </div>
     )
   }
-  
-  // Use organizedData if available, otherwise use organizedSkills directly
-  const dataToUse = organizedData || organizedSkills
+
+  // Use the organized data we built from legacy skills
+  const dataToUse = organizedData
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -719,7 +779,8 @@ export function EnhancedSkillsManager({
             </button>
           </div>
 
-          {/* Simple Proficiency Toggle Bar */}
+          {/* DISABLED: Proficiency Toggle - Skills system needs fixing first */}
+          {false && (
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center gap-3">
               <Zap className="h-5 w-5 text-gray-600" />
@@ -729,36 +790,73 @@ export function EnhancedSkillsManager({
                 </span>
               </div>
             </div>
-            
+
             {/* Simple Toggle Switch */}
             <button
               onClick={() => {
                 const newValue = !showSkillLevelsInResume
                 setShowSkillLevelsInResume(newValue)
                 onShowSkillLevelsChange?.(newValue)
-                
-                // Immediately update skills format to trigger preview refresh
+
+                // Update organized data to reflect proficiency toggle
                 if (organizedData) {
-                  const newSkillsFormat = convertOrganizedToSkillsFormat(organizedData.organized_categories)
-                  onSkillsChange(newSkillsFormat)
+                  const updatedCategories: Record<string, OrganizedCategory> = {}
+
+                  Object.entries(organizedData.organized_categories).forEach(([categoryName, categoryData]) => {
+                    const isTechnical = shouldCategoryHaveProficiency(categoryName)
+                    const shouldHaveProficiency = newValue && isTechnical
+
+                    // Convert skills based on the new proficiency setting
+                    const updatedSkills = categoryData.skills.map(skill => {
+                      if (typeof skill === 'string') {
+                        // Converting string to object (turning proficiency ON)
+                        return shouldHaveProficiency ? {
+                          skill: skill,
+                          proficiency: 'Intermediate' as const // Default proficiency
+                        } : skill
+                      } else {
+                        // Converting object to string (turning proficiency OFF) or keeping object
+                        return shouldHaveProficiency ? skill : skill.skill
+                      }
+                    })
+
+                    updatedCategories[categoryName] = {
+                      ...categoryData,
+                      skills: updatedSkills,
+                      allowProficiency: shouldHaveProficiency
+                    }
+                  })
+
+                  // Update organized data with preserved skills
+                  const newOrganizedData = { ...organizedData, organized_categories: updatedCategories }
+                  setOrganizedData(newOrganizedData)
+
+                  // Convert to skills format for the resume - DON'T modify base resume in tailor mode!
+                  if (mode !== 'tailor') {
+                    const newSkillsFormat = convertOrganizedToSkillsFormat(updatedCategories)
+                    onSkillsChange(newSkillsFormat)
+                  } else {
+                    console.log('🚫 Tailor mode: Preventing base resume skills modification')
+                  }
                 }
               }}
               className={`relative inline-flex h-7 w-12 items-center rounded-full border-2 transition-all duration-200 ${
-                showSkillLevelsInResume 
-                  ? 'bg-green-500 border-green-500' 
+                showSkillLevelsInResume
+                  ? 'bg-green-500 border-green-500'
                   : 'bg-gray-200 border-gray-300'
               }`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full transition-all duration-200 shadow-md ${
-                  showSkillLevelsInResume 
-                    ? 'translate-x-6 bg-white' 
+                  showSkillLevelsInResume
+                    ? 'translate-x-6 bg-white'
                     : 'translate-x-1 bg-white'
                 }`}
               />
               <span className="sr-only">Toggle skill proficiency display</span>
             </button>
           </div>
+          )}
         </div>
       </div>
 
@@ -855,20 +953,20 @@ export function EnhancedSkillsManager({
       {/* Categories - clean and minimal */}
       {dataToUse && dataToUse.organized_categories && (
         <div className="space-y-3">
-          {/* Sort categories to show those with suggestions first */}
+          {/* Sort categories by priority to match preview order */}
           {Object.entries(dataToUse.organized_categories)
-            .sort(([categoryNameA], [categoryNameB]) => {
-              // Check if categories have skill suggestions
-              const aHasSuggestions = mode === 'tailor' && suggestions?.some(s => 
-                s.section === 'skills' && s.targetPath?.includes(categoryNameA)
-              )
-              const bHasSuggestions = mode === 'tailor' && suggestions?.some(s => 
-                s.section === 'skills' && s.targetPath?.includes(categoryNameB)
-              )
-              // Categories with suggestions come first
-              if (aHasSuggestions && !bHasSuggestions) return -1
-              if (!aHasSuggestions && bHasSuggestions) return 1
-              return 0
+            .sort(([categoryNameA, categoryDataA], [categoryNameB, categoryDataB]) => {
+              // Use priority-based sorting to match preview order
+              const priorityA = categoryDataA.priority || 999
+              const priorityB = categoryDataB.priority || 999
+
+              // Lower priority numbers appear first (same as preview)
+              if (priorityA !== priorityB) {
+                return priorityA - priorityB
+              }
+
+              // If priorities are equal, sort alphabetically
+              return categoryNameA.localeCompare(categoryNameB)
             })
             .map(([categoryName, categoryDataRaw], index) => {
             const categoryData: OrganizedCategory = {

@@ -1021,21 +1021,42 @@ Please return the response as a valid JSON object following the schema above.`;
         this.client = this.initializeClient();
       }
 
-      const categoryPrompt = `You are a career expert. Suggest 5-8 relevant skills for the "${categoryName}" category.
+      // Extract key context from profile for more tailored suggestions
+      const experience = profileData?.experience || [];
+      const education = profileData?.education || [];
+      const currentRole = experience[0]?.position || 'Professional';
+      const industry = experience[0]?.company || 'General';
+      const allSkills = Object.values(profileData?.skills || {}).flat()
+        .map((s: any) => typeof s === 'string' ? s : s?.skill || s)
+        .filter(Boolean);
 
-USER PROFILE CONTEXT:
-${JSON.stringify(profileData, null, 2)}
+      const categoryPrompt = `You are an expert career consultant analyzing a ${currentRole}'s resume.
 
-CURRENT SKILLS IN THIS CATEGORY:
-${currentCategorySkills.join(', ')}
+CATEGORY: "${categoryName}"
 
-TASK: Suggest popular, relevant skills for "${categoryName}" that would strengthen a professional resume. Consider:
-- Industry standards for this category
-- Skills that complement the user's existing profile
-- Popular tools/technologies in this domain
-- Skills that would be valuable for career growth
+PROFESSIONAL BACKGROUND:
+- Current/Recent Role: ${currentRole}
+- Industry/Company: ${industry}
+- Education: ${education.map((e: any) => `${e.degree || ''} in ${e.field_of_study || e.field || ''}`).join(', ') || 'Not specified'}
+- Years of Experience: ${experience.length > 0 ? 'Experienced professional' : 'Entry level'}
 
-Return ONLY a JSON array of skill names (no explanations, no other text):
+EXISTING SKILLS PROFILE (shows their skill level):
+${allSkills.slice(0, 20).join(', ')}
+
+SKILLS ALREADY IN THIS CATEGORY (avoid duplicates):
+${currentCategorySkills.join(', ') || 'None yet'}
+
+TASK: Suggest 5-8 highly relevant skills for the "${categoryName}" category that:
+1. Are specifically relevant to someone working as a ${currentRole}
+2. Would be natural progressions or complements to their existing skillset
+3. Are in-demand in their industry
+4. Match the sophistication level of their current skills
+5. Are practical skills they could realistically have or quickly develop
+
+Focus on skills that make sense for THIS specific person based on their background, not generic suggestions.
+Ensure suggestions are concrete, specific skills (not vague concepts).
+
+Return ONLY a JSON array of skill names:
 ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5"]`;
 
       try {
