@@ -107,7 +107,7 @@ const CUSTOM_SECTION_TEMPLATES = {
   'Hobbies & Interests': {
     icon: <Star className="w-4 h-4" />,
     fields: ['Interest Category', 'Specific Activities', 'Level', 'Achievements'],
-    color: 'from-orange-500 to-red-500'
+    color: 'from-gray-500 to-gray-600'
   }
 }
 
@@ -247,7 +247,7 @@ const TailorSectionCard = ({
   const relevantSuggestions = aiSuggestions.filter(s => s.section.toLowerCase() === sectionKey)
   
   return (
-    <div className={cn('bg-white border border-gray-200 rounded-lg card-hover', className)}>
+    <div className={cn('bg-white border rounded-lg', className)} style={{ borderColor: 'var(--border)' }}>
       {/* AI Suggestion Overlay */}
       <AnimatePresence>
         {showingSuggestion && relevantSuggestions.find(s => s.id === showingSuggestion) && (
@@ -268,10 +268,10 @@ const TailorSectionCard = ({
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 text-gray-600">
-              {icon}
+            <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
+              {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4 text-gray-600' })}
             </div>
-            <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
             {badge !== undefined && (
               <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">
                 {badge}
@@ -279,7 +279,7 @@ const TailorSectionCard = ({
             )}
             
             {relevantSuggestions.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]">
+              <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px]">
                 {relevantSuggestions.length} suggestion{relevantSuggestions.length>1?'s':''}
               </span>
             )}
@@ -655,24 +655,19 @@ export const TailorPerfectStudio = ({
   }, [skillsSuggestion, resumeData])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Debug UI removed */}
-      
-      {/* Swiss Precision Header */}
-      <div className="bg-white border-b border-gray-200 py-4 px-6 mb-6">
-        <div className="flex items-center justify-between">
+    <div className="w-full h-screen">
+      {/* Header */}
+      <div className="bg-white border-b h-14 flex items-center px-4" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-              <Diamond className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Resume Studio</h1>
-              {jobData && (
-                <p className="text-sm text-gray-600">
-                  {jobData.title}
+            {jobData && (
+              <div>
+                <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Tailoring for: {jobData.title}</h1>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  {jobData.companies?.name || 'Company'}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
@@ -701,19 +696,17 @@ export const TailorPerfectStudio = ({
             <Sparkles className="w-4 h-4 text-blue-600" />
             <span>{aiSuggestions.length} suggestions</span>
             <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">{suggestionCounts.bullet} experience</span>
-            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">{suggestionCounts.summary} summary</span>
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">{suggestionCounts.summary} summary</span>
             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">{suggestionCounts.skills} skills</span>
           </div>
         )}
       </div>
       
       {/* Layout: Editor + Preview */}
-      <div className={cn(
-        'px-6 grid gap-6 text-[13px]',
-        showPreview ? 'grid-cols-1 xl:grid-cols-[520px_1fr]' : 'grid-cols-1'
-      )}>
+      <div className="flex w-full" style={{ height: 'calc(100vh - 56px)' }}>
         {/* Editor Column */}
-        <div className="space-y-4" key={`editor-${forceRender}`}>
+        <div className="w-[45%] bg-white border-r overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
+          <div className="p-4 space-y-3" key={`editor-${forceRender}`}>
           {/* Personal Information */}
           <TailorSectionCard
             title="Personal Information"
@@ -1436,12 +1429,12 @@ export const TailorPerfectStudio = ({
         </div>
         
         {/* Preview Column */}
-        {showPreview && (
-          <div className="sticky top-24 h-fit">
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="w-[55%] bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
+          <div className="p-8">
+            <div className="bg-white rounded-lg shadow-xl mx-auto" style={{ maxWidth: '850px' }}>
+              <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Preview</h3>
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Preview</h3>
                   <div className="flex items-center gap-2">
                     <TailorSimpleTemplateDropdown 
                       activeTemplate={activeTemplate}
@@ -1461,12 +1454,12 @@ export const TailorPerfectStudio = ({
                   </div>
                 </div>
               </div>
-              <div className="h-[700px] overflow-y-auto">
-                {previewHtml ? (
+              {previewHtml ? (
                   <iframe
                     ref={iframeRef}
                     srcDoc={previewHtml}
                     className="w-full h-full border-0"
+                    scrolling="no"
                     style={{ 
                       transform: `scale(${zoom})`,
                       transformOrigin: 'top left',
@@ -1493,7 +1486,7 @@ export const TailorPerfectStudio = ({
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

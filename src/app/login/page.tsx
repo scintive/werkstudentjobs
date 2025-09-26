@@ -2,8 +2,15 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Lock, LogIn } from 'lucide-react'
+import Link from 'next/link'
+import { User, Lock, LogIn, Sparkles, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
 
 export default function LoginPage() {
   const [email, setEmail] = React.useState('')
@@ -12,10 +19,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const router = useRouter()
 
-  // If already authenticated, redirect to jobs
+  // If already authenticated, redirect to dashboard
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) router.replace('/jobs')
+      if (data.session?.user) router.replace('/dashboard')
     })
   }, [router])
 
@@ -38,10 +45,10 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: data.session.user.id, email: data.session.user.email })
         })
-        // Route to Home for onboarding logic; Home redirects to Jobs when profile exists
-        router.push('/')
+        // Route to dashboard
+        router.push('/dashboard')
       } else {
-      setErrorMsg('Check your email to confirm your account, then log in.')
+        setErrorMsg('Check your email to confirm your account, then log in.')
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -52,114 +59,129 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-blue-600" />
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      {/* Logo */}
+      <Link href="/" className="mb-8">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-lg">W</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to access your resume and job matching</p>
+          <span className="font-bold text-2xl text-gray-900">WerkstudentJobs</span>
         </div>
+      </Link>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                required
-              />
-              <User className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
-            </div>
-          </div>
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-semibold">Welcome back</CardTitle>
+          <CardDescription>
+            Enter your credentials to access your account
+          </CardDescription>
+        </CardHeader>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full px-4 py-3 pl-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                required
-              />
-              <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
-            </div>
-          </div>
-
-          {errorMsg && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">{errorMsg}</div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading || !email || !password}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Signing In...
-              </>
-            ) : (
-              <>
-                <LogIn className="w-5 h-5" />
-                Sign In
-              </>
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            {errorMsg && (
+              <Alert variant="destructive" className="text-sm">
+                <AlertDescription>{errorMsg}</AlertDescription>
+              </Alert>
             )}
-          </button>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-9"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Link
+                href="/reset-password"
+                className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex flex-col space-y-4">
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign in
+                </>
+              )}
+            </Button>
+
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or</span>
+              </div>
+            </div>
+
+            <div className="text-center text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link
+                href="/register"
+                className="font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Sign up
+              </Link>
+            </div>
+          </CardFooter>
         </form>
+      </Card>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          New here? <a href="/register" className="text-blue-600 hover:underline">Create an account</a>
-        </div>
-
-        <div className="mt-3 text-center text-sm text-gray-600">
-          Trouble signing in?{' '}
-          <button
-            onClick={async () => {
-              try {
-                setErrorMsg(null)
-                await supabase.auth.resend({ type: 'signup', email })
-                setErrorMsg('Confirmation email resent. Please check your inbox.')
-              } catch (e: any) {
-                setErrorMsg(e?.message || 'Failed to resend confirmation email')
-              }
-            }}
-            className="text-blue-600 hover:underline mr-2"
-            type="button"
-          >
-            Resend confirmation
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                setErrorMsg(null)
-                await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` })
-                setErrorMsg('Password reset email sent. Follow the link to set a new password.')
-              } catch (e: any) {
-                setErrorMsg(e?.message || 'Failed to send password reset email')
-              }
-            }}
-            className="text-blue-600 hover:underline"
-            type="button"
-          >
-            Forgot password
-          </button>
-        </div>
-      </div>
+      {/* Footer */}
+      <p className="mt-8 text-center text-sm text-gray-500">
+        By continuing, you agree to our{' '}
+        <Link href="/terms" className="underline underline-offset-4 hover:text-gray-900">
+          Terms of Service
+        </Link>{' '}
+        and{' '}
+        <Link href="/privacy" className="underline underline-offset-4 hover:text-gray-900">
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   )
 }

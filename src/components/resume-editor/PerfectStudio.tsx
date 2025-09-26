@@ -113,10 +113,10 @@ interface SectionCardProps {
   onToggle?: () => void
 }
 
-const SectionCard = ({ 
-  title, 
-  icon, 
-  children, 
+const SectionCard = ({
+  title,
+  icon,
+  children,
   badge,
   onAdd,
   className,
@@ -125,53 +125,56 @@ const SectionCard = ({
   onToggle
 }: SectionCardProps) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className={cn(
-        "bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200",
+        "bg-white rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-300",
         className
       )}
     >
-      <div 
+      <div
         className={cn(
-          "p-4 transition-all duration-200",
-          isExpanded ? "border-b border-gray-100" : "",
-          onToggle ? "cursor-pointer hover:bg-gray-50" : ""
+          "px-5 py-4 transition-all duration-200",
+          onToggle ? "cursor-pointer" : ""
         )}
         onClick={onToggle}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-white", color)}>
-              {icon}
+            <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
+              {React.cloneElement(icon, { className: 'w-4 h-4 text-gray-600' })}
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{title}</h3>
+              <h3 className="font-semibold text-gray-900 text-[15px]">
+                {title}
+              </h3>
               {badge !== undefined && (
-                <span className="text-xs text-gray-500">{badge} items</span>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {badge} {typeof badge === 'number' && badge !== 1 ? 'items' : 'item'}
+                </p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {onAdd && isExpanded && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={(e) => {
                   e.stopPropagation()
                   onAdd()
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200"
               >
                 <Plus className="w-4 h-4 text-gray-600" />
-              </button>
+              </motion.button>
             )}
             {onToggle && (
               <motion.div
                 animate={{ rotate: isExpanded ? 0 : -90 }}
-                transition={{ duration: 0.2 }}
-                className="p-1"
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown className="w-4 h-4 text-gray-500" />
               </motion.div>
             )}
           </div>
@@ -186,13 +189,13 @@ const SectionCard = ({
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="p-4">
+            <div className="px-5 pb-5 pt-1">
               {children}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   )
 }
 
@@ -217,14 +220,14 @@ const CleanInput = ({
   return (
     <div>
       {label && (
-        <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">
           {label}
         </label>
       )}
-      <div className="relative">
+      <div className="relative group">
         {icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {icon}
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gray-600 transition-colors">
+            {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
           </div>
         )}
         <Component
@@ -232,9 +235,10 @@ const CleanInput = ({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn(
-            "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
-            "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10",
-            "transition-all duration-200 text-gray-900",
+            "w-full px-3.5 py-2.5 text-sm bg-gray-50 border-0 rounded-lg",
+            "focus:outline-none focus:ring-2 focus:ring-gray-300/50 focus:bg-white",
+            "placeholder:text-gray-400 text-gray-900",
+            "transition-all duration-200",
             icon && "pl-10",
             multiline && "min-h-[100px] resize-none"
           )}
@@ -1287,65 +1291,47 @@ export function PerfectStudio({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
-                <PenTool className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Resume Studio</h1>
-                <p className="text-xs text-gray-500">Professional Resume Builder</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              
-              <SimpleTemplateDropdown
-                activeTemplate={activeTemplate}
-                onChange={(tpl) => {
-                  setActiveTemplate(tpl)
-                }}
-              />
-              
-              <motion.button
-                onClick={exportToPDF}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold text-base hover:shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 flex items-center gap-3 border-0"
-              >
-                <Download className="w-5 h-5" />
-                Export PDF
-              </motion.button>
-            </div>
-          </div>
+    <div className="w-full h-screen bg-gray-50">
+      {/* Premium Header */}
+      <div className="bg-white border-b h-14 flex items-center px-6 shadow-sm" style={{ borderColor: 'var(--border, #e5e7eb)' }}>
+        <div className="flex items-center justify-between w-full">
+          <SimpleTemplateDropdown
+            activeTemplate={activeTemplate}
+            onChange={(tpl) => setActiveTemplate(tpl)}
+          />
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={exportToPDF}
+            className="px-4 py-2 text-sm rounded-lg text-white font-medium bg-gray-900 hover:bg-black shadow-sm transition-all duration-200 flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export PDF
+          </motion.button>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content - Full Width Usage */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Editor Panel - 40% */}
-        <div className="w-[40%] overflow-y-auto bg-white border-r border-gray-200">
-          <div className="p-6 space-y-6">
+      {/* Main Editor Layout */}
+      <div className="flex w-full" style={{ height: 'calc(100vh - 56px)' }}>
+        {/* Editor Panel */}
+        <div className="w-[45%] bg-white overflow-y-auto border-r" style={{ borderColor: 'var(--border, #e5e7eb)' }}>
+          <div className="p-6 space-y-4">
             
             {/* Suggestions Summary Banner */}
             {suggestionsEnabled && suggestions.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4"
+                className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/50 rounded-2xl p-5 shadow-sm"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-white" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                      <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">AI Suggestions Available</h3>
-                      <p className="text-sm text-gray-600">
+                      <h3 className="font-semibold text-gray-900 text-[15px]">AI Suggestions Available</h3>
+                      <p className="text-sm text-gray-600 mt-0.5">
                         {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} to optimize your resume
                       </p>
                     </div>
@@ -2298,36 +2284,35 @@ export function PerfectStudio({
           </div>
         </div>
 
-        {/* Preview Panel - 60% Full Size */}
-        <div className="w-[60%] bg-gray-100 flex items-center justify-center p-4">
-          <div className="w-full h-full bg-white shadow-xl overflow-hidden">
-            {previewHtml ? (
-              <iframe
-                ref={iframeRef}
-                srcDoc={previewHtml}
-                className="w-full h-full"
-                style={{ 
-                  border: 'none',
-                  display: 'block',
-                  overflow: 'hidden'
-                }}
-                title="Resume Preview"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-400 to-purple-600 rounded-2xl flex items-center justify-center"
-                  >
-                    <Sparkles className="w-10 h-10 text-white" />
-                  </motion.div>
-                  <p className="font-semibold text-gray-900 text-lg mb-2">Creating Your Resume</p>
-                  <p className="text-gray-500 text-sm">Your preview will appear here</p>
+        {/* Preview Panel */}
+        <div className="w-[55%] bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
+          <div className="p-8">
+            <div className="bg-white rounded-lg shadow-xl mx-auto" style={{ maxWidth: '850px' }}>
+              {previewHtml ? (
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={previewHtml}
+                  className="w-full"
+                  style={{
+                    border: 'none',
+                    display: 'block',
+                    height: '1100px'
+                  }}
+                  scrolling="no"
+                  title="Resume Preview"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '600px' }}>
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-light, rgba(255, 107, 71, 0.1))' }}>
+                      <Sparkles className="w-8 h-8" style={{ color: 'var(--primary, #ff6b47)' }} />
+                    </div>
+                    <p className="font-semibold text-gray-900 text-lg mb-2">Creating Your Resume</p>
+                    <p className="text-gray-500 text-sm">Your preview will appear here</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           
           {isGeneratingPreview && (

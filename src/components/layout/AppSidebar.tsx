@@ -3,22 +3,25 @@
 import * as React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   FileText,
   Briefcase,
   Target,
-  Upload,
   Settings,
   HelpCircle,
   ChevronLeft,
   ChevronRight,
   LogOut,
   PenTool,
-  MoreHorizontal,
-  Home
+  Home,
+  TrendingUp,
+  Brain,
+  Users,
+  BookOpen,
+  Sparkles,
+  BarChart3
 } from 'lucide-react'
 
 interface NavItem {
@@ -36,19 +39,24 @@ interface AppSidebarProps {
 export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [hovering, setHovering] = React.useState(false)
 
   const mainNavItems: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'My Resume', href: '/?edit=1', icon: FileText },
+    { label: 'My Resumes', href: '/?edit=1', icon: FileText },
     { label: 'Job Browser', href: '/jobs', icon: Briefcase },
-    { label: 'Tailor Resume', href: '/jobs?tailor=1', icon: Target },
+    { label: 'AI Resume Builder', href: '/jobs?tailor=1', icon: Sparkles },
     { label: 'Cover Letters', href: '/cover-letters', icon: PenTool },
+  ]
+
+  const toolsNavItems: NavItem[] = [
+    { label: 'Career Insights', href: '/insights', icon: TrendingUp },
+    { label: 'Skill Matcher', href: '/skills', icon: Brain },
+    { label: 'Interview Prep', href: '/interview', icon: BookOpen },
   ]
 
   const bottomNavItems: NavItem[] = [
     { label: 'Settings', href: '/settings', icon: Settings },
-    { label: 'Help', href: '/help', icon: HelpCircle },
+    { label: 'Help & Support', href: '/help', icon: HelpCircle },
   ]
 
   const isActiveRoute = (href: string) => {
@@ -65,166 +73,204 @@ export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarP
   }
 
   return (
-    <>
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "relative bg-white border-r border-gray-200 transition-all duration-200 flex flex-col h-full",
-          collapsed ? "w-[60px]" : "w-[240px]"
-        )}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-      >
-        {/* Logo/Home */}
-        <div className="h-16 flex items-center px-3 border-b border-gray-100">
-          {!collapsed ? (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">RC</span>
-              </div>
-              <span className="font-semibold text-gray-900">ResumeCraft</span>
-            </div>
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto">
-              <span className="text-white font-bold text-sm">R</span>
-            </div>
-          )}
-        </div>
-
-        {/* Main Navigation */}
-        <nav className="flex-1 px-2 py-3 space-y-1">
-          <div className="mb-2">
-            {!collapsed && (
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 mb-2">
-                Main
-              </p>
-            )}
-            {mainNavItems.map((item) => {
-              const Icon = item.icon
-              const isActive = isActiveRoute(item.href)
-
-              return (
-                <Button
-                  key={item.href}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "w-full justify-start relative group",
-                    isActive ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900",
-                    collapsed && "justify-center px-2"
-                  )}
-                  onClick={() => router.push(item.href)}
-                >
-                  <Icon className={cn(
-                    "w-5 h-5 flex-shrink-0",
-                    !collapsed && "mr-3"
-                  )} />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {item.badge && (
-                        <Badge variant="secondary" className="ml-auto">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </>
-                  )}
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-full" />
-                  )}
-
-                  {/* Tooltip for collapsed state */}
-                  {collapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                      {item.label}
-                    </div>
-                  )}
-                </Button>
-              )
-            })}
-          </div>
-
-          {/* Divider */}
-          <div className="my-3 border-t border-gray-200" />
-
-          {/* Bottom Navigation */}
-          <div>
-            {!collapsed && (
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 mb-2">
-                Support
-              </p>
-            )}
-            {bottomNavItems.map((item) => {
-              const Icon = item.icon
-              const isActive = isActiveRoute(item.href)
-
-              return (
-                <Button
-                  key={item.href}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "w-full justify-start relative group",
-                    isActive ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900",
-                    collapsed && "justify-center px-2"
-                  )}
-                  onClick={() => router.push(item.href)}
-                >
-                  <Icon className={cn(
-                    "w-5 h-5 flex-shrink-0",
-                    !collapsed && "mr-3"
-                  )} />
-                  {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
-
-                  {/* Tooltip for collapsed state */}
-                  {collapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                      {item.label}
-                    </div>
-                  )}
-                </Button>
-              )
-            })}
-          </div>
-        </nav>
-
-        {/* More Menu */}
-        <div className="p-2 border-t border-gray-100">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full justify-start text-gray-600 hover:text-gray-900",
-              collapsed && "justify-center px-2"
-            )}
-          >
-            <MoreHorizontal className={cn(
-              "w-5 h-5 flex-shrink-0",
-              !collapsed && "mr-3"
-            )} />
-            {!collapsed && <span>More</span>}
-          </Button>
-        </div>
-      </aside>
-
-      {/* Collapse Toggle - Vertical bar on edge */}
+    <aside
+      className="relative flex flex-col h-full transition-all duration-300"
+      style={{
+        width: collapsed ? '60px' : 'var(--sidebar-width)',
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--border)'
+      }}
+    >
+      {/* Logo Area */}
       <div
-        className={cn(
-          "relative w-1 hover:w-2 bg-gray-200 hover:bg-gray-300 transition-all cursor-col-resize group",
-          "flex items-center justify-center"
-        )}
-        onClick={() => onCollapsedChange(!collapsed)}
+        className="flex items-center px-4 h-16"
+        style={{ borderBottom: '1px solid var(--border)' }}
       >
-        <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-white border border-gray-300 rounded-full p-1 shadow-sm">
-            {collapsed ? (
-              <ChevronRight className="w-3 h-3 text-gray-600" />
-            ) : (
-              <ChevronLeft className="w-3 h-3 text-gray-600" />
-            )}
+        {!collapsed && (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--primary-gradient)' }}
+            >
+              <span className="text-white font-bold">W</span>
+            </div>
+            <span className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
+              CareerHub
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Main Navigation */}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {/* Main Section */}
+        <div className="mb-6">
+          {!collapsed && (
+            <p className="nav-section-header mb-3">MAIN</p>
+          )}
+          {mainNavItems.map((item) => {
+            const Icon = item.icon
+            const isActive = isActiveRoute(item.href)
+
+            return (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className={cn(
+                  "nav-item w-full mb-2 relative group",
+                  isActive && "active"
+                )}
+              >
+                <Icon className="nav-icon" />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.badge && (
+                      <span className="badge badge-primary text-xs">
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+
+                {/* Tooltip for collapsed state */}
+                {collapsed && (
+                  <div
+                    className="absolute left-full ml-2 px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50"
+                    style={{
+                      background: 'var(--text-primary)',
+                      color: 'var(--background)'
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Tools Section */}
+        <div className="mb-6">
+          {!collapsed && (
+            <p className="nav-section-header mb-3">TOOLS</p>
+          )}
+          {toolsNavItems.map((item) => {
+            const Icon = item.icon
+            const isActive = isActiveRoute(item.href)
+
+            return (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className={cn(
+                  "nav-item w-full mb-2 relative group",
+                  isActive && "active"
+                )}
+              >
+                <Icon className="nav-icon" />
+                {!collapsed && (
+                  <span className="flex-1 text-left">{item.label}</span>
+                )}
+
+                {/* Tooltip for collapsed state */}
+                {collapsed && (
+                  <div
+                    className="absolute left-full ml-2 px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50"
+                    style={{
+                      background: 'var(--text-primary)',
+                      color: 'var(--background)'
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Support Section */}
+        <div>
+          {!collapsed && (
+            <p className="nav-section-header mb-3">SUPPORT</p>
+          )}
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon
+            const isActive = isActiveRoute(item.href)
+
+            return (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className={cn(
+                  "nav-item w-full mb-2 relative group",
+                  isActive && "active"
+                )}
+              >
+                <Icon className="nav-icon" />
+                {!collapsed && (
+                  <span className="flex-1 text-left">{item.label}</span>
+                )}
+
+                {/* Tooltip for collapsed state */}
+                {collapsed && (
+                  <div
+                    className="absolute left-full ml-2 px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50"
+                    style={{
+                      background: 'var(--text-primary)',
+                      color: 'var(--background)'
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Upgrade to Pro */}
+      {!collapsed && (
+        <div className="p-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <div
+            className="p-4 rounded-lg text-center"
+            style={{ background: 'var(--surface-hover)' }}
+          >
+            <Sparkles className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--primary)' }} />
+            <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>
+              Upgrade to Pro
+            </h3>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+              Get unlimited features
+            </p>
+            <Button
+              className="w-full btn btn-gradient text-xs"
+              size="sm"
+            >
+              Upgrade Now
+            </Button>
           </div>
         </div>
-      </div>
-    </>
+      )}
+
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => onCollapsedChange(!collapsed)}
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center transition-all hover:scale-110"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--card-shadow)'
+        }}
+      >
+        {collapsed ? (
+          <ChevronRight className="w-3 h-3" style={{ color: 'var(--text-secondary)' }} />
+        ) : (
+          <ChevronLeft className="w-3 h-3" style={{ color: 'var(--text-secondary)' }} />
+        )}
+      </button>
+    </aside>
   )
 }

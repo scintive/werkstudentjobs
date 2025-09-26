@@ -1,436 +1,593 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import Breadcrumbs from '@/components/navigation/Breadcrumbs'
+import { formatDistanceToNow } from 'date-fns'
 import {
   FileText,
   Briefcase,
-  TrendingUp,
-  Target,
-  ChevronRight,
-  Upload,
-  Sparkles,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  ArrowUpRight,
-  Plus,
-  Activity,
-  Users,
   Building2,
   Calendar,
-  Zap,
-  PenTool
+  ChevronRight,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  Search,
+  Wand2,
+  BarChart3,
+  Target,
+  BookOpen,
+  MoreHorizontal,
+  Bell,
+  Activity,
+  Send,
+  Edit3,
+  Eye,
+  Download
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
-interface ResumeVariant {
+interface TailoredResume {
   id: string
   job_id: string
-  variant_name?: string
-  match_score?: number
+  variant_name: string
+  match_score: number
   created_at: string
   updated_at: string
-  jobs?: {
+  jobs: {
+    id: string
     title: string
-    company_name?: string
+    companies: {
+      name: string
+    }
   }
 }
 
-interface QuickStat {
-  label: string
-  value: string | number
-  change?: string
-  trend?: 'up' | 'down'
-  icon: React.ElementType
+interface Activity {
+  id: string
+  type: 'application' | 'resume_edit' | 'job_view' | 'tailor'
+  title: string
+  description: string
+  timestamp: string
+  icon: 'success' | 'info' | 'warning'
+}
+
+interface HighMatchJob {
+  id: string
+  title: string
+  company: string
+  match_score: number
+  posted_date: string
 }
 
 export default function DashboardPage() {
-  const [userEmail, setUserEmail] = React.useState<string | null>(null)
-  const [resumeName, setResumeName] = React.useState<string>('')
-  const [completeness, setCompleteness] = React.useState<number>(0)
-  const [jobsCount, setJobsCount] = React.useState<number>(0)
-  const [resumeVariants, setResumeVariants] = React.useState<ResumeVariant[]>([])
-  const [baseResumeId, setBaseResumeId] = React.useState<string | null>(null)
-  const [recentActivity, setRecentActivity] = React.useState<any[]>([])
+  const router = useRouter()
   const [loading, setLoading] = React.useState(true)
+  const [userName, setUserName] = React.useState('there')
+  const [userId, setUserId] = React.useState<string | null>(null)
+  const [tailoredResumes, setTailoredResumes] = React.useState<TailoredResume[]>([])
+  const [activities, setActivities] = React.useState<Activity[]>([])
+  const [stats, setStats] = React.useState({
+    profileCompletion: 0,
+    activeApplications: 0,
+    jobMatches: 0,
+    avgMatchScore: 0
+  })
+  const [highMatchJobs, setHighMatchJobs] = React.useState<HighMatchJob[]>([])
+  const [showNotifications, setShowNotifications] = React.useState(false)
 
   React.useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession()
-        if (!mounted) return
-        const email = sessionData.session?.user?.email || null
-        setUserEmail(email)
-
-        // Fetch latest resume_data for this user
-        if (email) {
-          const userId = sessionData.session!.user!.id
-          const { data } = await supabase
-            .from('resume_data')
-            .select('id, personal_info, profile_completeness')
-            .eq('user_id', userId)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-
-          if (data && data.length > 0) {
-            const rec: any = data[0]
-            setResumeName(rec.personal_info?.name || '')
-            setCompleteness(Math.round((rec.profile_completeness || 0) * 100))
-            setBaseResumeId(rec.id)
-
-            // Fetch resume variants with job info - try both base_resume_id and user_id
-            let { data: variants } = await supabase
-              .from('resume_variants')
-              .select(`
-                id,
-                job_id,
-                variant_name,
-                match_score,
-                created_at,
-                updated_at,
-                jobs (
-                  title,
-                  company_name
-                )
-              `)
-              .eq('base_resume_id', rec.id)
-              .order('updated_at', { ascending: false })
-              .limit(5)
-
-            // If no variants found by base_resume_id, try user_id
-            if (!variants || variants.length === 0) {
-              const { data: variantsByUser } = await supabase
-                .from('resume_variants')
-                .select(`
-                  id,
-                  job_id,
-                  variant_name,
-                  match_score,
-                  created_at,
-                  updated_at,
-                  jobs (
-                    title,
-                    company_name
-                  )
-                `)
-                .eq('user_id', userId)
-                .order('updated_at', { ascending: false })
-                .limit(5)
-
-              variants = variantsByUser
-            }
-
-            if (variants) {
-              setResumeVariants(variants as ResumeVariant[])
-            }
-          }
-        }
-
-        // Fetch job count
-        const { count } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true)
-        setJobsCount(count || 0)
-
-      } catch (error) {
-        console.error('Dashboard data fetch error:', error)
-      } finally {
-        setLoading(false)
-      }
-    })()
-    return () => { mounted = false }
+    loadDashboardData()
   }, [])
 
-  const quickStats: QuickStat[] = [
-    {
-      label: 'Profile Completion',
-      value: `${completeness}%`,
-      change: completeness >= 80 ? 'Ready' : 'In Progress',
-      trend: completeness >= 80 ? 'up' : 'down',
-      icon: completeness >= 80 ? CheckCircle2 : AlertCircle
-    },
-    {
-      label: 'Tailored Resumes',
-      value: resumeVariants.length,
-      change: 'This month',
-      icon: FileText
-    },
-    {
-      label: 'Jobs Available',
-      value: jobsCount.toLocaleString(),
-      change: 'Active positions',
-      icon: Briefcase
-    },
-    {
-      label: 'Match Rate',
-      value: resumeVariants.length > 0
-        ? `${Math.round(resumeVariants.reduce((acc, v) => acc + (v.match_score || 0), 0) / resumeVariants.length)}%`
-        : '0%',
-      change: 'Average score',
-      icon: Target
-    }
-  ]
+  const loadDashboardData = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session?.user) {
+        router.push('/login')
+        return
+      }
 
-  const actionCards = [
-    {
-      title: 'Find Your Next Job',
-      description: 'Browse tailored job matches',
-      icon: Briefcase,
-      color: 'from-blue-500 to-indigo-600',
-      href: '/jobs',
-      cta: 'Browse Jobs'
-    },
-    {
-      title: 'Optimize Resume',
-      description: 'AI-powered improvements',
-      icon: Sparkles,
-      color: 'from-purple-500 to-pink-600',
-      href: '/?edit=1',
-      cta: 'Edit Resume'
-    },
-    {
-      title: 'Create Cover Letter',
-      description: 'Generate personalized letters',
-      icon: PenTool,
-      color: 'from-green-500 to-emerald-600',
-      href: '/cover-letters',
-      cta: 'Start Writing'
+      const userId = sessionData.session.user.id
+      setUserId(userId)
+
+      // Load user name
+      const { data: resumeData } = await supabase
+        .from('resume_data')
+        .select('personal_info, professional_title, skills')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+
+      if (resumeData && resumeData[0]) {
+        const firstName = resumeData[0].personal_info?.name?.split(' ')[0] || 'there'
+        setUserName(firstName)
+
+        // Calculate profile completion
+        let completion = 0
+        if (resumeData[0].personal_info?.name) completion += 20
+        if (resumeData[0].personal_info?.email) completion += 20
+        if (resumeData[0].professional_title) completion += 20
+        if (resumeData[0].skills && Object.keys(resumeData[0].skills).length > 0) completion += 20
+        if (resumeData[0].personal_info?.phone) completion += 20
+
+        setStats(prev => ({ ...prev, profileCompletion: completion }))
+      }
+
+      // Load tailored resumes
+      const { data: variants } = await supabase
+        .from('resume_variants')
+        .select(`
+          id,
+          job_id,
+          variant_name,
+          match_score,
+          created_at,
+          updated_at,
+          jobs (
+            id,
+            title,
+            companies (
+              name
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(5)
+
+      if (variants) {
+        setTailoredResumes(variants as TailoredResume[])
+        setStats(prev => ({ ...prev, activeApplications: variants.length }))
+      }
+
+      // Load job matches count
+      const { data: jobs } = await supabase
+        .from('jobs')
+        .select('id, title, companies(name)', { count: 'exact' })
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+
+      if (jobs) {
+        setStats(prev => ({ ...prev, jobMatches: jobs.length }))
+      }
+
+      // Calculate average match score from variants
+      if (variants && variants.length > 0) {
+        const avgScore = variants.reduce((acc, v) => acc + (v.match_score || 0), 0) / variants.length
+        setStats(prev => ({ ...prev, avgMatchScore: Math.round(avgScore) }))
+      }
+
+      // Load high match jobs (90%+) for notifications
+      // For demo, we'll create mock high-match jobs
+      const mockHighMatches: HighMatchJob[] = [
+        {
+          id: '1',
+          title: 'Senior React Developer',
+          company: 'TechCorp',
+          match_score: 95,
+          posted_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: '2',
+          title: 'Full Stack Engineer',
+          company: 'StartupXYZ',
+          match_score: 92,
+          posted_date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+        }
+      ]
+      setHighMatchJobs(mockHighMatches)
+
+      // Create recent activities
+      const recentActivities: Activity[] = []
+
+      if (variants && variants.length > 0) {
+        variants.slice(0, 3).forEach(v => {
+          recentActivities.push({
+            id: v.id,
+            type: 'tailor',
+            title: `Resume tailored for ${v.jobs?.companies?.name || 'Company'}`,
+            description: v.jobs?.title || 'Position',
+            timestamp: v.created_at,
+            icon: 'info'
+          })
+        })
+      }
+
+      // Add mock activities for demo
+      recentActivities.push(
+        {
+          id: 'act1',
+          type: 'application',
+          title: 'Application submitted to TechCorp',
+          description: 'Your application for Senior React Developer has been submitted',
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          icon: 'success'
+        },
+        {
+          id: 'act2',
+          type: 'resume_edit',
+          title: 'Resume optimized for AI/ML role',
+          description: 'Added machine learning skills and relevant projects',
+          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          icon: 'info'
+        },
+        {
+          id: 'act3',
+          type: 'job_view',
+          title: 'New job matches found',
+          description: '5 new positions match your profile',
+          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          icon: 'info'
+        }
+      )
+
+      setActivities(recentActivities.slice(0, 5))
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="space-y-4 text-center">
-          <div className="w-16 h-16 mx-auto border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--primary)] border-t-transparent"></div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Page Header with Breadcrumbs */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumbs />
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">
-            Welcome back{resumeName ? `, ${resumeName.split(' ')[0]}` : ''}!
-          </h1>
-          <p className="text-gray-600 mt-1">Here's what's happening with your job search today.</p>
-        </div>
-        <Button
-          onClick={() => window.location.href = '/?upload=new'}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          Upload New Resume
-        </Button>
+    <div className="page-content">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="heading-xl" style={{ color: 'var(--text-primary)' }}>
+          Welcome back, {userName}
+        </h1>
+        <p className="text-base mt-2" style={{ color: 'var(--text-secondary)' }}>
+          Here's what's happening with your job search today.
+        </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {quickStats.map((stat, index) => {
-          const Icon = stat.icon
-          return (
-            <Card key={index} className="relative overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-600">{stat.label}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    {stat.change && (
-                      <div className="flex items-center gap-1">
-                        {stat.trend && (
-                          <TrendingUp className={cn(
-                            "w-4 h-4",
-                            stat.trend === 'up' ? "text-green-500" : "text-red-500"
-                          )} />
-                        )}
-                        <p className="text-xs text-gray-500">{stat.change}</p>
+      {/* Notification Bell */}
+      <div className="absolute top-4 right-8">
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            <Bell className="w-5 h-5" />
+            {highMatchJobs.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {highMatchJobs.length}
+              </span>
+            )}
+          </Button>
+
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+              <div className="p-4 border-b">
+                <h3 className="font-semibold">Top Job Matches</h3>
+                <p className="text-xs text-gray-500">Jobs with 90%+ match score</p>
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                {highMatchJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="p-4 border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => router.push(`/jobs/${job.id}`)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{job.title}</p>
+                        <p className="text-xs text-gray-600">{job.company}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatDistanceToNow(new Date(job.posted_date), { addSuffix: true })}
+                        </p>
                       </div>
-                    )}
+                      <Badge className="bg-green-100 text-green-700">
+                        {job.match_score}% match
+                      </Badge>
+                    </div>
                   </div>
-                  <div className={cn(
-                    "w-12 h-12 rounded-lg flex items-center justify-center",
-                    stat.trend === 'up' ? "bg-green-50" : "bg-gray-50"
-                  )}>
-                    <Icon className={cn(
-                      "w-6 h-6",
-                      stat.trend === 'up' ? "text-green-600" : "text-gray-600"
-                    )} />
+                ))}
+                {highMatchJobs.length === 0 && (
+                  <div className="p-4 text-center text-gray-500">
+                    No high-match jobs at the moment
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+                )}
+              </div>
+              <div className="p-3 border-t">
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={() => router.push('/jobs')}
+                >
+                  View All Jobs
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Profile Completion */}
+        <div className="stat-card">
+          <div className="stat-icon-wrapper" style={{ background: stats.profileCompletion === 100 ? 'var(--success-bg)' : 'var(--warning-bg)' }}>
+            <CheckCircle className="w-6 h-6" style={{ color: stats.profileCompletion === 100 ? 'var(--success)' : 'var(--warning)' }} />
+          </div>
+          <div>
+            <p className="stat-label">Profile Completion</p>
+            <p className="stat-value">{stats.profileCompletion}%</p>
+            <p className="stat-sublabel">{stats.profileCompletion === 100 ? 'Ready to apply' : 'Complete your profile'}</p>
+          </div>
+          <div className="stat-progress">
+            <div className="stat-progress-fill" style={{ width: `${stats.profileCompletion}%`, background: stats.profileCompletion === 100 ? 'var(--success)' : 'var(--warning)' }} />
+          </div>
+        </div>
+
+        {/* Active Applications */}
+        <div className="stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'var(--primary-light)' }}>
+            <FileText className="w-6 h-6" style={{ color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <p className="stat-label">Active Applications</p>
+            <p className="stat-value">{stats.activeApplications}</p>
+            <p className="stat-sublabel">In progress</p>
+          </div>
+        </div>
+
+        {/* Job Matches */}
+        <div className="stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'var(--info-bg)' }}>
+            <Briefcase className="w-6 h-6" style={{ color: 'var(--info)' }} />
+          </div>
+          <div>
+            <p className="stat-label">Job Matches</p>
+            <p className="stat-value">{stats.jobMatches}</p>
+            <p className="stat-sublabel">New opportunities</p>
+          </div>
+          <span className="stat-badge badge-info">
+            +12 today
+          </span>
+        </div>
+
+        {/* Match Score */}
+        <div className="stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'var(--warning-bg)' }}>
+            <Target className="w-6 h-6" style={{ color: 'var(--warning)' }} />
+          </div>
+          <div>
+            <p className="stat-label">Match Score</p>
+            <p className="stat-value">{stats.avgMatchScore}%</p>
+            <p className="stat-sublabel">Average compatibility</p>
+          </div>
+          <div className="stat-progress">
+            <div className="stat-progress-fill" style={{ width: `${stats.avgMatchScore}%`, background: 'var(--warning)' }} />
+          </div>
+        </div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Tailored Resumes - 2 columns wide */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Recent Tailored Resumes</CardTitle>
-                  <CardDescription>Your customized resume versions</CardDescription>
-                </div>
-                {resumeVariants.length > 0 && (
-                  <Link href="/jobs">
-                    <Button variant="ghost" size="sm">
-                      View all
-                      <ArrowUpRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {resumeVariants.length > 0 ? (
-                <div className="space-y-3">
-                  {resumeVariants.map((variant) => (
-                    <div
-                      key={variant.id}
-                      className="group p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all cursor-pointer"
-                      onClick={() => window.location.href = `/jobs/${variant.job_id}/tailor?variant_id=${variant.id}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Building2 className="w-4 h-4 text-gray-400" />
-                            <p className="font-medium text-gray-900 truncate">
-                              {variant.jobs?.title || variant.variant_name || 'Untitled Position'}
-                            </p>
-                            {variant.match_score && (
-                              <Badge
-                                variant={variant.match_score >= 80 ? "default" : "secondary"}
-                                className={cn(
-                                  "ml-2",
-                                  variant.match_score >= 80 && "bg-green-100 text-green-700"
-                                )}
-                              >
-                                {variant.match_score}% match
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {variant.jobs?.company_name || 'Company not specified'}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(variant.updated_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+        {/* Left Column - Recent Resumes & Activity */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Recent Tailored Resumes */}
+          <div className="bg-white rounded-xl border border-[var(--border)] p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="heading-md" style={{ color: 'var(--text-primary)' }}>
+                Recent Tailored Resumes
+              </h2>
+              <button className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                View All →
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {tailoredResumes.length > 0 ? (
+                tailoredResumes.map((resume) => (
+                  <div key={resume.id} className="resume-item">
+                    <div className="resume-icon">
+                      <FileText className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
+                    </div>
+                    <div className="resume-details">
+                      <div className="resume-title">
+                        {resume.jobs?.title || resume.variant_name || 'Tailored Resume'}
+                      </div>
+                      <div className="resume-meta">
+                        <span className="resume-meta-item">
+                          <Building2 className="w-3.5 h-3.5" />
+                          {resume.jobs?.companies?.name || 'Company'}
+                        </span>
+                        <span className="resume-meta-item">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatDistanceToNow(new Date(resume.updated_at), { addSuffix: true })}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="resume-actions">
+                      <span className={`badge ${resume.match_score >= 90 ? 'badge-success' : resume.match_score >= 75 ? 'badge-warning' : 'badge-info'}`}>
+                        {resume.match_score || 0}% match
+                      </span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 font-medium">
+                        optimized
+                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1">
+                            <MoreHorizontal className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor`)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor`)}>
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Download className="w-4 h-4 mr-2" />
+                            Download PDF
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))
               ) : (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 mb-4">No tailored resumes yet</p>
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No tailored resumes yet</p>
                   <Button
-                    onClick={() => window.location.href = '/jobs'}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => router.push('/jobs')}
                   >
-                    Browse Jobs
+                    Browse Jobs to Tailor
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Quick Actions - 1 column */}
-        <div className="space-y-4">
-          {actionCards.map((action, index) => {
-            const Icon = action.icon
-            return (
-              <Card
-                key={index}
-                className="group hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => window.location.href = action.href}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className={cn(
-                      "w-12 h-12 rounded-lg bg-gradient-to-br flex items-center justify-center",
-                      action.color
-                    )}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
-                      <p className="text-sm text-gray-600 mb-3">{action.description}</p>
-                      <div className="flex items-center text-sm font-medium text-blue-600 group-hover:text-blue-700">
-                        {action.cta}
-                        <ArrowUpRight className="w-4 h-4 ml-1" />
+          {/* Recent Activity */}
+          <div className="bg-white rounded-xl border border-[var(--border)] p-6">
+            <h2 className="heading-md mb-5" style={{ color: 'var(--text-primary)' }}>
+              Recent Activity
+            </h2>
+
+            <div className="space-y-4">
+              {activities.length > 0 ? (
+                activities.map((activity) => {
+                  const getActivityIcon = () => {
+                    switch (activity.type) {
+                      case 'application': return <Send className="w-4 h-4" />
+                      case 'resume_edit': return <Edit3 className="w-4 h-4" />
+                      case 'job_view': return <Eye className="w-4 h-4" />
+                      case 'tailor': return <Wand2 className="w-4 h-4" />
+                      default: return <Activity className="w-4 h-4" />
+                    }
+                  }
+
+                  const getIconColor = () => {
+                    switch (activity.icon) {
+                      case 'success': return { bg: 'var(--success-bg)', color: 'var(--success)' }
+                      case 'warning': return { bg: 'var(--warning-bg)', color: 'var(--warning)' }
+                      default: return { bg: 'var(--info-bg)', color: 'var(--info)' }
+                    }
+                  }
+
+                  const iconStyle = getIconColor()
+
+                  return (
+                    <div key={activity.id} className="activity-item">
+                      <div className="activity-icon" style={{ background: iconStyle.bg }}>
+                        {React.cloneElement(getActivityIcon(), { style: { color: iconStyle.color } })}
+                      </div>
+                      <div className="activity-content">
+                        <div className="activity-title">{activity.title}</div>
+                        <div className="activity-desc">{activity.description}</div>
+                      </div>
+                      <div className="activity-time">
+                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                  )
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No recent activity</p>
+                  <p className="text-xs mt-1">Start by creating or tailoring a resume</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Quick Actions */}
+        <div className="space-y-4">
+          <h2 className="heading-sm mb-4" style={{ color: 'var(--text-primary)' }}>
+            Quick Actions
+          </h2>
+
+          {/* Find Your Next Job */}
+          <div className="quick-action" onClick={() => router.push('/jobs')}>
+            <div className="quick-action-icon" style={{ background: 'var(--primary-light)' }}>
+              <Search className="w-6 h-6" style={{ color: 'var(--primary)' }} />
+            </div>
+            <div className="quick-action-content">
+              <div className="quick-action-title">Find Your Next Job</div>
+              <div className="quick-action-desc">Browse tailored job matches</div>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+          </div>
+
+          {/* Optimize Resume */}
+          <div className="quick-action" onClick={() => router.push('/?edit=1')}>
+            <div className="quick-action-icon" style={{ background: 'rgba(124, 58, 237, 0.1)' }}>
+              <Wand2 className="w-6 h-6" style={{ color: '#7c3aed' }} />
+            </div>
+            <div className="quick-action-content">
+              <div className="quick-action-title">Optimize Resume</div>
+              <div className="quick-action-desc">AI-powered improvements</div>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+          </div>
+
+          {/* Career Insights */}
+          <div className="quick-action">
+            <div className="quick-action-icon" style={{ background: 'var(--warning-bg)' }}>
+              <BarChart3 className="w-6 h-6" style={{ color: 'var(--warning)' }} />
+            </div>
+            <div className="quick-action-content">
+              <div className="quick-action-title">Career Insights</div>
+              <div className="quick-action-desc">Track your progress</div>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+          </div>
+
+          {/* Skill Assessment */}
+          <div className="quick-action">
+            <div className="quick-action-icon" style={{ background: 'var(--error-bg)' }}>
+              <Target className="w-6 h-6" style={{ color: 'var(--error)' }} />
+            </div>
+            <div className="quick-action-content">
+              <div className="quick-action-title">Skill Assessment</div>
+              <div className="quick-action-desc">Identify skill gaps</div>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+          </div>
+
+          {/* Interview Prep */}
+          <div className="quick-action">
+            <div className="quick-action-icon" style={{ background: 'var(--success-bg)' }}>
+              <BookOpen className="w-6 h-6" style={{ color: 'var(--success)' }} />
+            </div>
+            <div className="quick-action-content">
+              <div className="quick-action-title">Interview Prep</div>
+              <div className="quick-action-desc">Practice with AI</div>
+            </div>
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+          </div>
         </div>
       </div>
-
-      {/* Resume Health Check */}
-      {baseResumeId && (
-        <Card className="border-2 border-dashed">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "w-14 h-14 rounded-full flex items-center justify-center",
-                  completeness >= 80 ? "bg-green-100" : "bg-yellow-100"
-                )}>
-                  <Activity className={cn(
-                    "w-7 h-7",
-                    completeness >= 80 ? "text-green-600" : "text-yellow-600"
-                  )} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Resume Health Check</h3>
-                  <div className="flex items-center gap-3 mt-1">
-                    <Progress value={completeness} className="w-32 h-2" />
-                    <span className="text-sm text-gray-600">{completeness}% complete</span>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {completeness >= 80
-                      ? "Your resume is ready for applications!"
-                      : "Complete your profile for better job matches"}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => window.location.href = '/?edit=1'}
-              >
-                {completeness >= 80 ? 'View Resume' : 'Complete Profile'}
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

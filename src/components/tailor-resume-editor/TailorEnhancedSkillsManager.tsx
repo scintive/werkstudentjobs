@@ -84,7 +84,7 @@ const CATEGORY_COLORS = [
   { bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-600', accent: 'bg-slate-500' },
   { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-600', accent: 'bg-indigo-500' },
   { bg: 'bg-teal-50', border: 'border-teal-100', text: 'text-teal-600', accent: 'bg-teal-500' },
-  { bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-600', accent: 'bg-orange-500' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600', accent: 'bg-emerald-500' },
   { bg: 'bg-cyan-50', border: 'border-cyan-100', text: 'text-cyan-600', accent: 'bg-cyan-500' },
   { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-600', accent: 'bg-violet-500' }
 ]
@@ -605,8 +605,8 @@ export function TailorEnhancedSkillsManager({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <Brain className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
+                <Brain className="w-4 h-4 text-gray-600" />
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900">AI Skills Optimization Active</h4>

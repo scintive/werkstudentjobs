@@ -837,7 +837,8 @@ export async function POST(request: NextRequest) {
         education: Array.isArray(baseResume.education) ? baseResume.education : [],
         projects: Array.isArray(baseResume.projects) ? baseResume.projects : [],
         certifications: Array.isArray(baseResume.certifications) ? baseResume.certifications : [],
-        languages: (baseResume as any).languages || []
+        languages: (baseResume as any).languages || [],
+        customSections: baseResume.custom_sections || []
       }
     };
     
@@ -2200,10 +2201,11 @@ Return your response as a valid JSON object only. Do not include any additional 
       // 10. UPDATE VARIANT WITH TAILORED DATA
       logContext.stage = 'update_variant';
       
-      // CRITICAL: Preserve personal info exactly; do not overwrite tailored skills
+      // CRITICAL: Preserve personal info and custom sections exactly; do not overwrite tailored skills
       const tailoredDataWithOriginalInfo = {
         ...(analysisData.tailored_resume || analysisContext.resume),
         personalInfo: baseResume.personal_info, // Force original personal info
+        customSections: baseResume.custom_sections || [] // Force original custom sections
       };
       if (analysisData.skills_category_plan) {
         tailoredDataWithOriginalInfo.skillsCategoryPlan = analysisData.skills_category_plan;

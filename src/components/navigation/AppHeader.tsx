@@ -28,7 +28,8 @@ import {
   Sparkles,
   LayoutDashboard,
   PenTool,
-  Target
+  Target,
+  Bell
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -48,9 +49,10 @@ export default function AppHeader() {
 
   const navigationItems: NavigationItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Resume', href: '/?edit=1', icon: FileText },
-    { label: 'Jobs', href: '/jobs', icon: Briefcase, badge: 'New' },
-    { label: 'Tailor', href: '/jobs?tailor=1', icon: Target },
+    { label: 'Resume Editor', href: '/?edit=1', icon: FileText },
+    { label: 'Jobs', href: '/jobs', icon: Briefcase },
+    { label: 'Tailor Resume', href: '/jobs?tailor=1', icon: Sparkles },
+    { label: 'Cover Letters', href: '/cover-letters', icon: PenTool },
   ]
 
   React.useEffect(() => {
@@ -106,17 +108,17 @@ export default function AppHeader() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="sticky top-0 z-50" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Desktop Navigation */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary)' }}>
+                <span className="text-white font-bold">W</span>
               </div>
-              <span className="font-bold text-xl text-gray-900 hidden sm:block">
-                ResumeCraft AI
+              <span className="font-bold text-xl hidden sm:block" style={{ color: 'var(--text-primary)' }}>
+                WerkstudentJobs
               </span>
             </Link>
 
@@ -133,8 +135,8 @@ export default function AppHeader() {
                     className={cn(
                       "px-3 py-2 text-sm font-medium rounded-md flex items-center gap-2 transition-colors",
                       isActive
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                        ? "bg-orange-50 text-orange-600 font-medium"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -170,7 +172,7 @@ export default function AppHeader() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="relative">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--primary)' }}>
                           <span className="text-white text-sm font-medium">
                             {userName ? userName[0].toUpperCase() : email[0].toUpperCase()}
                           </span>
@@ -186,19 +188,20 @@ export default function AppHeader() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuLabel>
+                      <div>
+                        <p className="font-medium">{userName || 'User'}</p>
+                        <p className="text-xs text-gray-500 font-normal">{email}</p>
+                      </div>
+                    </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                      <Home className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push('/?edit=1')}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Edit Resume
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push('/settings')}>
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/help')}>
+                      <User className="mr-2 h-4 w-4" />
+                      Help & Support
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600">
@@ -220,7 +223,8 @@ export default function AppHeader() {
                 <Button
                   size="sm"
                   onClick={() => router.push('/register')}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  style={{ background: 'var(--primary)' }}
+                  className="hover:opacity-90 text-white"
                 >
                   Get Started
                 </Button>
@@ -257,8 +261,8 @@ export default function AppHeader() {
                   className={cn(
                     "px-3 py-2 text-sm font-medium rounded-md flex items-center gap-2 transition-colors",
                     isActive
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                      ? "bg-orange-50 text-orange-600 font-medium"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   )}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -276,10 +280,6 @@ export default function AppHeader() {
         )}
       </div>
 
-      {/* Progress bar for loading states */}
-      <div className="h-0.5 bg-gray-100">
-        <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300" style={{ width: '0%' }} />
-      </div>
     </header>
   )
 }

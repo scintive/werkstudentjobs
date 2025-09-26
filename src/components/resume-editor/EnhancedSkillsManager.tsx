@@ -752,29 +752,27 @@ export function EnhancedSkillsManager({
       <div className="bg-gradient-to-r from-white to-slate-50/30 border-b border-gray-100/80">
         <div className="p-6 space-y-5">
           {/* Top Row - Title & Add Category */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50 shadow-sm">
-                <Brain className="h-6 w-6 text-blue-600" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
+                <Brain className="h-4 w-4 text-gray-600" />
               </div>
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+              <div>
+                <h2 className="font-semibold text-gray-900 text-[15px]">
                   Skills Intelligence
                 </h2>
-                <p className="text-sm text-gray-600 font-medium">
+                <p className="text-xs text-gray-500 mt-0.5">
                   AI-powered skill organization with proficiency tracking
                 </p>
               </div>
             </div>
-            
+
             <button
               onClick={() => setShowAddCategory(true)}
-              className="group flex items-center gap-3 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-800 rounded-xl text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-800 rounded-lg text-sm font-medium transition-all duration-200"
               title="Add new skill category"
             >
-              <div className="p-1.5 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-colors">
-                <Plus className="h-3.5 w-3.5 text-slate-600" />
-              </div>
+              <Plus className="h-4 w-4" />
               Add Category
             </button>
           </div>
