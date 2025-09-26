@@ -560,8 +560,25 @@ export const TailorPerfectStudio = ({
     }
   }, [resumeData, loading, generatePreview])
   
-  // Disable automatic scroll restoration to avoid jumpiness while editing
-  React.useEffect(() => {}, [previewHtml])
+  // Auto-resize iframe when content changes
+  React.useEffect(() => {
+    if (previewHtml && iframeRef.current) {
+      const iframe = iframeRef.current
+
+      iframe.onload = () => {
+        // Auto-resize iframe to fit content
+        try {
+          if (iframe.contentDocument) {
+            const contentHeight = iframe.contentDocument.documentElement.scrollHeight
+            iframe.style.height = `${Math.max(contentHeight + 100, 1200)}px`
+          }
+        } catch (error) {
+          // Fallback height if we can't access content
+          iframe.style.height = '1500px'
+        }
+      }
+    }
+  }, [previewHtml])
   
   const saveResume = async () => {
     console.log('Saving resume...', resumeData)
@@ -1458,13 +1475,14 @@ export const TailorPerfectStudio = ({
                   <iframe
                     ref={iframeRef}
                     srcDoc={previewHtml}
-                    className="w-full h-full border-0"
-                    scrolling="no"
-                    style={{ 
+                    className="w-full border-0"
+                    scrolling="yes"
+                    style={{
                       transform: `scale(${zoom})`,
                       transformOrigin: 'top left',
                       width: `${(1/zoom)*100}%`,
-                      height: `${(1/zoom)*100}%`
+                      minHeight: '1200px',
+                      height: 'auto'
                     }}
                   />
                 ) : (

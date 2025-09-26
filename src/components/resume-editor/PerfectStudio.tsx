@@ -1208,8 +1208,19 @@ export function PerfectStudio({
         }
       }
       
-      // Wait for iframe to load content, then restore scroll
+      // Wait for iframe to load content, then resize and restore scroll
       iframe.onload = () => {
+        // Auto-resize iframe to fit content
+        try {
+          if (iframe.contentDocument) {
+            const contentHeight = iframe.contentDocument.documentElement.scrollHeight
+            iframe.style.height = `${Math.max(contentHeight + 100, 1200)}px`
+          }
+        } catch (error) {
+          // Fallback height if we can't access content
+          iframe.style.height = '1500px'
+        }
+
         setTimeout(restoreScroll, 100)
       }
       
@@ -2311,9 +2322,10 @@ export function PerfectStudio({
                   style={{
                     border: 'none',
                     display: 'block',
-                    height: '1100px'
+                    minHeight: '1200px',
+                    height: 'auto'
                   }}
-                  scrolling="no"
+                  scrolling="yes"
                   title="Resume Preview"
                 />
               ) : (
