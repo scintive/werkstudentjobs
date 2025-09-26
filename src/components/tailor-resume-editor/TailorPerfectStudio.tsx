@@ -672,7 +672,7 @@ export const TailorPerfectStudio = ({
   }, [skillsSuggestion, resumeData])
 
   return (
-    <div className="w-full h-screen">
+    <div className="w-full">
       {/* Header */}
       <div className="bg-white border-b h-14 flex items-center px-4" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between w-full">
@@ -720,7 +720,7 @@ export const TailorPerfectStudio = ({
       </div>
       
       {/* Layout: Editor + Preview */}
-      <div className="flex w-full" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex w-full" style={{ minHeight: 'calc(100vh - 400px)' }}>
         {/* Editor Column */}
         <div className="w-[45%] bg-white border-r overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
           <div className="p-4 space-y-3" key={`editor-${forceRender}`}>

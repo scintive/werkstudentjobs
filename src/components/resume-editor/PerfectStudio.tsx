@@ -2079,7 +2079,137 @@ export function PerfectStudio({
               </div>
             </SectionCard>
 
-            {/* Custom Sections - Enhanced Redesign */}
+            {/* Render Custom Sections First */}
+            {localData.customSections?.filter(section => {
+              // Filter out Academic Projects - they should be in the main projects section
+              const lowerTitle = section.title?.toLowerCase() || '';
+              return !(lowerTitle.includes('academic') && lowerTitle.includes('project'));
+            }).map((section, sectionIndex) => {
+              // Smart template matching for extracted sections
+              const findMatchingTemplate = (sectionTitle: string) => {
+                // Direct match first
+                if (CUSTOM_SECTION_TEMPLATES[sectionTitle as keyof typeof CUSTOM_SECTION_TEMPLATES]) {
+                  return CUSTOM_SECTION_TEMPLATES[sectionTitle as keyof typeof CUSTOM_SECTION_TEMPLATES];
+                }
+
+                // Fuzzy matching for common variations
+                const lowerTitle = sectionTitle.toLowerCase();
+
+                // Leadership matching
+                if (lowerTitle.includes('leadership') || lowerTitle.includes('president') ||
+                    lowerTitle.includes('executive')) {
+                  return CUSTOM_SECTION_TEMPLATES['Leadership Experience'];
+                }
+                // Volunteer matching
+                if (lowerTitle.includes('volunteer') || lowerTitle.includes('community')) {
+                  return CUSTOM_SECTION_TEMPLATES['Volunteer Experience'];
+                }
+                // Awards matching
+                if (lowerTitle.includes('award') || lowerTitle.includes('honor') ||
+                    lowerTitle.includes('recognition')) {
+                  return CUSTOM_SECTION_TEMPLATES['Awards & Recognition'];
+                }
+                // Publications matching
+                if (lowerTitle.includes('publication') || lowerTitle.includes('research') ||
+                    lowerTitle.includes('paper')) {
+                  return CUSTOM_SECTION_TEMPLATES['Publications'];
+                }
+
+                // Default template
+                return null;
+              };
+
+              const template = findMatchingTemplate(section.title);
+              const icon = template ? template.icon : <Users className="w-4 h-4" />;
+              const color = template ? template.color : 'from-gray-500 to-gray-600';
+
+              return (
+                <SectionCard
+                  key={sectionIndex}
+                  title={section.title}
+                  icon={icon}
+                  badge={section.items?.length || 0}
+                  isExpanded={expandedSections.custom}
+                  onToggle={() => toggleSection('custom')}
+                  onAdd={() => {
+                    const newSections = [...localData.customSections]
+                    newSections[sectionIndex].items = [
+                      ...(newSections[sectionIndex].items || []),
+                      { field1: '', field2: '', field3: '', field4: '' }
+                    ]
+                    setLocalData({ ...localData, customSections: newSections })
+                  }}
+                >
+                  <div className="space-y-3">
+                    {section.items?.map((item, itemIndex) => {
+                      const fieldNames = section.fields || ['Field 1', 'Field 2', 'Field 3', 'Field 4'];
+                      return (
+                        <div key={itemIndex} className="p-4 bg-gray-50 rounded-lg relative">
+                          <button
+                            onClick={() => {
+                              const newSections = [...localData.customSections]
+                              newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_, i) => i !== itemIndex)
+                              setLocalData({ ...localData, customSections: newSections })
+                            }}
+                            className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <div className="space-y-3 pr-8">
+                            {fieldNames.map((fieldName, fieldIndex) => (
+                              <div key={fieldIndex}>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  {fieldName}
+                                </label>
+                                {fieldIndex === 3 ? (
+                                  <textarea
+                                    value={item[`field${fieldIndex + 1}` as keyof typeof item] || ''}
+                                    onChange={(e) => {
+                                      const newSections = [...localData.customSections]
+                                      newSections[sectionIndex].items[itemIndex][`field${fieldIndex + 1}` as keyof typeof item] = e.target.value
+                                      setLocalData({ ...localData, customSections: newSections })
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    rows={3}
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={item[`field${fieldIndex + 1}` as keyof typeof item] || ''}
+                                    onChange={(e) => {
+                                      const newSections = [...localData.customSections]
+                                      newSections[sectionIndex].items[itemIndex][`field${fieldIndex + 1}` as keyof typeof item] = e.target.value
+                                      setLocalData({ ...localData, customSections: newSections })
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setLocalData({
+                          ...localData,
+                          customSections: localData.customSections.filter((_, i) => i !== sectionIndex)
+                        })
+                      }}
+                      className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 border border-red-200 transition-all flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remove Section
+                    </motion.button>
+                  </div>
+                </SectionCard>
+              )
+            })}
+
+            {/* Add Custom Section Button - Now After All Custom Sections */}
             <div className="relative">
               <motion.button
                 whileHover={{ 
