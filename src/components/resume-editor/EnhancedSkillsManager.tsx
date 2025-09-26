@@ -70,16 +70,16 @@ interface OrganizedSkillsResponse {
 
 // Subtle category color hints - professional palette
 const CATEGORY_COLORS = [
-  { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-600', accent: 'bg-blue-500' },
-  { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600', accent: 'bg-emerald-500' },
-  { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-600', accent: 'bg-purple-500' },
-  { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-600', accent: 'bg-amber-500' },
-  { bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-600', accent: 'bg-slate-500' },
-  { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-600', accent: 'bg-indigo-500' },
-  { bg: 'bg-teal-50', border: 'border-teal-100', text: 'text-teal-600', accent: 'bg-teal-500' },
-  { bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-600', accent: 'bg-orange-500' },
-  { bg: 'bg-cyan-50', border: 'border-cyan-100', text: 'text-cyan-600', accent: 'bg-cyan-500' },
-  { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-600', accent: 'bg-violet-500' }
+  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', accent: 'bg-blue-500', icon: 'bg-blue-100' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', accent: 'bg-emerald-500', icon: 'bg-emerald-100' },
+  { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', accent: 'bg-purple-500', icon: 'bg-purple-100' },
+  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', accent: 'bg-amber-500', icon: 'bg-amber-100' },
+  { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', accent: 'bg-slate-500', icon: 'bg-slate-100' },
+  { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', accent: 'bg-indigo-500', icon: 'bg-indigo-100' },
+  { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', accent: 'bg-teal-500', icon: 'bg-teal-100' },
+  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', accent: 'bg-rose-500', icon: 'bg-rose-100' },
+  { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', accent: 'bg-cyan-500', icon: 'bg-cyan-100' },
+  { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', accent: 'bg-violet-500', icon: 'bg-violet-100' }
 ]
 
 // Default icons for categories
@@ -992,7 +992,7 @@ export function EnhancedSkillsManager({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 bg-white border ${colorScheme.border} rounded-lg shadow-sm`}>
+                      <div className={`p-2 ${colorScheme.icon} rounded-lg`}>
                         <CategoryIcon className={`h-4 w-4 ${colorScheme.text}`} />
                       </div>
                       <div>
@@ -1013,7 +1013,7 @@ export function EnhancedSkillsManager({
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`text-xs ${colorScheme.text} ${colorScheme.bg} border ${colorScheme.border} px-2 py-1 rounded-md font-medium`}>
+                      <span className={`text-xs font-semibold ${colorScheme.text} ${colorScheme.icon} px-2.5 py-1 rounded-lg`}>
                         {categoryData.skills.length}
                       </span>
                       {isExpanded ? (
@@ -1052,7 +1052,7 @@ export function EnhancedSkillsManager({
                                     key={`${skillName}-${skillIndex}`}
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className={`inline-flex items-center gap-2 px-4 py-2.5 ${colorScheme.bg} border ${colorScheme.border} ${colorScheme.text} rounded-xl text-sm font-medium hover:opacity-80 transition-all shadow-sm hover:shadow-md`}
+                                    className={`inline-flex items-center gap-2 px-4 py-2.5 ${colorScheme.bg} border-2 ${colorScheme.border} rounded-xl text-sm font-semibold ${colorScheme.text} hover:shadow-md transition-all`}
                                   >
                                     <span className="font-medium">{skillName}</span>
                                     {showProficiency && showSkillLevelsInResume && (
@@ -1333,16 +1333,24 @@ export function EnhancedSkillsManager({
                 </div>
               ))
             ) : (
-              <div className="px-6 py-8 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Globe2 className="w-6 h-6 text-gray-400" />
-                </div>
-                <p className="text-sm text-gray-500 mb-4">No languages added yet</p>
-                <button
-                  onClick={() => setShowAddLanguage(true)}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                  Add your first language
-                </button>
+              <div className="px-6 py-12 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg mx-4 mb-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-center"
+                >
+                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <Globe2 className="w-8 h-8 text-indigo-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Languages Added</h3>
+                  <p className="text-sm text-gray-600 mb-6 max-w-xs mx-auto">Add languages you speak to showcase your communication skills to global employers</p>
+                  <button
+                    onClick={() => setShowAddLanguage(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all transform hover:scale-105">
+                    <Plus className="w-4 h-4" />
+                    Add Your First Language
+                  </button>
+                </motion.div>
               </div>
             )}
           </div>

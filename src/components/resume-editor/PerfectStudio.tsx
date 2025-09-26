@@ -47,6 +47,7 @@ import { EnhancedRichText } from './enhanced-rich-text'
 import { SimpleTemplateDropdown } from './SimpleTemplateDropdown'
 import { EnhancedSkillsManager } from './EnhancedSkillsManager'
 import { TailorEnhancedSkillsManager } from '../tailor-resume-editor/TailorEnhancedSkillsManager'
+import { SkillsSuggestionsPanel } from './SkillsSuggestionsPanel'
 import { useUnifiedSuggestions } from '@/hooks/useUnifiedSuggestions'
 import { SuggestionIndicator, SuggestionBadge } from './SuggestionIndicator'
 import type { UnifiedSuggestion } from '@/hooks/useUnifiedSuggestions'
@@ -1877,6 +1878,22 @@ export function PerfectStudio({
                 />
               )}
             </SectionCard>
+
+            {/* Skills Suggestions Panel */}
+            {mode === 'base' && (
+              <SkillsSuggestionsPanel
+                currentSkills={localData.skills || {}}
+                onSkillsChange={(updatedSkills) => {
+                  setLocalData(prev => ({
+                    ...prev,
+                    skills: updatedSkills
+                  }))
+                  updateField('skills', updatedSkills)
+                }}
+                jobContext={null}
+                userProfile={resumeData}
+              />
+            )}
 
             {/* Certifications */}
             <SectionCard
