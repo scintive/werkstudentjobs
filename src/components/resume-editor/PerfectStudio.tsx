@@ -1879,19 +1879,17 @@ export function PerfectStudio({
               )}
             </SectionCard>
 
-            {/* Skills Suggestions Panel */}
-            {mode === 'base' && (
+            {/* Skills Suggestions Panel - Currently disabled, needs implementation */}
+            {false && mode === 'base' && (
               <SkillsSuggestionsPanel
-                currentSkills={localData.skills || {}}
-                onSkillsChange={(updatedSkills) => {
-                  setLocalData(prev => ({
-                    ...prev,
-                    skills: updatedSkills
-                  }))
-                  updateField('skills', updatedSkills)
+                suggestions={[]}
+                onAccept={(id) => {
+                  console.log('Accept skill suggestion:', id)
                 }}
-                jobContext={null}
-                userProfile={resumeData}
+                onDecline={(id) => {
+                  console.log('Decline skill suggestion:', id)
+                }}
+                loading={false}
               />
             )}
 

@@ -61,7 +61,7 @@ const getActionIcon = (type: string) => {
 };
 
 export const SkillsSuggestionsPanel: React.FC<SkillsSuggestionsPanelProps> = ({
-  suggestions,
+  suggestions = [],
   onAccept,
   onDecline,
   onAcceptAll,
