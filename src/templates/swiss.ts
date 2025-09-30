@@ -2,8 +2,10 @@
 // Used for both preview and PDF generation
 
 export function generateSwissResumeHTML(data: any): string {
-  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume } = data;
-  
+  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
+
+  console.log('📸 SWISS TEMPLATE: Received photoUrl =', photoUrl);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,6 +73,17 @@ export function generateSwissResumeHTML(data: any): string {
             background: #fafbfc;
             padding: 6mm 5mm;
             grid-column: 1;
+        }
+        .profile-photo {
+            width: 100%;
+            max-width: 50mm;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 50%;
+            margin: 0 auto 4mm auto;
+            display: block;
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 2mm 6mm rgba(59, 130, 246, 0.15);
         }
         
         .swiss-gutter {
@@ -305,6 +318,7 @@ export function generateSwissResumeHTML(data: any): string {
 <body>
     <div class="resume-container">
         <aside class="sidebar">
+            ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
             <header>
                 <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
                 <div class="title" data-section="title">${professionalTitle || 'Professional'}</div>
@@ -374,15 +388,19 @@ export function generateSwissResumeHTML(data: any): string {
             <section>
                 <h2 class="section-header">${section.title}</h2>
                 ${section.items.map(item => `
-                    <div style="margin-bottom: 4mm;">
-                        <div style="font-size: 10px; font-weight: 600; color: var(--text-primary);">${item.title || ''}</div>
-                        ${item.subtitle ? `<div style="font-size: 9px; color: var(--text-secondary); margin-top: 1mm;">${item.subtitle}</div>` : ''}
-                        ${item.date ? `<div style="font-size: 8px; color: var(--primary-color); margin-top: 1mm;">${item.date}</div>` : ''}
-                        ${item.description ? `<div style="font-size: 9px; color: var(--text-primary); margin-top: 2mm; line-height: 1.4;">${item.description}</div>` : ''}
-                        ${item.details && item.details.length > 0 ? `
-                            <div style="font-size: 9px; color: var(--text-primary); margin-top: 2mm;">
-                                ${item.details.map(detail => `• ${detail}`).join('<br>')}
+                    <div style="margin-bottom: 5mm; page-break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 10px; font-weight: 600; color: var(--text-primary); margin-bottom: 1mm;">${item.title || ''}</div>
+                                ${item.subtitle ? `<div style="font-size: 9px; color: var(--text-secondary);">${item.subtitle}</div>` : ''}
                             </div>
+                            ${item.date ? `<div style="font-size: 8px; color: var(--primary-color); font-weight: 500; padding: 1mm 2mm; background: rgba(79, 70, 229, 0.08); border-radius: 3px; white-space: nowrap; margin-left: 3mm;">${item.date}</div>` : ''}
+                        </div>
+                        ${item.description ? `<div style="font-size: 9px; color: var(--text-primary); line-height: 1.5; text-align: justify;">${item.description}</div>` : ''}
+                        ${item.details && item.details.length > 0 ? `
+                            <ul style="margin-top: 2mm; padding-left: 4mm; list-style: none;">
+                                ${item.details.map(detail => `<li style="font-size: 9px; color: var(--text-primary); margin-bottom: 1.5mm; padding-left: 3mm; position: relative; line-height: 1.4;"><span style="position: absolute; left: 0; color: var(--primary-color); font-weight: bold;">◦</span>${detail}</li>`).join('')}
+                            </ul>
                         ` : ''}
                     </div>
                 `).join('')}

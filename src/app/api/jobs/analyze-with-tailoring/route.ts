@@ -13,8 +13,8 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Valid sections for normalization
 const VALID_SECTIONS = new Set([
-  'summary', 'experience', 'skills', 'languages', 
-  'education', 'projects', 'certifications', 'custom_sections', 'order'
+  'summary', 'experience', 'skills', 'languages',
+  'education', 'projects', 'certifications', 'custom', 'order'
 ]);
 
 const CANONICAL_CATEGORY_OVERRIDES: Record<string, string> = {
@@ -1121,7 +1121,7 @@ OUTPUT FORMAT (JSON):
               additionalProperties: false,
               properties: {
                 // Align with DB check constraint; drop 'custom'
-                section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom_sections','title'] },
+                section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom','title'] },
                 suggestion_type: { enum: ['text','bullet','skill_addition','skill_removal','reorder','language_addition'] },
                 target_id: { type: ['string','null'] },
                 target_path: { type: ['string','null'] },
@@ -1266,7 +1266,7 @@ Return your response as a valid JSON object only. Do not include any additional 
                 type: 'object',
                 additionalProperties: false,
                 properties: {
-                  section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom_sections','title'] },
+                  section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom','title'] },
                   suggestion_type: { enum: ['text','bullet','addition','modification','skill_addition','skill_removal','skill_reorder','skill_replacement'] },
                   target_path: { type: ['string','null'] },
                   before: { type: ['string','null'] },
@@ -1282,7 +1282,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           required: ['atomic_suggestions']
         };
 
-        const atomicOnlyPrompt = `Return ONLY an object with key "atomic_suggestions" containing 15–25 high-quality suggestions.\n\nRules:\n• COVER ALL experience roles (2–3 bullet additions/rewrites each)\n• Anchor bullets with target_path when possible (experience[ROLE_INDEX].achievements[BULLET_INDEX])\n• Include skills adds/removals mapped to existing categories (no new categories)\n• For additions, set before to empty or null; for removals, set after to empty or null\n• Set confidence 75–95 and impact high/medium appropriately\n• No prose. No extra keys.\n\nJOB DATA:\n${JSON.stringify(analysisContext.job, null, 2)}\n\nRESUME DATA:\n${JSON.stringify(analysisContext.resume, null, 2)}\n\nCACHE_BUST:${Date.now()}`;
+        const atomicOnlyPrompt = `Return ONLY an object with key "atomic_suggestions" containing 20–30 high-quality suggestions.\n\nRules:\n• MUST INCLUDE 1-2 title suggestions (section: "title", target_path: "professionalTitle")\n• MUST INCLUDE 2-3 summary suggestions (section: "summary", target_path: "professionalSummary")\n• COVER ALL experience roles (2–3 bullet additions/rewrites each)\n• Anchor bullets with target_path when possible (experience[ROLE_INDEX].achievements[BULLET_INDEX])\n• Include skills adds/removals mapped to existing categories (no new categories)\n• For additions, set before to empty or null; for removals, set after to empty or null\n• Set confidence 75–95 and impact high/medium appropriately\n• No prose. No extra keys.\n\nJOB DATA:\n${JSON.stringify(analysisContext.job, null, 2)}\n\nRESUME DATA:\n${JSON.stringify(analysisContext.resume, null, 2)}\n\nCACHE_BUST:${Date.now()}`;
 
         try {
           const retryStructured = await llmService.createJsonResponse<{ atomic_suggestions: any[] }>({
@@ -1970,15 +1970,15 @@ Return your response as a valid JSON object only. Do not include any additional 
       if (analysisData.atomic_suggestions?.length > 0) {
         // Normalize and validate suggestions with new structure
         // IMPORTANT: 'title' is now allowed to ensure professional title suggestions work properly
-        const allowedSections = new Set(['title','summary','experience','skills','languages','education','projects','certifications','custom_sections'])
+        const allowedSections = new Set(['title','summary','experience','skills','languages','education','projects','certifications','custom'])
         const sanitizeSection = (raw: string, suggestionType?: string) => {
           const s = (raw === 'professionalSummary') ? 'summary' :
                     (raw === 'professionalTitle') ? 'title' :
                     (raw || '')
           if (allowedSections.has(s)) return s
-          // Fallback: route unknown sections to skills if it looks like a skill op, else custom_sections
+          // Fallback: route unknown sections to skills if it looks like a skill op, else custom
           if ((suggestionType || '').includes('skill')) return 'skills'
-          return 'custom_sections'
+          return 'custom'
         }
 
         // Map model suggestion types to DB-allowed types

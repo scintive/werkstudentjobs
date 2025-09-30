@@ -173,7 +173,20 @@ const ProfileExtractionSchema = {
         additionalProperties: false,
         properties: {
           title: { type: "string" },
-          items: { type: "array", items: { type: "string" } }
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                title: { type: "string" },
+                subtitle: { type: "string" },
+                date: { type: "string" },
+                description: { type: "string" }
+              },
+              required: ["title", "subtitle", "date", "description"]
+            }
+          }
         },
         required: ["title", "items"]
       }

@@ -116,6 +116,7 @@ export interface ResumeData {
     website?: string;
     customHeader?: string;
   };
+  photoUrl?: string;
   professionalTitle: string;
   professionalSummary: string;
   enableProfessionalSummary: boolean;

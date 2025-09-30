@@ -99,6 +99,18 @@ export default function DashboardPage() {
       const userId = sessionData.session.user.id
       setUserId(userId)
 
+      // Check if user has completed onboarding
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('onboarding_completed')
+        .eq('user_id', userId)
+        .single()
+
+      if (!profileData?.onboarding_completed) {
+        router.push('/')
+        return
+      }
+
       // Load user name
       const { data: resumeData } = await supabase
         .from('resume_data')

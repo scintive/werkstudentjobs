@@ -170,6 +170,8 @@ export function TailorEnhancedSkillsManager({
         Object.entries(enhancedData.organized_categories).forEach(([key, category]) => {
           autoExpanded[key] = category.jobRelevance === 'high' || true // Default to expanded
         })
+        // Always include languages in expanded categories
+        autoExpanded['languages'] = true
         setExpandedCategories(autoExpanded)
       } else if (Object.keys(skills).length > 0 && !skipAutoReorganization) {
         console.log('🧠 Auto-reorganization triggered (skills changed, no organized data, not skipping)')
@@ -362,8 +364,38 @@ export function TailorEnhancedSkillsManager({
       skillToAdd: skill.trim()
     })
 
-    if (!skill.trim() || !organizedData) {
-      console.log('❌ ADD SKILL FAILED: Missing skill or organized data')
+    if (!skill.trim()) {
+      console.log('❌ ADD SKILL FAILED: Empty skill')
+      return
+    }
+
+    // Special handling for languages
+    if (categoryKey === 'languages') {
+      console.log('🌐 Adding language:', skill)
+      // CRITICAL: Set flag to prevent automatic reorganization during individual processing
+      console.log('🚫 Setting skipAutoReorganization = true to prevent AI reorganization')
+      setSkipAutoReorganization(true)
+
+      const updatedSkills = { ...skills }
+      if (!updatedSkills.languages) {
+        updatedSkills.languages = []
+      }
+      if (Array.isArray(updatedSkills.languages)) {
+        updatedSkills.languages.push(skill.trim())
+        onSkillsChange(updatedSkills)
+      }
+      setNewSkillInputs(prev => ({ ...prev, [categoryKey]: '' }))
+
+      // Reset flag after a short delay
+      setTimeout(() => {
+        console.log('✅ Resetting skipAutoReorganization = false')
+        setSkipAutoReorganization(false)
+      }, 100)
+      return
+    }
+
+    if (!organizedData) {
+      console.log('❌ ADD SKILL FAILED: No organized data')
       return
     }
 
@@ -418,6 +450,27 @@ export function TailorEnhancedSkillsManager({
       totalCategories: Object.keys(organizedData?.organized_categories || {}).length
     })
 
+    // Special handling for languages
+    if (categoryKey === 'languages') {
+      console.log('🌐 Removing language at index:', skillIndex)
+      // CRITICAL: Set flag to prevent automatic reorganization during individual processing
+      console.log('🚫 Setting skipAutoReorganization = true to prevent AI reorganization during removal')
+      setSkipAutoReorganization(true)
+
+      const updatedSkills = { ...skills }
+      if (Array.isArray(updatedSkills.languages)) {
+        updatedSkills.languages.splice(skillIndex, 1)
+        onSkillsChange(updatedSkills)
+      }
+
+      // Reset flag after a short delay
+      setTimeout(() => {
+        console.log('✅ Resetting skipAutoReorganization = false')
+        setSkipAutoReorganization(false)
+      }, 100)
+      return
+    }
+
     if (!organizedData) return
 
     // CRITICAL: Set flag to prevent automatic reorganization during individual processing
@@ -463,6 +516,12 @@ export function TailorEnhancedSkillsManager({
         skills: skillsObject[displayName]
       })
     })
+
+    // Preserve languages from the original skills prop if they exist
+    if (skills.languages && !skillsObject.Languages) {
+      skillsObject.languages = skills.languages
+      console.log('📝 Preserving languages from skills prop:', skills.languages)
+    }
 
     console.log('📤 CALLING onSkillsChange with COMPLETE skills object:', {
       categories: Object.keys(skillsObject),
@@ -627,14 +686,15 @@ export function TailorEnhancedSkillsManager({
 
       {/* Skills Categories */}
       <div className="space-y-2">
-        {Object.entries(organizedData.organized_categories).map(([categoryKey, categoryData], index) => {
+        {Object.entries(organizedData.organized_categories)
+          .map(([categoryKey, categoryData], index) => {
           const colorIndex = index % CATEGORY_COLORS.length
           const colors = CATEGORY_COLORS[colorIndex]
-          
+
           const categoryWords = categoryKey.split('_')
           const iconKey = categoryWords.find(word => CATEGORY_ICONS[word.toLowerCase()]) || 'core'
           const IconComponent = CATEGORY_ICONS[iconKey] || Star
-          
+
           const displayName = categoryKey
             .replace(/___/g, ' & ')
             .split('_')
@@ -843,7 +903,212 @@ export function TailorEnhancedSkillsManager({
           )
         })}
       </div>
-      
+
+      {/* Languages Section Removed - Using separate LanguagesCard component */}
+      {false && (() => {
+        // Debug logging
+        console.log('🔍 Looking for languages in:', {
+          organizedCategories: Object.keys(organizedData.organized_categories),
+          skills: Object.keys(skills)
+        })
+
+        // First try to find languages in organized data
+        let languageEntry = Object.entries(organizedData.organized_categories).find(([key]) => {
+          const displayName = key
+            .replace(/___/g, ' & ')
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+          return displayName.toLowerCase() === 'languages'
+        })
+
+        // If not found in organized data, check the skills prop directly
+        let languageSkills: any[] = []
+        let languageCategoryKey = 'languages'
+
+        if (languageEntry) {
+          languageSkills = languageEntry[1].skills || []
+          languageCategoryKey = languageEntry[0]
+          console.log('✅ Found languages in organized data:', languageSkills)
+        } else if (skills.languages) {
+          // Languages might be directly in skills object
+          languageSkills = Array.isArray(skills.languages) ? skills.languages : []
+          console.log('✅ Found languages in skills prop:', languageSkills)
+        } else {
+          console.log('⚠️ No languages found in either location')
+        }
+
+        // Always show languages section
+        if (true) {
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all duration-200"
+            >
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-purple-50 rounded-lg">
+                      <Globe2 className="w-4 h-4 text-purple-600" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-sm font-semibold text-purple-600">Languages</h4>
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                          {languageSkills.length}
+                        </span>
+
+                        {/* Job Relevance Indicator */}
+                        {languageEntry && languageEntry[1].jobRelevance && aiMode && (
+                          <div className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium uppercase">
+                            {languageEntry[1].jobRelevance} relevance
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    onClick={() => toggleCategory(languageCategoryKey)}
+                    className="p-2 hover:bg-white/60 rounded-lg transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {expandedCategories[languageCategoryKey] ? (
+                      <ChevronDown className="w-5 h-5 text-gray-600" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-gray-600" />
+                    )}
+                  </motion.button>
+                </div>
+
+                <AnimatePresence>
+                  {expandedCategories[languageCategoryKey] && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="space-y-2">
+                        {/* Language Pills */}
+                        <div className="flex flex-wrap gap-2">
+                          {languageSkills.map((lang, skillIndex) => {
+                            const langName = typeof lang === 'string' ? lang : lang.skill
+                            // Parse language and proficiency if in format "Language (Proficiency)"
+                            const match = langName?.match(/^(.+?)\s*\((.+?)\)$/)
+                            const language = match ? match[1] : langName
+                            const proficiency = match ? match[2] : ''
+
+                            return (
+                              <motion.div
+                                key={skillIndex}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: skillIndex * 0.05 }}
+                                className="group flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 border-2 border-purple-100 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                              >
+                                <span className="font-medium text-purple-600">
+                                  {language}
+                                </span>
+
+                                {/* Proficiency Dropdown */}
+                                <select
+                                  value={proficiency || 'Professional working'}
+                                  onChange={(e) => {
+                                    const updatedSkills = { ...skills }
+                                    const newLangValue = `${language} (${e.target.value})`
+
+                                    // Check if languages exist in organized categories or directly in skills
+                                    if (languageEntry) {
+                                      // Update in the organized categories structure
+                                      const categoryKey = languageEntry[0]
+                                      if (!updatedSkills[categoryKey]) {
+                                        updatedSkills[categoryKey] = []
+                                      }
+                                      if (Array.isArray(updatedSkills[categoryKey])) {
+                                        updatedSkills[categoryKey][skillIndex] = newLangValue
+                                      }
+                                    } else if (updatedSkills.languages && Array.isArray(updatedSkills.languages)) {
+                                      // Update directly in languages array
+                                      updatedSkills.languages[skillIndex] = newLangValue
+                                    } else {
+                                      // Create languages array if it doesn't exist
+                                      if (!updatedSkills.languages) {
+                                        updatedSkills.languages = []
+                                      }
+                                      updatedSkills.languages[skillIndex] = newLangValue
+                                    }
+
+                                    console.log('📝 Updating language proficiency:', {
+                                      language,
+                                      newValue: newLangValue,
+                                      updatedSkills
+                                    })
+
+                                    onSkillsChange(updatedSkills)
+                                  }}
+                                  className="text-xs text-gray-600 bg-transparent border-0 focus:ring-1 focus:ring-purple-500 rounded cursor-pointer"
+                                >
+                                  <option value="Native">Native</option>
+                                  <option value="Full professional">Full professional</option>
+                                  <option value="Professional working">Professional working</option>
+                                  <option value="Limited working">Limited working</option>
+                                  <option value="Elementary">Elementary</option>
+                                </select>
+
+                                <motion.button
+                                  onClick={() => removeSkillFromCategory(languageCategoryKey, skillIndex)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded-full transition-all ml-auto"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <X className="w-3 h-3 text-red-500" />
+                                </motion.button>
+                              </motion.div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Add New Language */}
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={newSkillInputs[languageCategoryKey] || ''}
+                            onChange={(e) => setNewSkillInputs(prev => ({
+                              ...prev,
+                              [languageCategoryKey]: e.target.value
+                            }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                addSkillToCategory(languageCategoryKey, newSkillInputs[languageCategoryKey] || '')
+                              }
+                            }}
+                            placeholder="Add a new language..."
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                          <motion.button
+                            onClick={() => addSkillToCategory(languageCategoryKey, newSkillInputs[languageCategoryKey] || '')}
+                            className="px-4 py-2 bg-purple-500 hover:bg-opacity-80 text-white rounded-lg font-semibold transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Add
+                          </motion.button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )
+        }
+        return null
+      })()}
+
       {/* AI Optimization Summary */}
       {aiMode && jobOptimizedSkills.length > 0 && (
         <motion.div

@@ -2,7 +2,7 @@
 // Designed to make a memorable impression on recruiters
 
 export function generateImpactResumeHTML(data: any): string {
-  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume } = data;
+  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
   
   // Dynamic color palette - vibrant but professional (no purple!)
   const colors = {
@@ -72,11 +72,21 @@ export function generateImpactResumeHTML(data: any): string {
             align-items: flex-end;
             gap: 8mm;
         }
-        
+
+        .profile-photo {
+            width: 40mm;
+            height: 40mm;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid ${colors.primary};
+            box-shadow: 0 0 0 2px white, 0 4px 12px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+
         .name-section {
             flex: 1;
         }
-        
+
         .name {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 22px;
@@ -525,6 +535,7 @@ export function generateImpactResumeHTML(data: any): string {
         <!-- Compact Header -->
         <div class="hero-header">
             <div class="header-content">
+                ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
                 <div class="name-section">
                     <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
                     ${professionalTitle ? `<div class="title" data-section="title">${professionalTitle}</div>` : ''}

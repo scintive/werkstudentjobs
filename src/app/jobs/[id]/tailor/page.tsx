@@ -712,9 +712,7 @@ function TailorApplicationPage() {
       {/* Full Width Tab Content */}
       <div className="w-full">
         <div className={cn(
-          "px-8 py-8",
-          // Add height for resume tab when using SimpleTailoredPreview
-          activeTab === 'resume' ? "h-[calc(100vh-100px)]" : ""
+          activeTab === 'resume' ? "" : "px-8 py-8"
         )}>
           <AnimatePresence mode="wait">
             <motion.div
@@ -723,10 +721,6 @@ function TailorApplicationPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className={cn(
-                // Ensure resume tab content takes full height
-                activeTab === 'resume' ? "h-full" : ""
-              )}
             >
               {activeTab === 'strategy' && (
                 <StrategyTab
@@ -1460,7 +1454,7 @@ function ResumeStudioTab({
   // Simply render the unified editor
 
   return (
-    <div className="h-full">
+    <div>
       {localVariantId ? (
         // Unified editor with tailor mode
         <SupabaseResumeProvider 

@@ -12,6 +12,7 @@ import { StepIndicator } from "@/components/ui/step-indicator"
 import { ResumeUpload } from "@/components/onboarding/resume-upload"
 import { PerfectStudio } from "@/components/resume-editor/PerfectStudio"
 import { JobBrowser } from "@/components/jobs/JobBrowser"
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow"
 import { useResumeActions } from "@/lib/contexts/ResumeContext"
 import { SupabaseResumeProvider, useSupabaseResumeContext, SaveStatusIndicator } from "@/lib/contexts/SupabaseResumeContext"
 import { EditModeProvider } from "@/lib/contexts/EditModeContext"
@@ -69,6 +70,9 @@ function MainApp() {
   const [isCheckingProfile, setIsCheckingProfile] = React.useState(true)
   const [isAuthed, setIsAuthed] = React.useState<boolean>(false)
   const [checkedAuth, setCheckedAuth] = React.useState<boolean>(false)
+  const [showOnboarding, setShowOnboarding] = React.useState(false)
+  const [userId, setUserId] = React.useState<string>('')
+  const [userEmail, setUserEmail] = React.useState<string>('')
   
   // Use ResumeContext hooks
   const { setResumeData } = useResumeActions()
@@ -80,22 +84,50 @@ function MainApp() {
         // Check if user is authenticated
         const { data: session } = await supabase.auth.getSession()
         const isAuthenticated = !!session.session?.user
+        const currentUserId = session.session?.user?.id || ''
+        const currentUserEmail = session.session?.user?.email || ''
+
         setIsAuthed(isAuthenticated)
         setCheckedAuth(true)
-        
-        // Redirect to login if not authenticated
+        setUserId(currentUserId)
+        setUserEmail(currentUserEmail)
+
+        // Show landing page if not authenticated
         if (!isAuthenticated) {
-          console.log('User not authenticated, redirecting to login')
-          window.location.href = '/login'
+          console.log('User not authenticated, showing landing page')
+          setIsCheckingProfile(false)
+          // Redirect to landing page
+          window.location.href = '/landing'
           return
         }
-        
+
+        // Check if user has completed onboarding
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('onboarding_completed')
+          .eq('user_id', currentUserId)
+          .single()
+
+        if (!profileData?.onboarding_completed) {
+          console.log('Onboarding not completed, showing onboarding flow')
+          setShowOnboarding(true)
+          setIsCheckingProfile(false)
+          return
+        }
+
         const token = session.session?.access_token
         const response = await fetch('/api/profile/latest', {
           credentials: 'include',
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         })
-        
+
+        // If no resume found (404), stay on upload page
+        if (!response.ok) {
+          console.log('No resume found, staying on upload page')
+          setIsCheckingProfile(false)
+          return
+        }
+
         if (response.ok) {
           const result = await response.json()
           if (result.success && result.resumeData) {
@@ -214,10 +246,7 @@ function MainApp() {
           technical: profile.skills?.technology || [],
           soft_skills: profile.skills?.soft_skills || [],
           tools: profile.skills?.design || [], // Reusing design as tools for demo
-          // Keep skills.languages as strings as per type definition
-          languages: (profile.languages || []).map((lang: any) =>
-            typeof lang === 'string' ? lang : `${lang.language} (${lang.proficiency})`
-          )
+          // Removed languages from skills - they're now stored separately
         },
         experience: (profile.experience || []).map(exp => ({
           company: exp.company,
@@ -238,94 +267,64 @@ function MainApp() {
           date: "2023" // Default date
         })),
         // Languages array for editor Languages card (kept in sync from skills.languages)
-        languages: (profile.languages || []).map((lang: any) => ({
-          name: typeof lang === 'string' ? lang : (lang.language || ''),
-          level: typeof lang === 'string' ? (lang.includes('(') ? lang.split('(')[1].replace(')','') : 'Not specified') : (lang.proficiency || 'Not specified')
-        })),
+        languages: (profile.languages || []).map((lang: any) => {
+          // Handle both string format and object format
+          if (typeof lang === 'string') {
+            // Parse "Language (Proficiency)" format
+            const match = lang.match(/^(.+?)\s*\((.+?)\)$/)
+            if (match) {
+              return {
+                name: match[1].trim(),
+                language: match[1].trim(),
+                level: match[2].trim(),
+                proficiency: match[2].trim()
+              }
+            }
+            return {
+              name: lang,
+              language: lang,
+              level: 'Not specified',
+              proficiency: 'Not specified'
+            }
+          }
+          // Handle object format from extraction
+          return {
+            name: lang.language || lang.name || '',
+            language: lang.language || lang.name || '',
+            level: lang.proficiency || lang.level || 'Not specified',
+            proficiency: lang.proficiency || lang.level || 'Not specified'
+          }
+        }),
         certifications: profile.certifications.map(cert => ({
           name: cert.title,
           issuer: cert.institution,
           date: cert.date
         })),
-        customSections: (profile as any).custom_sections ? (profile as any).custom_sections.map((section: any, index: number) => {
-          console.log('🔍 CONVERTING CUSTOM SECTION:', section);
-          
-          // Helper function to intelligently parse custom section items based on title
-          const parseCustomSectionItem = (item: string, sectionTitle: string) => {
-            const lowerTitle = sectionTitle.toLowerCase();
-            
-            // Try multiple parsing patterns
-            // Pattern 1: "Title/Role, Organization (Date/Duration) — Description"
-            const pattern1 = item.match(/^(.*?),\s*(.*?)\s*\(([^)]+)\)\s*[—–-]\s*(.*)$/);
-            if (pattern1) {
-              return {
-                field1: pattern1[1].trim(),
-                field2: pattern1[2].trim(),
-                field3: pattern1[3].trim(),
-                field4: pattern1[4].trim()
-              };
-            }
-            
-            // Pattern 2: "Title/Role at Organization (Date/Duration)"
-            const pattern2 = item.match(/^(.*?)\s+at\s+(.*?)\s*\(([^)]+)\)(.*)$/);
-            if (pattern2) {
-              return {
-                field1: pattern2[1].trim(),
-                field2: pattern2[2].trim(),
-                field3: pattern2[3].trim(),
-                field4: pattern2[4].trim()
-              };
-            }
-            
-            // Pattern 3: "Title - Organization, Date"
-            const pattern3 = item.match(/^(.*?)\s*[-–]\s*(.*?),\s*(.*)$/);
-            if (pattern3) {
-              return {
-                field1: pattern3[1].trim(),
-                field2: pattern3[2].trim(),
-                field3: pattern3[3].trim(),
-                field4: ''
-              };
-            }
-            
-            // Pattern 4: Simple comma separation "Title, Organization, Date, Description"
-            const parts = item.split(',').map(p => p.trim());
-            if (parts.length >= 2) {
-              return {
-                field1: parts[0] || '',
-                field2: parts[1] || '',
-                field3: parts[2] || '',
-                field4: parts.slice(3).join(', ') || ''
-              };
-            }
-            
-            // Default: Put entire item in appropriate field based on section type
-            if (lowerTitle.includes('publication') || lowerTitle.includes('course')) {
-              // For publications/courses, the item is likely a title
-              return {
-                field1: item,
-                field2: '',
-                field3: '',
-                field4: ''
-              };
-            }
-            
-            // For other sections, treat as a description
-            return {
-              field1: '',
-              field2: '',
-              field3: '',
-              field4: item
-            };
-          };
-          
-          return {
-            id: `custom-${index}`,
-            title: section.title,
-            type: 'custom',
-            items: section.items.map((item: string) => parseCustomSectionItem(item, section.title))
-          }
-        }) : []
+        customSections: (profile as any).custom_sections ? (() => {
+          // Deduplicate sections by title (case-insensitive)
+          const seenTitles = new Set<string>();
+          return (profile as any).custom_sections
+            .filter((section: any) => {
+              const normalizedTitle = section.title.toLowerCase().trim();
+              if (seenTitles.has(normalizedTitle)) {
+                console.log('🔍 SKIPPING DUPLICATE CUSTOM SECTION:', section.title);
+                return false;
+              }
+              seenTitles.add(normalizedTitle);
+              return true;
+            })
+            .map((section: any, index: number) => ({
+              id: `custom-${index}`,
+              title: section.title,
+              type: 'custom',
+              items: section.items.map((item: any) => ({
+                title: item.title || '',
+                subtitle: item.subtitle || '',
+                date: item.date || '',
+                description: item.description || ''
+              }))
+            }));
+        })() : []
       }
       
       // Update resume data through context
@@ -361,6 +360,22 @@ function MainApp() {
           <p className="text-gray-600">Checking your profile...</p>
         </div>
       </div>
+    )
+  }
+
+  // Show onboarding flow if user hasn't completed it
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow
+        userId={userId}
+        userEmail={userEmail}
+        onComplete={() => {
+          setShowOnboarding(false)
+          setIsCheckingProfile(false)
+          // After onboarding, show upload step
+          setCurrentStep('upload')
+        }}
+      />
     )
   }
 

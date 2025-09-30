@@ -224,9 +224,11 @@ export async function POST(request: NextRequest) {
 
     // Minimal observability: track proficiency toggle and template only
     // console.debug('preview: skillLevels=', showSkillLevelsInResume, 'template=', template)
+    console.log('📸 PREVIEW API: Received resumeData.photoUrl =', (resumeData as any).photoUrl);
 
     // Format the resume data exactly like CLI (now with GPT education formatting)
     const templateData = await formatResumeDataForTemplate(resumeData, userProfile, showSkillLevelsInResume);
+    console.log('📸 PREVIEW API: templateData.photoUrl =', (templateData as any).photoUrl);
 
     // Generate HTML using the same direct approach as CLI
     let html = '';
@@ -415,8 +417,9 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
         description: item.description || item.field4 || ''
       })) || []
     })) || [],
-    // Prefer explicit resume data languages if present; otherwise fall back to userProfile
-    languages: (resumeData as any).languages?.length ? (resumeData as any).languages : (userProfile?.languages || []),
+    // Languages come from the top-level languages field (NOT from skills)
+    languages: (resumeData as any).languages || [],
+    photoUrl: (resumeData as any).photoUrl || null,
     showSkillLevelsInResume: showSkillLevelsInResume // Pass skill level toggle to templates
   };
 }

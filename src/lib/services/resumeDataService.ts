@@ -7,25 +7,23 @@ import type { ResumeData as SupabaseResumeData } from '@/lib/supabase/types'
 
 // Convert between our ResumeData type and Supabase storage format
 function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResumeData['Insert'], 'id' | 'created_at' | 'updated_at' | 'last_accessed_at' | 'session_id'> {
-  // Persist languages inside skills.languages to match current DB schema
-  const topLevelLanguages = (resumeData as any).languages as any[] | undefined
-  const skillsLanguages = Array.isArray(topLevelLanguages)
-    ? topLevelLanguages
-        .map((l: any) => {
-          if (typeof l === 'string') return l
-          const name = (l?.language ?? l?.name ?? '').toString().trim()
-          const prof = (l?.proficiency ?? l?.level ?? '').toString().trim()
-          return name ? (prof ? `${name} (${prof})` : name) : ''
-        })
-        .filter(Boolean)
-    : Array.isArray((resumeData as any)?.skills?.languages)
-    ? (resumeData as any).skills.languages
-    : []
+  // Languages are now stored in a separate column, NOT in skills
+  const languages = ((resumeData as any).languages || []).map((l: any) => {
+    // Ensure consistent format
+    if (typeof l === 'string') {
+      return { name: l, proficiency: 'Not specified' }
+    }
+    return {
+      name: l.name || l.language || '',
+      language: l.language || l.name || '',
+      proficiency: l.proficiency || l.level || 'Not specified',
+      level: l.level || l.proficiency || 'Not specified'
+    }
+  })
 
-  const skillsToSave = {
-    ...(resumeData.skills || {}),
-    languages: skillsLanguages
-  }
+  // Clean skills object - remove any language entries
+  const skillsToSave = { ...(resumeData.skills || {}) }
+  delete skillsToSave.languages // Ensure no languages in skills
 
   return {
     // user_id will be added at call-site - authentication required
@@ -39,6 +37,7 @@ function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResum
     projects: resumeData.projects || null,
     certifications: resumeData.certifications || null,
     custom_sections: resumeData.customSections || null,
+    languages: languages, // Store languages in separate column
     last_template_used: 'swiss', // Default template
     is_active: true,
     profile_completeness: calculateCompleteness(resumeData)
@@ -46,18 +45,25 @@ function convertToSupabaseFormat(resumeData: ResumeDataType): Omit<SupabaseResum
 }
 
 function convertFromSupabaseFormat(supabaseData: SupabaseResumeData): ResumeDataType {
+  // Languages now come from the separate languages column
+  const rawLangs: any[] = (supabaseData as any).languages || []
   const skillsObj: any = (supabaseData.skills as any) || {}
-  const rawLangs: any[] = Array.isArray(skillsObj.languages) ? skillsObj.languages : []
+  // Remove any legacy language entries from skills
+  delete skillsObj.languages
   const parsedLanguages = rawLangs.map((entry: any) => {
     if (typeof entry === 'string') {
+      // Handle legacy string format
       const name = entry.replace(/\s*\([^)]*\)\s*$/, '').trim()
       const levelMatch = entry.match(/\(([^)]+)\)/)
       const level = levelMatch ? levelMatch[1] : 'Not specified'
-      return { name, level }
+      return { name, language: name, level, proficiency: level }
     }
+    // Return with both name/language and level/proficiency for compatibility
     return {
       name: (entry?.name ?? entry?.language ?? '').toString(),
-      level: (entry?.level ?? entry?.proficiency ?? 'Not specified').toString()
+      language: (entry?.language ?? entry?.name ?? '').toString(),
+      level: (entry?.level ?? entry?.proficiency ?? 'Not specified').toString(),
+      proficiency: (entry?.proficiency ?? entry?.level ?? 'Not specified').toString()
     }
   })
 
@@ -205,11 +211,11 @@ export class ResumeDataService {
       professionalTitle: "",
       professionalSummary: "",
       enableProfessionalSummary: false,
+      languages: [],  // Initialize empty languages array at top level
       skills: {
         technical: [],
         tools: [],
-        soft_skills: [],
-        languages: []
+        soft_skills: []  // Removed languages from skills
       },
       experience: [],
       education: [],

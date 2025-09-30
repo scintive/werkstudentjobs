@@ -81,12 +81,13 @@ Malformed JSON:
 - Preserve exact institution names and all date information
 
 **CUSTOM SECTIONS - EXTRACT ALL NON-STANDARD SECTIONS:**
-- Look for sections like "Leadership", "Volunteer Experience", "Awards", "Publications", "Honors", "Activities", "Community Service", etc.
-- Extract these as custom_sections with title and array of items
-- Common custom section titles: Leadership & Volunteer, Awards & Achievements, Publications, Community Involvement, Professional Associations, Honors, etc.
+- Look for ALL sections that are not education, experience, projects, certifications, languages, or skills
+- Common custom sections: "Leadership", "Volunteer Experience", "Awards", "Publications", "Honors", "Activities", "Community Service", "Hobbies", "Interests", "Hobbies & Interests", "Professional Memberships", "Research", "Speaking Engagements", etc.
+- Extract each as a separate custom section with title and array of items
 - IMPORTANT: DO NOT duplicate sections that are already extracted as core sections (education, experience, projects, certifications, languages, skills)
 - CRITICAL: "Academic Projects", "Personal Projects", "Side Projects", "Research Projects" or ANY variation of "Projects" should ALWAYS go in the main "projects" array, NEVER in custom_sections
-- Only extract truly custom/additional sections not covered by the main schema
+- Group similar activities under one section title (e.g., all volunteer/leadership roles under "Leadership & Volunteer")
+- Extract hobbies/interests as a separate section if present in the resume
 
 **LANGUAGE PROFICIENCY - PRESERVE EXACT LEVELS:**
 - Parse languages with ACTUAL proficiency levels mentioned in resume
@@ -149,8 +150,13 @@ Required JSON structure:
     "description": string
   }], // ALL projects go here: Academic Projects, Personal Projects, Side Projects, Research Projects, etc.
   "custom_sections": [{
-    "title": string, // e.g., "Leadership & Volunteer", "Awards", "Publications", etc.
-    "items": string[] // Array of achievements, activities, or items under this section
+    "title": string, // Section title (e.g., "Leadership & Volunteer")
+    "items": [{
+      "title": string, // Role/position name
+      "subtitle": string, // Organization name
+      "date": string, // Duration or date
+      "description": string // Brief description of role/achievement
+    }]
   }]
 }
 
@@ -207,7 +213,7 @@ COVER LETTER REQUIREMENTS:
 RESUME REQUIREMENTS:
 - **PROFESSIONAL TITLE (CRITICAL FOR RECRUITER ATTENTION)**: Generate a POWERFUL 2-3 word title that makes recruiters want to read more. Analyze the candidate's strongest skills, industry position, and career level. Create a title that conveys expertise and value immediately. Examples: "Senior Data Scientist", "Full-Stack Developer", "Strategic Marketing Leader", "Business Intelligence Analyst", "Product Design Expert". Make it specific, professional, and attention-grabbing.
 - **PROFESSIONAL SUMMARY (HIGH-IMPACT RECRUITER HOOK)**: Create 2-4 sentences (60-80 words) that serve as a powerful elevator pitch. Start with years of experience and strongest expertise. Include 2-3 key achievements with metrics. End with value proposition for employers. Must capture recruiter attention in first 10 seconds of reading. Focus on quantifiable impact, specialized skills, and career growth trajectory.
-- Complete skills categorization (technical, tools, business, soft skills, languages)
+- Complete skills categorization (technical, tools, business, soft skills) - Languages are separate
 - ALL experience with detailed responsibilities and quantified achievements
 - Include ALL projects, certifications, education details
 - Professional formatting suitable for senior-level positions
@@ -239,7 +245,8 @@ Return STRICT JSON only:
     "personalInfo": { "name": string, "email": string, "phone": string, "location": string, "linkedin": string },
     "professionalTitle": string, // MUST be 2-3 words maximum, recruiter-focused, ATS-optimized (e.g., "Senior Data Scientist", "Full-Stack Developer")
     "professionalSummary": string, // MUST be 2-4 sentences, 60-80 words, include metrics and value proposition
-    "skills": { "technical": string[], "tools": string[], "soft_skills": string[], "languages": string[] },
+    "skills": { "technical": string[], "tools": string[], "soft_skills": string[] },
+    "languages": [{ "name": string, "proficiency": string }],
     "experience": [{ "company": string, "position": string, "duration": string, "achievements": string[] }],
     "education": [{ "degree": string, "field_of_study": string, "institution": string, "year": string, "duration": string }],
     "projects": [{ "name": string, "description": string, "technologies": string[], "date": string }],
@@ -262,7 +269,8 @@ ResumeJSON shape:
 {
   "personalInfo": {"name": string, "email": string, "phone": string, "location": string, "website"?: string, "linkedin"?: string},
   "professionalSummary": string,
-  "skillCategories": {"technical"?: string[], "creative"?: string[], "business"?: string[], "tools"?: string[], "languages"?: string[]},
+  "skillCategories": {"technical"?: string[], "creative"?: string[], "business"?: string[], "tools"?: string[]},  // No languages in skills
+  "languages": [{"name": string, "proficiency": string}],  // Separate languages field
   "experience"?: [{"title": string, "company": string, "location"?: string, "duration"?: string, "achievements"?: string[]}],
   "projects"?: [{"name": string, "description": string, "impact"?: string, "technologies"?: string[]}],
   "education"?: [{"degree": string, "institution": string, "location"?: string, "year"?: string}],

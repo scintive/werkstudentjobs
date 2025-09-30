@@ -35,10 +35,12 @@ export default function Header() {
       <div className="container mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-bold text-gray-900">ResumeCraft AI</Link>
-          <nav className="hidden md:flex items-center gap-1">
-            <NavLink href="/dashboard" label="Dashboard" />
-            <NavLink href="/jobs" label="Jobs" />
-          </nav>
+          {email && (
+            <nav className="hidden md:flex items-center gap-1">
+              <NavLink href="/dashboard" label="Dashboard" />
+              <NavLink href="/jobs" label="Jobs" />
+            </nav>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {email ? (

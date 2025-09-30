@@ -63,23 +63,7 @@ export function useUnifiedSuggestions({
     return p
   }
   
-  // Load suggestions if in tailor mode
-  useEffect(() => {
-    console.log('🎯 useUnifiedSuggestions effect triggered', { mode, variantId })
-    if (mode === 'tailor' && variantId) {
-      console.log('✅ Loading suggestions for tailor mode with variant:', variantId)
-      loadSuggestions()
-    } else if (mode === 'base') {
-      console.log('🔄 Base mode - clearing suggestions')
-      // Clear suggestions in base mode
-      setSuggestions([])
-      appliedChanges.current.clear()
-    } else {
-      console.log('⚠️ Conditions not met for loading', { mode, variantId })
-    }
-  }, [mode, variantId])
-
-  const loadSuggestions = async () => {
+  const loadSuggestions = useCallback(async () => {
     if (!variantId) {
       console.log('⚠️ No variantId provided, skipping suggestion load')
       return
@@ -105,6 +89,8 @@ export function useUnifiedSuggestions({
       console.log(`📊 Raw suggestions from DB:`, data?.length || 0, 'suggestions')
       if (data && data.length > 0) {
         console.log('Sample suggestion:', data[0])
+        console.log('🔍 Sections found:', Array.from(new Set(data.map(s => s.section))))
+        console.log('🔍 Types found:', Array.from(new Set(data.map(s => s.suggestion_type))))
       }
       
       // Transform to our format
@@ -132,22 +118,45 @@ export function useUnifiedSuggestions({
       }
       
       setSuggestions(transformed)
-      
+
       // Track which ones are already applied
       transformed.forEach(s => {
         if (s.status === 'accepted') {
           appliedChanges.current.add(s.id)
         }
       })
-      
+
       console.log(`📋 Loaded ${transformed.length} suggestions for variant ${variantId}`)
+      console.log('🎯 Transformed sections:', Array.from(new Set(transformed.map(s => s.section))))
+      console.log('🎯 By section:', {
+        title: transformed.filter(s => s.section === 'title').length,
+        summary: transformed.filter(s => s.section === 'summary').length,
+        experience: transformed.filter(s => s.section === 'experience').length,
+        skills: transformed.filter(s => s.section === 'skills').length
+      })
     } catch (err) {
       console.error('Failed to load suggestions:', err)
       setError('Failed to load suggestions')
     } finally {
       setLoading(false)
     }
-  }
+  }, [variantId])
+
+  // Load suggestions if in tailor mode
+  useEffect(() => {
+    console.log('🎯 useUnifiedSuggestions effect triggered', { mode, variantId })
+    if (mode === 'tailor' && variantId) {
+      console.log('✅ Loading suggestions for tailor mode with variant:', variantId)
+      loadSuggestions()
+    } else if (mode === 'base') {
+      console.log('🔄 Base mode - clearing suggestions')
+      // Clear suggestions in base mode
+      setSuggestions([])
+      appliedChanges.current.clear()
+    } else {
+      console.log('⚠️ Conditions not met for loading', { mode, variantId })
+    }
+  }, [mode, variantId, loadSuggestions])
 
   const acceptSuggestion = useCallback(async (suggestionId: string) => {
     console.log('✅ ACCEPT SUGGESTION CALLED:', suggestionId)

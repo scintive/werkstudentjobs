@@ -131,9 +131,28 @@ export async function GET(request: NextRequest) {
       // Use complete resume data
       const resumeRecord = resumeDataList[0];
       console.log('🔍 LATEST PROFILE: Found complete resume data');
-      
+
+      // Get photo from user_profiles if available
+      let photoUrl = resumeRecord.photo_url || null;
+      console.log('📸 PHOTO DEBUG: resume_data.photo_url =', photoUrl);
+
+      if (authUserId && !photoUrl) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('photo_url')
+          .eq('user_id', authUserId)
+          .single();
+        if (profile?.photo_url) {
+          photoUrl = profile.photo_url;
+          console.log('📸 PHOTO DEBUG: Got photo from user_profiles =', photoUrl);
+        }
+      }
+
+      console.log('📸 PHOTO DEBUG: Final photoUrl in resumeData =', photoUrl);
+
       resumeData = {
         personalInfo: resumeRecord.personal_info,
+        photoUrl: photoUrl,
         professionalTitle: resumeRecord.professional_title || '',
         professionalSummary: resumeRecord.professional_summary || '',
         enableProfessionalSummary: resumeRecord.enable_professional_summary || false,
@@ -142,7 +161,8 @@ export async function GET(request: NextRequest) {
         education: resumeRecord.education || [],
         projects: resumeRecord.projects || [],
         certifications: resumeRecord.certifications || [],
-        customSections: resumeRecord.custom_sections || []
+        customSections: resumeRecord.custom_sections || [],
+        languages: resumeRecord.languages || [] // Include languages from separate column
       };
       
       return NextResponse.json({

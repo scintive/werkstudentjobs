@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
+import {
   User,
   Briefcase,
   GraduationCap,
@@ -37,14 +37,18 @@ import {
   Target,
   Lightbulb,
   Megaphone,
-  PenTool
+  PenTool,
+  Upload,
+  Camera
 } from 'lucide-react'
 import { useResumeActions } from '@/lib/contexts/ResumeContext'
 import { useSupabaseResumeContext, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext'
 import { supabase } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { EnhancedRichText } from './enhanced-rich-text'
+import { ModernTemplateSelector } from './ModernTemplateSelector'
 import { SimpleTemplateDropdown } from './SimpleTemplateDropdown'
+import LanguagesCard from './LanguagesCard'
 import { EnhancedSkillsManager } from './EnhancedSkillsManager'
 import { TailorEnhancedSkillsManager } from '../tailor-resume-editor/TailorEnhancedSkillsManager'
 import { SkillsSuggestionsPanel } from './SkillsSuggestionsPanel'
@@ -101,6 +105,19 @@ const CUSTOM_SECTION_TEMPLATES = {
   }
 }
 
+// Section colors for each type - vibrant and modern
+const sectionColors = {
+  personal: { icon: 'text-blue-600', bg: 'bg-blue-50', badge: 'bg-blue-50 text-blue-700' },
+  summary: { icon: 'text-indigo-600', bg: 'bg-indigo-50', badge: 'bg-indigo-50 text-indigo-700' },
+  experience: { icon: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-50 text-emerald-700' },
+  projects: { icon: 'text-cyan-600', bg: 'bg-cyan-50', badge: 'bg-cyan-50 text-cyan-700' },
+  skills: { icon: 'text-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-50 text-violet-700' },
+  languages: { icon: 'text-purple-600', bg: 'bg-purple-50', badge: 'bg-purple-50 text-purple-700' },
+  certifications: { icon: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-50 text-amber-700' },
+  education: { icon: 'text-teal-600', bg: 'bg-teal-50', badge: 'bg-teal-50 text-teal-700' },
+  custom: { icon: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-50 text-rose-700' }
+}
+
 // Clean Section Card Component
 interface SectionCardProps {
   title: string
@@ -109,7 +126,7 @@ interface SectionCardProps {
   badge?: string | number
   onAdd?: () => void
   className?: string
-  color?: string
+  sectionType?: keyof typeof sectionColors
   isExpanded?: boolean
   onToggle?: () => void
 }
@@ -121,64 +138,60 @@ const SectionCard = ({
   badge,
   onAdd,
   className,
-  color = 'from-gray-600 to-gray-700',
+  sectionType = 'personal',
   isExpanded = true,
   onToggle
 }: SectionCardProps) => {
+  const colors = sectionColors[sectionType]
   return (
     <div
       className={cn(
-        "bg-white rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-300",
+        "bg-white rounded-lg shadow transition-all duration-300",
         className
       )}
     >
       <div
         className={cn(
-          "px-5 py-4 transition-all duration-200",
+          "p-4 flex items-center justify-between transition-all duration-200",
           onToggle ? "cursor-pointer" : ""
         )}
         onClick={onToggle}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
-              {React.cloneElement(icon, { className: 'w-4 h-4 text-gray-600' })}
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 text-[15px]">
-                {title}
-              </h3>
-              {badge !== undefined && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {badge} {typeof badge === 'number' && badge !== 1 ? 'items' : 'item'}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {onAdd && isExpanded && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onAdd()
-                }}
-                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200"
-              >
-                <Plus className="w-4 h-4 text-gray-600" />
-              </motion.button>
-            )}
-            {onToggle && (
-              <motion.div
-                animate={{ rotate: isExpanded ? 0 : -90 }}
-                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              </motion.div>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          {React.cloneElement(icon, { className: cn('w-5 h-5', colors.icon) })}
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+          {badge !== undefined && badge > 0 && (
+            <span className={cn(
+              "text-sm px-2 py-0.5 rounded-full font-medium",
+              colors.badge
+            )}>
+              {badge}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {onAdd && isExpanded && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onAdd()
+              }}
+              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200"
+            >
+              <Plus className="w-4 h-4 text-gray-600" />
+            </motion.button>
+          )}
+          {onToggle && (
+            <motion.div
+              animate={{ rotate: isExpanded ? 0 : -90 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            </motion.div>
+          )}
         </div>
       </div>
       <AnimatePresence>
@@ -190,7 +203,7 @@ const SectionCard = ({
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 pt-1">
+            <div className="p-4 pt-0">
               {children}
             </div>
           </motion.div>
@@ -1288,10 +1301,10 @@ export function PerfectStudio({
       title: templateName,
       type: 'custom',
       items: [{
-        field1: '',
-        field2: '',
-        field3: '',
-        field4: ''
+        title: '',
+        subtitle: '',
+        date: '',
+        description: ''
       }]
     }
     
@@ -1372,10 +1385,114 @@ export function PerfectStudio({
             <SectionCard
               title="Personal Information"
               icon={<User className="w-4 h-4" />}
-              color="from-blue-500 to-cyan-500"
+              sectionType="personal"
+              className="border border-blue-100 hover:shadow-lg hover:border-blue-200 transition-all duration-300"
+              badge={localData.personalInfo.name ? 1 : 0}
               isExpanded={expandedSections.personal}
               onToggle={() => toggleSection('personal')}
             >
+              {/* Photo Upload Section */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                <div className="flex items-center gap-4">
+                  {(localData as any).photoUrl ? (
+                    <div className="relative">
+                      <img
+                        src={(localData as any).photoUrl}
+                        alt="Profile"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      />
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Delete photo from storage and update state
+                            setLocalData({ ...localData, photoUrl: null } as any)
+                            updateField('photoUrl' as any, null)
+
+                            // Update user_profiles
+                            const { data: { user } } = await supabase.auth.getUser()
+                            if (user) {
+                              await supabase.from('user_profiles').update({ photo_url: null }).eq('user_id', user.id)
+                            }
+                          } catch (error) {
+                            console.error('Failed to delete photo:', error)
+                          }
+                        }}
+                        className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+
+                        if (!file.type.startsWith('image/')) {
+                          alert('Please upload an image file')
+                          return
+                        }
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert('Image size must be less than 5MB')
+                          return
+                        }
+
+                        try {
+                          const { data: { user } } = await supabase.auth.getUser()
+                          if (!user) throw new Error('No user found')
+
+                          // Upload to storage
+                          const fileExt = file.name.split('.').pop()
+                          const fileName = `${user.id}/profile.${fileExt}`
+
+                          const { error: uploadError } = await supabase.storage
+                            .from('profile-photos')
+                            .upload(fileName, file, { upsert: true })
+
+                          if (uploadError) throw uploadError
+
+                          // Get public URL
+                          const { data: urlData } = supabase.storage
+                            .from('profile-photos')
+                            .getPublicUrl(fileName)
+
+                          const photoUrl = urlData.publicUrl
+
+                          // Update state
+                          setLocalData({ ...localData, photoUrl } as any)
+                          updateField('photoUrl' as any, photoUrl)
+
+                          // Update user_profiles
+                          await supabase.from('user_profiles').update({ photo_url: photoUrl }).eq('user_id', user.id)
+                        } catch (error) {
+                          console.error('Photo upload failed:', error)
+                          alert('Failed to upload photo. Please try again.')
+                        }
+                      }}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <label
+                      htmlFor="photo-upload"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {(localData as any).photoUrl ? 'Change Photo' : 'Upload Photo'}
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">JPG, PNG or GIF • Max 5MB</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <CleanInput
                   label="Full Name"
@@ -1498,8 +1615,9 @@ export function PerfectStudio({
             <SectionCard
               title="Professional Experience"
               icon={<Briefcase className="w-4 h-4" />}
+              sectionType="experience"
+              className="border border-emerald-100 hover:shadow-lg hover:border-emerald-200 transition-all duration-300"
               badge={localData.experience.length}
-              color="from-purple-500 to-pink-500"
               isExpanded={expandedSections.experience}
               onToggle={() => toggleSection('experience')}
               onAdd={() => {
@@ -1649,10 +1767,11 @@ export function PerfectStudio({
             <SectionCard
               title="Projects"
               icon={<Code className="w-4 h-4" />}
+              className="border border-purple-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300"
+              sectionType="projects"
               badge={localData.projects?.length || 0}
               isExpanded={expandedSections.projects}
               onToggle={() => toggleSection('projects')}
-              color="from-orange-500 to-red-500"
               onAdd={() => {
                 setLocalData({
                   ...localData,
@@ -1788,9 +1907,11 @@ export function PerfectStudio({
             <SectionCard
               title="Skills & Languages"
               icon={<Sparkles className="w-4 h-4" />}
+              className="border border-indigo-100 hover:shadow-lg hover:border-indigo-200 transition-all duration-300"
+              sectionType="skills"
               isExpanded={expandedSections.skills}
               onToggle={() => toggleSection('skills')}
-              color="from-emerald-500 to-teal-500"
+              badge={Object.values(localData.skills || {}).flat().length}
             >
               {mode === 'tailor' ? (
                 <TailorEnhancedSkillsManager
@@ -1814,9 +1935,6 @@ export function PerfectStudio({
                   skills={localData.skills}
                   mode={mode}
                   onSkillsChange={(updatedSkills) => {
-                  console.log('🎯 Skills change callback triggered with:', Object.keys(updatedSkills || {}))
-                  console.log('🎯 Current mode:', mode, '- Should save to DB:', mode !== 'tailor')
-
                   // Update local data
                   setLocalData(prevData => ({
                     ...prevData,
@@ -1824,6 +1942,12 @@ export function PerfectStudio({
                     // Preserve languages from resumeData to prevent reset
                     languages: prevData.languages || []
                   }))
+
+                  // Update the actual resumeData in context and save to database
+                  if (mode !== 'tailor') {
+                    updateField('skills', updatedSkills || {})
+                    saveNow()
+                  }
 
                   // Update the plan to reflect the removal
                   if (localSkillsPlan && Array.isArray(localSkillsPlan.categories)) {
@@ -1904,14 +2028,47 @@ export function PerfectStudio({
               />
             )}
 
+            {/* Languages Card */}
+            <LanguagesCard
+              languages={(localData.languages || []) as any}
+              onLanguagesChange={(updatedLanguages) => {
+                console.log('🌍 Updating languages:', updatedLanguages)
+                // Update localData
+                const newData = {
+                  ...localData,
+                  languages: updatedLanguages
+                }
+                setLocalData(newData)
+
+                // Auto-save in base mode
+                if (mode === 'base') {
+                  console.log('💾 Saving languages to base resume:', updatedLanguages)
+                  const updatedResumeData = {
+                    ...resumeData,
+                    languages: updatedLanguages
+                  }
+                  updateField('languages', updatedLanguages)
+                  import('@/lib/services/resumeDataService').then(({ ResumeDataService }) => {
+                    const service = ResumeDataService.getInstance()
+                    service.saveResumeData(updatedResumeData, activeTemplate)
+                      .then(() => console.log('✅ Languages saved directly to Supabase'))
+                      .catch(error => console.error('❌ Failed to save languages:', error))
+                  })
+                }
+              }}
+              expandedSections={expandedSections}
+              toggleSection={toggleSection}
+            />
+
             {/* Certifications */}
             <SectionCard
               title="Certifications"
               icon={<Award className="w-4 h-4" />}
+              className="border border-amber-100 hover:shadow-lg hover:border-amber-200 transition-all duration-300"
+              sectionType="certifications"
               badge={localData.certifications?.length || 0}
               isExpanded={expandedSections.certifications}
               onToggle={() => toggleSection('certifications')}
-              color="from-indigo-500 to-purple-500"
               onAdd={() => {
                 setLocalData({
                   ...localData,
@@ -1980,10 +2137,11 @@ export function PerfectStudio({
             <SectionCard
               title="Education"
               icon={<GraduationCap className="w-4 h-4" />}
+              className="border border-rose-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300"
+              sectionType="education"
               badge={localData.education.length}
               isExpanded={expandedSections.education}
               onToggle={() => toggleSection('education')}
-              color="from-amber-500 to-yellow-500"
               onAdd={() => {
                 setLocalData({
                   ...localData,
@@ -2079,6 +2237,22 @@ export function PerfectStudio({
               </div>
             </SectionCard>
 
+            {/* Divider before Custom Sections */}
+            {localData.customSections && localData.customSections.length > 0 && (
+              <div className="mt-8 mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-gray-50 px-3 py-1 text-gray-500 font-medium rounded-full">
+                      Additional Sections
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Render Custom Sections First */}
             {localData.customSections?.filter(section => {
               // Filter out Academic Projects - they should be in the main projects section
@@ -2114,6 +2288,10 @@ export function PerfectStudio({
                     lowerTitle.includes('paper')) {
                   return CUSTOM_SECTION_TEMPLATES['Publications'];
                 }
+                // Hobbies matching
+                if (lowerTitle.includes('hobbies') || lowerTitle.includes('interests')) {
+                  return CUSTOM_SECTION_TEMPLATES['Hobbies & Interests'];
+                }
 
                 // Default template
                 return null;
@@ -2128,6 +2306,8 @@ export function PerfectStudio({
                   key={sectionIndex}
                   title={section.title}
                   icon={icon}
+                  className="border border-teal-100 hover:shadow-lg hover:border-teal-200 transition-all duration-300"
+                  sectionType="custom"
                   badge={section.items?.length || 0}
                   isExpanded={expandedSections.custom}
                   onToggle={() => toggleSection('custom')}
@@ -2135,57 +2315,95 @@ export function PerfectStudio({
                     const newSections = [...localData.customSections]
                     newSections[sectionIndex].items = [
                       ...(newSections[sectionIndex].items || []),
-                      { field1: '', field2: '', field3: '', field4: '' }
+                      { title: '', subtitle: '', date: '', description: '' }
                     ]
                     setLocalData({ ...localData, customSections: newSections })
                   }}
                 >
                   <div className="space-y-3">
                     {section.items?.map((item, itemIndex) => {
-                      const fieldNames = section.fields || ['Field 1', 'Field 2', 'Field 3', 'Field 4'];
+                      // Get appropriate field labels based on section type
+                      const getFieldLabels = (sectionTitle: string) => {
+                        const lowerTitle = sectionTitle.toLowerCase();
+
+                        if (lowerTitle.includes('hobbies') || lowerTitle.includes('interests')) {
+                          return ['Activity', 'Category', 'Level', 'Details'];
+                        }
+                        if (lowerTitle.includes('award') || lowerTitle.includes('honor') || lowerTitle.includes('recognition')) {
+                          return ['Award Title', 'Organization', 'Date', 'Description'];
+                        }
+                        if (lowerTitle.includes('publication')) {
+                          return ['Publication Title', 'Publisher/Journal', 'Date', 'URL/DOI'];
+                        }
+                        if (lowerTitle.includes('speaking') || lowerTitle.includes('presentation')) {
+                          return ['Event/Conference', 'Topic', 'Date', 'Details'];
+                        }
+                        if (lowerTitle.includes('membership') || lowerTitle.includes('association')) {
+                          return ['Organization', 'Membership Type', 'Since', 'Details'];
+                        }
+                        // Default for leadership/volunteer/community
+                        return ['Role', 'Organization', 'Duration', 'Impact/Contribution'];
+                      };
+
+                      const fieldNames = getFieldLabels(section.title);
+                      const fieldKeys = ['title', 'subtitle', 'date', 'description'] as const;
+
                       return (
-                        <div key={itemIndex} className="p-4 bg-gray-50 rounded-lg relative">
+                        <div key={itemIndex} className="p-4 bg-gray-50 rounded-lg relative group">
                           <button
                             onClick={() => {
                               const newSections = [...localData.customSections]
                               newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_, i) => i !== itemIndex)
                               setLocalData({ ...localData, customSections: newSections })
                             }}
-                            className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded text-red-500 transition-all"
                           >
-                            <X className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                          <div className="space-y-3 pr-8">
-                            {fieldNames.map((fieldName, fieldIndex) => (
-                              <div key={fieldIndex}>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  {fieldName}
-                                </label>
-                                {fieldIndex === 3 ? (
-                                  <textarea
-                                    value={item[`field${fieldIndex + 1}` as keyof typeof item] || ''}
-                                    onChange={(e) => {
-                                      const newSections = [...localData.customSections]
-                                      newSections[sectionIndex].items[itemIndex][`field${fieldIndex + 1}` as keyof typeof item] = e.target.value
-                                      setLocalData({ ...localData, customSections: newSections })
-                                    }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    rows={3}
-                                  />
-                                ) : (
-                                  <input
-                                    type="text"
-                                    value={item[`field${fieldIndex + 1}` as keyof typeof item] || ''}
-                                    onChange={(e) => {
-                                      const newSections = [...localData.customSections]
-                                      newSections[sectionIndex].items[itemIndex][`field${fieldIndex + 1}` as keyof typeof item] = e.target.value
-                                      setLocalData({ ...localData, customSections: newSections })
-                                    }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  />
-                                )}
-                              </div>
-                            ))}
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <CleanInput
+                              label={fieldNames[0]}
+                              value={item.title || ''}
+                              onChange={(value) => {
+                                const newSections = [...localData.customSections]
+                                newSections[sectionIndex].items[itemIndex].title = value
+                                setLocalData({ ...localData, customSections: newSections })
+                              }}
+                              placeholder={`e.g., ${fieldNames[0]}`}
+                            />
+                            <CleanInput
+                              label={fieldNames[1]}
+                              value={item.subtitle || ''}
+                              onChange={(value) => {
+                                const newSections = [...localData.customSections]
+                                newSections[sectionIndex].items[itemIndex].subtitle = value
+                                setLocalData({ ...localData, customSections: newSections })
+                              }}
+                              placeholder={`e.g., ${fieldNames[1]}`}
+                            />
+                            <CleanInput
+                              label={fieldNames[2]}
+                              value={item.date || ''}
+                              onChange={(value) => {
+                                const newSections = [...localData.customSections]
+                                newSections[sectionIndex].items[itemIndex].date = value
+                                setLocalData({ ...localData, customSections: newSections })
+                              }}
+                              placeholder={fieldNames[2] === 'Date' ? 'e.g., 2023-2024' : `e.g., ${fieldNames[2]}`}
+                              icon={fieldNames[2] === 'Date' || fieldNames[2] === 'Duration' || fieldNames[2] === 'Since' ? <Calendar className="w-4 h-4" /> : undefined}
+                            />
+                            <CleanInput
+                              label={fieldNames[3]}
+                              value={item.description || ''}
+                              onChange={(value) => {
+                                const newSections = [...localData.customSections]
+                                newSections[sectionIndex].items[itemIndex].description = value
+                                setLocalData({ ...localData, customSections: newSections })
+                              }}
+                              placeholder={`e.g., ${fieldNames[3]}`}
+                              multiline={true}
+                            />
                           </div>
                         </div>
                       )
@@ -2312,131 +2530,6 @@ export function PerfectStudio({
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Render Custom Sections */}
-            {localData.customSections?.filter(section => {
-              // Filter out Academic Projects - they should be in the main projects section
-              const lowerTitle = section.title?.toLowerCase() || '';
-              return !(lowerTitle.includes('academic') && lowerTitle.includes('project'));
-            }).map((section, sectionIndex) => {
-              // Smart template matching for extracted sections
-              const findMatchingTemplate = (sectionTitle: string) => {
-                // Direct match first
-                if (CUSTOM_SECTION_TEMPLATES[sectionTitle as keyof typeof CUSTOM_SECTION_TEMPLATES]) {
-                  return CUSTOM_SECTION_TEMPLATES[sectionTitle as keyof typeof CUSTOM_SECTION_TEMPLATES];
-                }
-                
-                // Fuzzy matching for common variations
-                const lowerTitle = sectionTitle.toLowerCase();
-                
-                if (lowerTitle.includes('volunteer')) {
-                  return CUSTOM_SECTION_TEMPLATES['Volunteer Experience'];
-                }
-                if (lowerTitle.includes('leadership')) {
-                  return CUSTOM_SECTION_TEMPLATES['Leadership Experience'];
-                }
-                if (lowerTitle.includes('award') || lowerTitle.includes('honor') || lowerTitle.includes('recognition')) {
-                  return CUSTOM_SECTION_TEMPLATES['Awards & Recognition'];
-                }
-                if (lowerTitle.includes('publication')) {
-                  return CUSTOM_SECTION_TEMPLATES['Publications'];
-                }
-                if (lowerTitle.includes('community')) {
-                  return CUSTOM_SECTION_TEMPLATES['Community Involvement'];
-                }
-                // Skip Academic Projects - they should be in the main projects section
-                if (lowerTitle.includes('academic') && lowerTitle.includes('project')) {
-                  return null; // Don't create a custom section for academic projects
-                }
-                if (lowerTitle.includes('research')) {
-                  return CUSTOM_SECTION_TEMPLATES['Research Experience'];
-                }
-                if (lowerTitle.includes('member') || lowerTitle.includes('association')) {
-                  return CUSTOM_SECTION_TEMPLATES['Professional Memberships'];
-                }
-                if (lowerTitle.includes('hobbies') || lowerTitle.includes('interest')) {
-                  return CUSTOM_SECTION_TEMPLATES['Hobbies & Interests'];
-                }
-                
-                // Default template for unrecognized sections
-                return {
-                  icon: <Star className="w-4 h-4" />,
-                  fields: ['Title/Name', 'Organization/Context', 'Date/Duration', 'Description/Details'],
-                  color: 'from-gray-500 to-gray-600'
-                };
-              };
-              
-              const template = findMatchingTemplate(section.title);
-              return (
-                <SectionCard
-                  key={section.id || `custom-section-${sectionIndex}-${section.title}`}
-                  title={section.title}
-                  icon={template?.icon || <Star className="w-4 h-4" />}
-                  badge={section.items?.length || 0}
-                  color={template?.color || 'from-gray-500 to-gray-600'}
-                  isExpanded={expandedSections.custom}
-                  onToggle={() => toggleSection('custom')}
-                  onAdd={() => {
-                    const newSections = [...localData.customSections]
-                    newSections[sectionIndex].items = [
-                      ...(newSections[sectionIndex].items || []),
-                      { field1: '', field2: '', field3: '', field4: '' }
-                    ]
-                    setLocalData({ ...localData, customSections: newSections })
-                  }}
-                >
-                  <div className="space-y-3">
-                    {section.items?.map((item, itemIndex) => {
-                      const fields = template?.fields || ['Field 1', 'Field 2', 'Field 3', 'Field 4']
-                      return (
-                        <div key={itemIndex} className="p-4 bg-gray-50 rounded-lg relative">
-                          <button
-                            onClick={() => {
-                              const newSections = [...localData.customSections]
-                              newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_, i) => i !== itemIndex)
-                              setLocalData({ ...localData, customSections: newSections })
-                            }}
-                            className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            {fields.map((fieldName, fieldIndex) => (
-                              <CleanInput
-                                key={fieldIndex}
-                                label={fieldName}
-                                value={item[`field${fieldIndex + 1}` as keyof typeof item] || ''}
-                                onChange={(value) => {
-                                  const newSections = [...localData.customSections]
-                                  newSections[sectionIndex].items[itemIndex][`field${fieldIndex + 1}` as keyof typeof item] = value
-                                  setLocalData({ ...localData, customSections: newSections })
-                                }}
-                                multiline={fieldIndex === 3}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        setLocalData({
-                          ...localData,
-                          customSections: localData.customSections.filter((_, i) => i !== sectionIndex)
-                        })
-                      }}
-                      className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 border border-red-200 transition-all flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Remove Section
-                    </motion.button>
-                  </div>
-                </SectionCard>
-              )
-            })}
           </div>
         </div>
 

@@ -2,7 +2,7 @@
 // Single Source of Truth for both preview and PDF generation
 
 export function generateClassicResumeHTML(data: any): string {
-  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume } = data;
+  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -71,7 +71,17 @@ export function generateClassicResumeHTML(data: any): string {
             text-align: center;
             margin-bottom: 3mm;
         }
-        
+
+        .profile-photo {
+            width: 35mm;
+            height: 35mm;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            margin: 0 auto 3mm auto;
+            display: block;
+        }
+
         .name {
             font-size: 18pt;
             font-weight: 700;
@@ -229,6 +239,7 @@ export function generateClassicResumeHTML(data: any): string {
     <div class="resume-container">
         <!-- Header Section -->
         <header class="header" data-section="header">
+            ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
             <div class="name" data-section="name">${personalInfo.name || ''}</div>
             <div class="contact-info">
                 ${[
