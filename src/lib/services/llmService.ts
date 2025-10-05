@@ -225,12 +225,12 @@ const SkillsOrganizationSchema = {
       required: ["career_focus", "skill_level", "recommendations"],
       additionalProperties: false
     },
-    category_mapping: { 
-      type: "object", 
+    category_mapping: {
+      type: "object",
       additionalProperties: { type: "string" }
     }
   },
-  required: ["organized_categories", "profile_assessment", "category_mapping"],
+  required: ["profile_assessment"],
   additionalProperties: false
 };
 

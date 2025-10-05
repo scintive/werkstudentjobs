@@ -13,15 +13,16 @@ export function generateClassicResumeHTML(data: any): string {
     <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&family=Georgia:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --text-primary: #000000;
-            --text-secondary: #333333;
-            --bg-primary: #ffffff;
-            --border-color: #000000;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --accent-color: #8b7355;
+            --bg-primary: #fffef8;
+            --border-color: #2c2c2c;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { 
-            size: A4; 
-            margin: 20mm 20mm 25mm 20mm;
+        @page {
+            size: A4;
+            margin: 10mm 10mm 10mm 10mm;
         }
         
         /* Page break optimization */
@@ -53,7 +54,7 @@ export function generateClassicResumeHTML(data: any): string {
             width: 100%;
             max-width: none;
             min-height: 297mm;
-            padding: 20mm 20mm 25mm 20mm;
+            padding: 10mm 10mm 10mm 10mm;
             margin: 0;
         }
         
@@ -72,30 +73,24 @@ export function generateClassicResumeHTML(data: any): string {
             margin-bottom: 3mm;
         }
 
-        .profile-photo {
-            width: 35mm;
-            height: 35mm;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 2px solid var(--border-color);
-            margin: 0 auto 3mm auto;
-            display: block;
-        }
-
         .name {
-            font-size: 18pt;
+            font-size: 20pt;
             font-weight: 700;
-            letter-spacing: 0.5px;
-            margin-bottom: 2mm;
+            letter-spacing: 1.5px;
+            margin-bottom: 2.5mm;
+            text-transform: uppercase;
+            color: var(--text-primary);
         }
         
         .contact-info {
             font-size: 10pt;
             line-height: 1.4;
+            color: var(--text-secondary);
         }
-        
+
         .contact-separator {
-            margin: 0 2mm;
+            margin: 0 2.5mm;
+            color: var(--accent-color);
         }
         
         /* Section Headers - Harvard Style with line */
@@ -108,9 +103,11 @@ export function generateClassicResumeHTML(data: any): string {
             font-size: 11pt;
             font-weight: 700;
             text-transform: uppercase;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1mm;
+            letter-spacing: 1.2px;
+            border-bottom: 1.5px solid var(--border-color);
+            padding-bottom: 1.5mm;
             margin-bottom: 3mm;
+            color: var(--text-primary);
         }
         
         /* Content Styling */
@@ -239,7 +236,6 @@ export function generateClassicResumeHTML(data: any): string {
     <div class="resume-container">
         <!-- Header Section -->
         <header class="header" data-section="header">
-            ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
             <div class="name" data-section="name">${personalInfo.name || ''}</div>
             <div class="contact-info">
                 ${[

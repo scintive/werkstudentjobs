@@ -111,28 +111,35 @@ export function useUnifiedSuggestions({
         appliedAt: s.applied_at
       }))
 
+      // Filter out suggestions for languages and custom sections - they should not have AI suggestions
+      const filteredSuggestions = transformed.filter(s => {
+        const section = s.section?.toLowerCase() || ''
+        return section !== 'languages' && section !== 'custom' && !section.startsWith('custom_')
+      })
+
       // Observability: count missing anchors for experience
-      const missingAnchors = transformed.filter(s => s.section === 'experience' && !s.targetPath)
+      const missingAnchors = filteredSuggestions.filter(s => s.section === 'experience' && !s.targetPath)
       if (missingAnchors.length > 0) {
         console.warn('SUGGESTIONS_ANCHOR_MISS', { count: missingAnchors.length, example: missingAnchors[0] })
       }
-      
-      setSuggestions(transformed)
+
+      setSuggestions(filteredSuggestions)
 
       // Track which ones are already applied
-      transformed.forEach(s => {
+      filteredSuggestions.forEach(s => {
         if (s.status === 'accepted') {
           appliedChanges.current.add(s.id)
         }
       })
 
-      console.log(`📋 Loaded ${transformed.length} suggestions for variant ${variantId}`)
-      console.log('🎯 Transformed sections:', Array.from(new Set(transformed.map(s => s.section))))
+      console.log(`📋 Loaded ${filteredSuggestions.length} suggestions for variant ${variantId} (filtered out languages/custom)`)
+      console.log('🎯 Filtered sections:', Array.from(new Set(filteredSuggestions.map(s => s.section))))
       console.log('🎯 By section:', {
-        title: transformed.filter(s => s.section === 'title').length,
-        summary: transformed.filter(s => s.section === 'summary').length,
-        experience: transformed.filter(s => s.section === 'experience').length,
-        skills: transformed.filter(s => s.section === 'skills').length
+        title: filteredSuggestions.filter(s => s.section === 'title').length,
+        summary: filteredSuggestions.filter(s => s.section === 'summary').length,
+        experience: filteredSuggestions.filter(s => s.section === 'experience').length,
+        skills: filteredSuggestions.filter(s => s.section === 'skills').length,
+        projects: filteredSuggestions.filter(s => s.section === 'projects').length
       })
     } catch (err) {
       console.error('Failed to load suggestions:', err)

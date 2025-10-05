@@ -3,15 +3,15 @@
 import * as React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase/client'
-import { 
-  Plus, 
-  X, 
-  Sparkles, 
-  Code2, 
-  Palette, 
-  Target, 
-  Users, 
-  Globe2, 
+import {
+  Plus,
+  X,
+  Sparkles,
+  Code2,
+  Palette,
+  Target,
+  Users,
+  Globe2,
   Award,
   Wand2,
   Check,
@@ -26,7 +26,9 @@ import {
   Trash2,
   TrendingUp,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  PenTool,
+  Edit
 } from 'lucide-react'
 
 interface TailorEnhancedSkillsManagerProps {
@@ -151,20 +153,99 @@ export function TailorEnhancedSkillsManager({
 
   // Flag to prevent automatic reorganization during individual suggestion processing
   const [skipAutoReorganization, setSkipAutoReorganization] = React.useState(false)
+  // Flag to prevent re-initialization after category deletion
+  const [skipReinitialization, setSkipReinitialization] = React.useState(false)
+
+  // State for success feedback and category editing
+  const [showSuccessToast, setShowSuccessToast] = React.useState(false)
+  const [skillsAccepted, setSkillsAccepted] = React.useState(false)
+  const [editingCategory, setEditingCategory] = React.useState<string | null>(null)
+  const [editingCategoryName, setEditingCategoryName] = React.useState('')
+  const [deleteConfirmation, setDeleteConfirmation] = React.useState<{ categoryKey: string; displayName: string } | null>(null)
+
+  // Helper function to check if organized skills have already been synced with current skills
+  const checkIfSkillsAlreadySynced = (organizedCategories: Record<string, OrganizedCategory>, currentSkills: any): boolean => {
+    // Convert organized categories to the same format as skills object
+    const organizedSkillsMap: Record<string, string[]> = {}
+    Object.entries(organizedCategories).forEach(([categoryKey, category]) => {
+      const displayName = categoryKey
+        .replace(/___/g, ' & ')
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+
+      organizedSkillsMap[displayName] = category.skills.map(skill =>
+        typeof skill === 'string' ? skill : skill.skill
+      )
+    })
+
+    // Compare with current skills
+    const organizedCategoryNames = Object.keys(organizedSkillsMap).sort()
+    const currentCategories = Object.keys(currentSkills).filter(key => key !== 'languages').sort()
+
+    // If different number of categories, not synced
+    if (organizedCategoryNames.length !== currentCategories.length) {
+      return false
+    }
+
+    // Check if all categories and skills match
+    for (const category of organizedCategoryNames) {
+      const organizedSkills = organizedSkillsMap[category] || []
+      const currentCategorySkills = currentSkills[category] || []
+
+      // Compare skill arrays
+      if (organizedSkills.length !== currentCategorySkills.length) {
+        return false
+      }
+
+      // Check if all skills exist (order doesn't matter)
+      const organizedSet = new Set(organizedSkills.map(s => s.toLowerCase()))
+      const currentSet = new Set(currentCategorySkills.map((s: any) =>
+        typeof s === 'string' ? s.toLowerCase() : s.skill?.toLowerCase() || ''
+      ))
+
+      if (organizedSet.size !== currentSet.size) {
+        return false
+      }
+
+      for (const skill of organizedSet) {
+        if (!currentSet.has(skill)) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }
 
   // Enhanced initialization with AI analysis
   React.useEffect(() => {
     const initializeSkills = async () => {
-      if (organizedSkills?.organized_categories) {
+      // Don't re-initialize after category deletion
+      if (skipReinitialization) {
+        console.log('🚫 Skipping re-initialization after category deletion')
+        return
+      }
+
+      // CRITICAL: Only initialize from organizedSkills prop if we don't have organizedData yet
+      // This prevents overwriting local changes (like deletions) with stale prop data
+      if (organizedSkills?.organized_categories && !organizedData) {
+        console.log('🎨 Initializing skills from organizedSkills prop (first load)')
         // Analyze job relevance if job data available
         let enhancedData = organizedSkills
-        
+
         if (jobData && strategy && aiMode) {
           enhancedData = await analyzeJobRelevance(organizedSkills)
         }
-        
+
         setOrganizedData(enhancedData)
-        
+
+        // Check if skills have already been accepted by comparing organized data with current skills
+        const skillsAlreadyAccepted = checkIfSkillsAlreadySynced(enhancedData.organized_categories, skills)
+        if (skillsAlreadyAccepted) {
+          setSkillsAccepted(true)
+        }
+
         // Auto-expand high relevance categories
         const autoExpanded: Record<string, boolean> = {}
         Object.entries(enhancedData.organized_categories).forEach(([key, category]) => {
@@ -173,7 +254,7 @@ export function TailorEnhancedSkillsManager({
         // Always include languages in expanded categories
         autoExpanded['languages'] = true
         setExpandedCategories(autoExpanded)
-      } else if (Object.keys(skills).length > 0 && !skipAutoReorganization) {
+      } else if (Object.keys(skills).length > 0 && !skipAutoReorganization && !organizedData) {
         console.log('🧠 Auto-reorganization triggered (skills changed, no organized data, not skipping)')
         await organizeExistingSkills()
       } else if (skipAutoReorganization) {
@@ -182,7 +263,7 @@ export function TailorEnhancedSkillsManager({
     }
 
     initializeSkills()
-  }, [skills, organizedSkills, jobData, strategy, aiMode, skipAutoReorganization])
+  }, [skills, organizedSkills, jobData, strategy, aiMode, skipAutoReorganization, skipReinitialization])
 
   const analyzeJobRelevance = async (skillsData: OrganizedSkillsResponse) => {
     if (!jobData || !strategy) return skillsData
@@ -198,33 +279,39 @@ export function TailorEnhancedSkillsManager({
       ]
       
       const enhancedCategories: Record<string, OrganizedCategory> = {}
-      
+
       Object.entries(skillsData.organized_categories).forEach(([categoryKey, category]) => {
-        const categorySkills = category.skills.map(skill => 
+        // Skip language categories - they should never be analyzed as skills
+        if (categoryKey.toLowerCase().includes('language')) {
+          enhancedCategories[categoryKey] = category
+          return
+        }
+
+        const categorySkills = category.skills.map(skill =>
           typeof skill === 'string' ? skill : skill.skill
         )
-        
+
         // Calculate relevance based on job keywords
         const relevantSkills = categorySkills.filter(skill =>
-          jobKeywords.some(keyword => 
+          jobKeywords.some(keyword =>
             skill.toLowerCase().includes(keyword.toLowerCase()) ||
             keyword.toLowerCase().includes(skill.toLowerCase())
           )
         )
-        
+
         const relevanceRatio = relevantSkills.length / categorySkills.length
         let jobRelevance: 'high' | 'medium' | 'low' = 'low'
-        
+
         if (relevanceRatio > 0.6) jobRelevance = 'high'
         else if (relevanceRatio > 0.3) jobRelevance = 'medium'
-        
+
         enhancedCategories[categoryKey] = {
           ...category,
           jobRelevance,
           aiOptimized: true
         }
-        
-        // Track job-optimized skills
+
+        // Track job-optimized skills (excluding language-related skills)
         if (jobRelevance === 'high') {
           setJobOptimizedSkills(prev => {
             const combined = [...prev, ...relevantSkills]
@@ -629,57 +716,156 @@ export function TailorEnhancedSkillsManager({
     )
   }
 
-  // Function to trigger preview update
   const updatePreview = () => {
     console.log('🔄 Updating preview with current organized skills')
     if (organizedData && onSkillsChange) {
       // Convert organized data back to skills object format and trigger update
       syncWithSkillsObject(organizedData)
+
+      // Show success feedback
+      setSkillsAccepted(true)
+      setShowSuccessToast(true)
+      setTimeout(() => setShowSuccessToast(false), 3000)
     }
+  }
+
+  const handleRenameCategory = (oldKey: string, newName: string) => {
+    if (!newName.trim() || newName === oldKey) {
+      setEditingCategory(null)
+      return
+    }
+
+    const newKey = newName
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '')
+
+    const newCategories = { ...organizedData.organized_categories }
+    const categoryData = newCategories[oldKey]
+    delete newCategories[oldKey]
+    newCategories[newKey] = { ...categoryData, displayName: newName }
+
+    setOrganizedData({
+      ...organizedData,
+      organized_categories: newCategories
+    })
+
+    setEditingCategory(null)
+    syncWithSkillsObject({ ...organizedData, organized_categories: newCategories })
+  }
+
+  const handleDeleteCategory = (categoryKey: string, displayName: string) => {
+    setDeleteConfirmation({ categoryKey, displayName })
+  }
+
+  const confirmDelete = () => {
+    if (!deleteConfirmation) return
+
+    console.log('🗑️ Deleting category:', deleteConfirmation.categoryKey)
+
+    // Set flag to prevent re-initialization from overwriting deletion
+    setSkipReinitialization(true)
+
+    const newCategories = { ...organizedData.organized_categories }
+    delete newCategories[deleteConfirmation.categoryKey]
+
+    setOrganizedData({
+      ...organizedData,
+      organized_categories: newCategories
+    })
+
+    syncWithSkillsObject({ ...organizedData, organized_categories: newCategories })
+    setDeleteConfirmation(null)
+
+    // Reset flag after sync completes
+    setTimeout(() => {
+      console.log('✅ Resetting skipReinitialization after category deletion')
+      setSkipReinitialization(false)
+    }, 500)
   }
 
   return (
     <div className="space-y-3 text-[13px]">
-      {/* Update Preview Button */}
-      {aiMode && organizedData && (
-        <div className="flex justify-end">
-          <motion.button
-            onClick={updatePreview}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5"
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirmation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl"
+            >
+              <h3 className="text-heading-3 mb-4">Delete Category</h3>
+              <p className="text-body mb-6 text-gray-600">
+                Delete the entire "{deleteConfirmation.displayName}" category?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirmation(null)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="btn btn-danger"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Toast */}
+      <AnimatePresence>
+        {showSuccessToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="info-box info-box-success mb-4"
           >
-            <CheckCircle className="w-3.5 h-3.5" />
+            <CheckCircle className="info-box-icon" />
+            <div className="info-box-content">
+              Skills updated successfully! Changes have been applied to your resume.
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Update Preview Button */}
+      {aiMode && organizedData && !skillsAccepted && (
+        <div className="flex justify-end">
+          <button onClick={updatePreview} className="btn btn-primary btn-sm">
+            <CheckCircle className="w-4 h-4" />
             Accept All Skills
-          </motion.button>
+          </button>
         </div>
       )}
 
-      {/* AI Mode Header */}
-      {aiMode && jobData && jobOptimizedSkills.length > 0 && (
+      {/* AI Mode Header - Hide after accepting */}
+      {aiMode && jobData && jobOptimizedSkills.length > 0 && !skillsAccepted && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-purple-50 rounded-lg border border-purple-200"
+          className="info-box info-box-primary"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
-                <Brain className="w-4 h-4 text-gray-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">AI Skills Optimization Active</h4>
-                <p className="text-xs text-gray-600">
-                  Skills are analyzed for relevance to: <span className="font-semibold">{jobData.title}</span>
-                </p>
-              </div>
+          <Brain className="info-box-icon" />
+          <div className="flex-1">
+            <div className="font-semibold text-gray-900 mb-1">AI Skills Optimization Active</div>
+            <div className="text-sm text-gray-600">
+              Skills are analyzed for relevance to: <span className="font-semibold">{jobData.title}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-purple-600 font-medium">
-                {jobOptimizedSkills.length} optimized skills
-              </span>
-              <TrendingUp className="w-4 h-4 text-purple-600" />
-            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="badge badge-primary">
+              {jobOptimizedSkills.length} optimized skills
+            </span>
+            <TrendingUp className="w-4 h-4 text-blue-600" />
           </div>
         </motion.div>
       )}
@@ -687,6 +873,7 @@ export function TailorEnhancedSkillsManager({
       {/* Skills Categories */}
       <div className="space-y-2">
         {Object.entries(organizedData.organized_categories)
+          .sort((a, b) => a[0].localeCompare(b[0])) // Sort alphabetically to match preview order
           .map(([categoryKey, categoryData], index) => {
           const colorIndex = index % CATEGORY_COLORS.length
           const colors = CATEGORY_COLORS[colorIndex]
@@ -710,7 +897,7 @@ export function TailorEnhancedSkillsManager({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all duration-200"
+              className="card"
             >
               <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -723,38 +910,72 @@ export function TailorEnhancedSkillsManager({
                         </div>
                       )}
                     </div>
-                    
-                    <div>
+
+                    <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <h4 className={`text-sm font-semibold ${colors.text}`}>{displayName}</h4>
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                        {editingCategory === categoryKey ? (
+                          <input
+                            type="text"
+                            value={editingCategoryName}
+                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                            onBlur={() => handleRenameCategory(categoryKey, editingCategoryName)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRenameCategory(categoryKey, editingCategoryName)
+                              if (e.key === 'Escape') setEditingCategory(null)
+                            }}
+                            autoFocus
+                            className="input input-sm max-w-xs"
+                          />
+                        ) : (
+                          <h4 className={`text-label ${colors.text}`}>{displayName}</h4>
+                        )}
+                        <span className="badge badge-sm">
                           {categoryData.skills.length}
                         </span>
-                        
+
                         {/* Job Relevance Indicator */}
                         {categoryData.jobRelevance && aiMode && (
-                          <div className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium uppercase">
+                          <span className="badge badge-success badge-sm">
                             {categoryData.jobRelevance} relevance
-                          </div>
+                          </span>
                         )}
                       </div>
-                      
+
                       {categoryData.reasoning && (
-                        <p className="text-sm text-gray-600 mt-1 max-w-md">
+                        <p className="text-body-small text-gray-600 mt-1 max-w-md">
                           {categoryData.reasoning}
                         </p>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-1">
+                    {/* Edit Category Button */}
+                    <button
+                      onClick={() => {
+                        setEditingCategory(categoryKey)
+                        setEditingCategoryName(displayName)
+                      }}
+                      className="btn-icon btn-ghost btn-sm"
+                      title="Rename category"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+
+                    {/* Delete Category Button */}
+                    <button
+                      onClick={() => handleDeleteCategory(categoryKey, displayName)}
+                      className="btn-icon btn-ghost btn-sm"
+                      title="Delete category"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+
                     {aiMode && (
-                      <motion.button
+                      <button
                         onClick={() => generateAISuggestions(categoryKey)}
                         disabled={loadingStates[categoryKey]}
-                        className="p-2 hover:bg-white/60 rounded-lg transition-colors"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        className="btn-icon btn-ghost btn-sm"
                         title="Get AI suggestions"
                       >
                         {loadingStates[categoryKey] ? (
@@ -762,21 +983,19 @@ export function TailorEnhancedSkillsManager({
                         ) : (
                           <Brain className="w-4 h-4 text-purple-600" />
                         )}
-                      </motion.button>
+                      </button>
                     )}
-                    
-                    <motion.button
+
+                    <button
                       onClick={() => toggleCategory(categoryKey)}
-                      className="p-2 hover:bg-white/60 rounded-lg transition-colors"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      className="btn-icon btn-ghost btn-sm"
                     >
                       {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-gray-600" />
+                        <ChevronDown className="w-5 h-5" />
                       ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                        <ChevronRight className="w-5 h-5" />
                       )}
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
                 
@@ -1110,7 +1329,10 @@ export function TailorEnhancedSkillsManager({
       })()}
 
       {/* AI Optimization Summary */}
-      {aiMode && jobOptimizedSkills.length > 0 && (
+      {aiMode && jobOptimizedSkills.filter(skill => {
+        const lowerSkill = skill.toLowerCase()
+        return !lowerSkill.includes('language') && !lowerSkill.includes('proficiency')
+      }).length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1123,13 +1345,19 @@ export function TailorEnhancedSkillsManager({
             <div>
               <h4 className="text-base font-semibold text-green-800">Skills Optimized for This Job</h4>
               <p className="text-sm text-green-700">
-                {jobOptimizedSkills.length} skills have been identified as highly relevant
+                {jobOptimizedSkills.filter(skill => {
+                  const lowerSkill = skill.toLowerCase()
+                  return !lowerSkill.includes('language') && !lowerSkill.includes('proficiency')
+                }).length} skills have been identified as highly relevant
               </p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
-            {jobOptimizedSkills.map((skill, i) => (
+            {jobOptimizedSkills.filter(skill => {
+              const lowerSkill = skill.toLowerCase()
+              return !lowerSkill.includes('language') && !lowerSkill.includes('proficiency')
+            }).map((skill, i) => (
               <div
                 key={i}
                 className="px-3 py-2 bg-white border border-green-200 rounded-lg text-sm font-medium text-green-700 whitespace-nowrap"

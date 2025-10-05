@@ -48,6 +48,7 @@ import { cn } from '@/lib/utils'
 import { EnhancedRichText } from './enhanced-rich-text'
 import { ModernTemplateSelector } from './ModernTemplateSelector'
 import { SimpleTemplateDropdown } from './SimpleTemplateDropdown'
+import { ElegantTemplateBar } from './ElegantTemplateBar'
 import LanguagesCard from './LanguagesCard'
 import { EnhancedSkillsManager } from './EnhancedSkillsManager'
 import { TailorEnhancedSkillsManager } from '../tailor-resume-editor/TailorEnhancedSkillsManager'
@@ -55,6 +56,15 @@ import { SkillsSuggestionsPanel } from './SkillsSuggestionsPanel'
 import { useUnifiedSuggestions } from '@/hooks/useUnifiedSuggestions'
 import { SuggestionIndicator, SuggestionBadge } from './SuggestionIndicator'
 import type { UnifiedSuggestion } from '@/hooks/useUnifiedSuggestions'
+import { ImageCropModal } from './ImageCropModal'
+import { SectionCard, sectionColors } from './sections/SectionCard'
+import { usePhotoUpload } from './hooks/usePhotoUpload'
+import { useResumeExport } from './hooks/useResumeExport'
+import { PersonalInfoSection } from './sections/PersonalInfoSection'
+import { ExperienceSection } from './sections/ExperienceSection'
+import { ProjectsSection } from './sections/ProjectsSection'
+import { EducationSection } from './sections/EducationSection'
+import { CertificationsSection } from './sections/CertificationsSection'
 
 // Custom Section Templates
 const CUSTOM_SECTION_TEMPLATES = {
@@ -105,119 +115,13 @@ const CUSTOM_SECTION_TEMPLATES = {
   }
 }
 
-// Section colors for each type - vibrant and modern
-const sectionColors = {
-  personal: { icon: 'text-blue-600', bg: 'bg-blue-50', badge: 'bg-blue-50 text-blue-700' },
-  summary: { icon: 'text-indigo-600', bg: 'bg-indigo-50', badge: 'bg-indigo-50 text-indigo-700' },
-  experience: { icon: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-50 text-emerald-700' },
-  projects: { icon: 'text-cyan-600', bg: 'bg-cyan-50', badge: 'bg-cyan-50 text-cyan-700' },
-  skills: { icon: 'text-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-50 text-violet-700' },
-  languages: { icon: 'text-purple-600', bg: 'bg-purple-50', badge: 'bg-purple-50 text-purple-700' },
-  certifications: { icon: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-50 text-amber-700' },
-  education: { icon: 'text-teal-600', bg: 'bg-teal-50', badge: 'bg-teal-50 text-teal-700' },
-  custom: { icon: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-50 text-rose-700' }
-}
-
-// Clean Section Card Component
-interface SectionCardProps {
-  title: string
-  icon: React.ReactNode
-  children: React.ReactNode
-  badge?: string | number
-  onAdd?: () => void
-  className?: string
-  sectionType?: keyof typeof sectionColors
-  isExpanded?: boolean
-  onToggle?: () => void
-}
-
-const SectionCard = ({
-  title,
-  icon,
-  children,
-  badge,
-  onAdd,
-  className,
-  sectionType = 'personal',
-  isExpanded = true,
-  onToggle
-}: SectionCardProps) => {
-  const colors = sectionColors[sectionType]
-  return (
-    <div
-      className={cn(
-        "bg-white rounded-lg shadow transition-all duration-300",
-        className
-      )}
-    >
-      <div
-        className={cn(
-          "p-4 flex items-center justify-between transition-all duration-200",
-          onToggle ? "cursor-pointer" : ""
-        )}
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-2">
-          {React.cloneElement(icon, { className: cn('w-5 h-5', colors.icon) })}
-          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-          {badge !== undefined && badge > 0 && (
-            <span className={cn(
-              "text-sm px-2 py-0.5 rounded-full font-medium",
-              colors.badge
-            )}>
-              {badge}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {onAdd && isExpanded && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onAdd()
-              }}
-              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200"
-            >
-              <Plus className="w-4 h-4 text-gray-600" />
-            </motion.button>
-          )}
-          {onToggle && (
-            <motion.div
-              animate={{ rotate: isExpanded ? 0 : -90 }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            </motion.div>
-          )}
-        </div>
-      </div>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="p-4 pt-0">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
+// SectionCard and sectionColors now imported from sections/SectionCard.tsx
 
 // Clean Input Component
-const CleanInput = ({ 
-  label, 
-  value, 
-  onChange, 
+export const CleanInput = ({
+  label,
+  value,
+  onChange,
   placeholder,
   multiline = false,
   icon
@@ -684,8 +588,49 @@ export function PerfectStudio({
   React.useEffect(() => {
     if (mode === 'tailor' && variantId && !organizedSkills && !loadingOrganizedSkills) {
       setLoadingOrganizedSkills(true)
-      console.log('🧠 Loading organized skills from variant:', variantId)
+      console.log('🧠 Loading organized skills for tailor mode, variantId:', variantId)
 
+      // Helper function to extract skills from plan
+      const extractSkillsFromPlan = (skillsCategoryPlan: any) => {
+        const organized_categories: Record<string, any> = {}
+
+        skillsCategoryPlan.categories.forEach((category: any) => {
+          const categoryKey = category.canonical_key || category.display_name?.toLowerCase().replace(/\s+/g, '_')
+          if (categoryKey && category.skills) {
+            organized_categories[categoryKey] = {
+              display_name: category.display_name,
+              skills: category.skills
+                .filter((skill: any) => skill.status !== 'remove')
+                .map((skill: any) => skill.name || skill.skill || skill),
+              category_rationale: category.rationale,
+              job_alignment: category.job_alignment
+            }
+          }
+        })
+
+        return {
+          organized_categories,
+          profile_analysis: {
+            strengths: [],
+            gaps: [],
+            recommendations: skillsCategoryPlan.guiding_principles || []
+          }
+        }
+      }
+
+      // FIRST: Check if resumeData already has skillsCategoryPlan (loaded from cache)
+      const skillsCategoryPlan = (resumeData as any)?.skillsCategoryPlan
+      if (skillsCategoryPlan?.categories) {
+        console.log('⚡ Found skillsCategoryPlan in resumeData (cached):', skillsCategoryPlan.categories.length)
+        const organizedData = extractSkillsFromPlan(skillsCategoryPlan)
+        console.log('✅ Converted cached skillsCategoryPlan to organized skills:', Object.keys(organizedData.organized_categories))
+        setOrganizedSkills(organizedData)
+        setLoadingOrganizedSkills(false)
+        return
+      }
+
+      // SECOND: If not in resumeData, fetch from database
+      console.log('🔍 No cached skillsCategoryPlan, fetching from database...')
       supabase
         .from('resume_variants')
         .select('tailored_data')
@@ -697,37 +642,11 @@ export function PerfectStudio({
             return
           }
 
-          const skillsCategoryPlan = data?.tailored_data?.skillsCategoryPlan
-          if (skillsCategoryPlan?.categories) {
-            console.log('✅ Found skillsCategoryPlan with categories:', skillsCategoryPlan.categories.length)
-
-            // Convert skillsCategoryPlan to organized_categories format
-            const organized_categories: Record<string, any> = {}
-
-            skillsCategoryPlan.categories.forEach((category: any) => {
-              const categoryKey = category.canonical_key || category.display_name?.toLowerCase().replace(/\s+/g, '_')
-              if (categoryKey && category.skills) {
-                organized_categories[categoryKey] = {
-                  display_name: category.display_name,
-                  skills: category.skills
-                    .filter((skill: any) => skill.status !== 'remove')
-                    .map((skill: any) => skill.name || skill.skill || skill),
-                  category_rationale: category.rationale,
-                  job_alignment: category.job_alignment
-                }
-              }
-            })
-
-            const organizedData = {
-              organized_categories,
-              profile_analysis: {
-                strengths: [],
-                gaps: [],
-                recommendations: skillsCategoryPlan.guiding_principles || []
-              }
-            }
-
-            console.log('🎯 Converted to organized skills:', Object.keys(organized_categories))
+          const dbSkillsCategoryPlan = data?.tailored_data?.skillsCategoryPlan
+          if (dbSkillsCategoryPlan?.categories) {
+            console.log('✅ Found skillsCategoryPlan in database:', dbSkillsCategoryPlan.categories.length)
+            const organizedData = extractSkillsFromPlan(dbSkillsCategoryPlan)
+            console.log('🎯 Converted database skillsCategoryPlan to organized skills:', Object.keys(organizedData.organized_categories))
             setOrganizedSkills(organizedData)
           } else {
             console.log('⚠️ No skillsCategoryPlan found in variant data')
@@ -742,7 +661,13 @@ export function PerfectStudio({
   const [localData, setLocalData] = React.useState(resumeData)
   const [localSkillsPlan, setLocalSkillsPlan] = React.useState<any>(resumeData?.skillsCategoryPlan || null)
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
-  
+
+  // Debug logging for photoUrl
+  React.useEffect(() => {
+    console.log('🎨 PerfectStudio - resumeData.photoUrl:', (resumeData as any)?.photoUrl)
+    console.log('🎨 PerfectStudio - localData.photoUrl:', (localData as any)?.photoUrl)
+  }, [resumeData, localData])
+
   // Sync resumeData changes to localData (avoid loops)
   const lastSyncedJsonRef = React.useRef<string>('')
   React.useEffect(() => {
@@ -750,6 +675,7 @@ export function PerfectStudio({
       const nextJson = JSON.stringify(resumeData || {})
       if (nextJson === lastSyncedJsonRef.current) return
       lastSyncedJsonRef.current = nextJson
+      console.log('🔄 Syncing resumeData to localData, photoUrl:', (resumeData as any)?.photoUrl)
       setLocalData(resumeData)
       setLocalSkillsPlan(resumeData?.skillsCategoryPlan || null)
     } catch {
@@ -784,12 +710,12 @@ export function PerfectStudio({
   })
   
   // Toggle function for sections
-  const toggleSection = (sectionKey: keyof typeof expandedSections) => {
+  const toggleSection = React.useCallback((sectionKey: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
       [sectionKey]: !prev[sectionKey]
     }))
-  }
+  }, [])
   
   const [showSkillLevelsInResume, setShowSkillLevelsInResume] = React.useState(false)
   const [newSkillInput, setNewSkillInput] = React.useState({
@@ -1242,36 +1168,23 @@ export function PerfectStudio({
     }
   }, [previewHtml])
 
-  // Export to PDF
-  const exportToPDF = async () => {
-    try {
-      const response = await fetch('/api/resume/pdf-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeData: localData,
-          template: activeTemplate,
-          userProfile: resumeData,
-          showSkillLevelsInResume: showSkillLevelsInResume
-        })
-      })
+  // Custom hooks for photo upload and PDF export
+  const { imageToCrop, setImageToCrop, handleCroppedImage } = usePhotoUpload({
+    localData,
+    setLocalData,
+    updateField,
+    saveNow
+  })
 
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${localData.personalInfo.name || 'resume'}.pdf`
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
-    } catch (error) {
-      console.error('PDF export failed:', error)
-    }
-  }
+  const { exportToPDF } = useResumeExport({
+    localData,
+    activeTemplate,
+    resumeData,
+    showSkillLevelsInResume
+  })
 
   // Add skill with enter key
-  const handleAddSkill = (category: keyof typeof newSkillInput) => {
+  const handleAddSkill = React.useCallback((category: keyof typeof newSkillInput) => {
     const skill = newSkillInput[category].trim()
     if (skill) {
       setLocalData({
@@ -1283,18 +1196,18 @@ export function PerfectStudio({
       })
       setNewSkillInput({ ...newSkillInput, [category]: '' })
     }
-  }
+  }, [newSkillInput, localData])
 
   // Remove Education
-  const handleRemoveEducation = (index: number) => {
+  const handleRemoveEducation = React.useCallback((index: number) => {
     setLocalData({
       ...localData,
       education: localData.education.filter((_, i) => i !== index)
     })
-  }
+  }, [localData])
 
   // Add Custom Section
-  const handleAddCustomSection = (templateName: string) => {
+  const handleAddCustomSection = React.useCallback((templateName: string) => {
     const template = CUSTOM_SECTION_TEMPLATES[templateName as keyof typeof CUSTOM_SECTION_TEMPLATES]
     const newSection = {
       id: `custom-${Date.now()}`,
@@ -1307,37 +1220,25 @@ export function PerfectStudio({
         description: ''
       }]
     }
-    
+
     setLocalData({
       ...localData,
       customSections: [...(localData.customSections || []), newSection]
     })
     setSelectedCustomSection(null)
-  }
+  }, [localData])
 
   return (
     <div className="w-full h-screen bg-gray-50">
-      {/* Premium Header */}
-      <div className="bg-white border-b h-14 flex items-center px-6 shadow-sm" style={{ borderColor: 'var(--border, #e5e7eb)' }}>
-        <div className="flex items-center justify-between w-full">
-          <SimpleTemplateDropdown
-            activeTemplate={activeTemplate}
-            onChange={(tpl) => setActiveTemplate(tpl)}
-          />
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={exportToPDF}
-            className="px-4 py-2 text-sm rounded-lg text-white font-medium bg-gray-900 hover:bg-black shadow-sm transition-all duration-200 flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export PDF
-          </motion.button>
-        </div>
-      </div>
+      {/* Elegant Template Bar */}
+      <ElegantTemplateBar
+        activeTemplate={activeTemplate}
+        onChange={(tpl) => setActiveTemplate(tpl)}
+        onExport={exportToPDF}
+      />
 
       {/* Main Editor Layout */}
-      <div className="flex w-full" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex w-full" style={{ height: 'calc(100vh - 80px)' }}>
         {/* Editor Panel */}
         <div className="w-[45%] bg-white overflow-y-auto border-r" style={{ borderColor: 'var(--border, #e5e7eb)' }}>
           <div className="p-6 space-y-4">
@@ -1391,224 +1292,19 @@ export function PerfectStudio({
               isExpanded={expandedSections.personal}
               onToggle={() => toggleSection('personal')}
             >
-              {/* Photo Upload Section */}
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
-                <div className="flex items-center gap-4">
-                  {(localData as any).photoUrl ? (
-                    <div className="relative">
-                      <img
-                        src={(localData as any).photoUrl}
-                        alt="Profile"
-                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-                      />
-                      <button
-                        onClick={async () => {
-                          try {
-                            // Delete photo from storage and update state
-                            setLocalData({ ...localData, photoUrl: null } as any)
-                            updateField('photoUrl' as any, null)
-
-                            // Update user_profiles
-                            const { data: { user } } = await supabase.auth.getUser()
-                            if (user) {
-                              await supabase.from('user_profiles').update({ photo_url: null }).eq('user_id', user.id)
-                            }
-                          } catch (error) {
-                            console.error('Failed to delete photo:', error)
-                          }
-                        }}
-                        className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-gray-400" />
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0]
-                        if (!file) return
-
-                        if (!file.type.startsWith('image/')) {
-                          alert('Please upload an image file')
-                          return
-                        }
-                        if (file.size > 5 * 1024 * 1024) {
-                          alert('Image size must be less than 5MB')
-                          return
-                        }
-
-                        try {
-                          const { data: { user } } = await supabase.auth.getUser()
-                          if (!user) throw new Error('No user found')
-
-                          // Upload to storage
-                          const fileExt = file.name.split('.').pop()
-                          const fileName = `${user.id}/profile.${fileExt}`
-
-                          const { error: uploadError } = await supabase.storage
-                            .from('profile-photos')
-                            .upload(fileName, file, { upsert: true })
-
-                          if (uploadError) throw uploadError
-
-                          // Get public URL
-                          const { data: urlData } = supabase.storage
-                            .from('profile-photos')
-                            .getPublicUrl(fileName)
-
-                          const photoUrl = urlData.publicUrl
-
-                          // Update state
-                          setLocalData({ ...localData, photoUrl } as any)
-                          updateField('photoUrl' as any, photoUrl)
-
-                          // Update user_profiles
-                          await supabase.from('user_profiles').update({ photo_url: photoUrl }).eq('user_id', user.id)
-                        } catch (error) {
-                          console.error('Photo upload failed:', error)
-                          alert('Failed to upload photo. Please try again.')
-                        }
-                      }}
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <label
-                      htmlFor="photo-upload"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <Upload className="w-4 h-4" />
-                      {(localData as any).photoUrl ? 'Change Photo' : 'Upload Photo'}
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">JPG, PNG or GIF • Max 5MB</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <CleanInput
-                  label="Full Name"
-                  value={localData.personalInfo.name}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    personalInfo: { ...localData.personalInfo, name: value }
-                  })}
-                  icon={<User className="w-4 h-4" />}
-                />
-                <CleanInput
-                  label="Professional Title"
-                  value={localData.professionalTitle}
-                  onChange={(value) => {
-                    setLocalData({
-                      ...localData,
-                      professionalTitle: value
-                    })
-                    // Auto-save professional title
-                    try {
-                      updateField('professionalTitle', value)
-                    } catch {}
-                  }}
-                  icon={<Briefcase className="w-4 h-4" />}
-                />
-              {suggestionsEnabled && getSuggestionForField('title') && (
-                <div className="col-span-2 -mt-2">
-                  <SuggestionIndicator
-                    suggestion={getSuggestionForField('title')!}
-                    onAccept={acceptSuggestion}
-                    onDecline={declineSuggestion}
-                  />
-                </div>
-              )}
-                <CleanInput
-                  label="Email"
-                  value={localData.personalInfo.email}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    personalInfo: { ...localData.personalInfo, email: value }
-                  })}
-                  icon={<Mail className="w-4 h-4" />}
-                />
-                <CleanInput
-                  label="Phone"
-                  value={localData.personalInfo.phone}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    personalInfo: { ...localData.personalInfo, phone: value }
-                  })}
-                  icon={<Phone className="w-4 h-4" />}
-                />
-                <CleanInput
-                  label="Location"
-                  value={localData.personalInfo.location}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    personalInfo: { ...localData.personalInfo, location: value }
-                  })}
-                  icon={<MapPin className="w-4 h-4" />}
-                />
-                <CleanInput
-                  label="LinkedIn Profile"
-                  value={localData.personalInfo.linkedin || ''}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    personalInfo: { ...localData.personalInfo, linkedin: value }
-                  })}
-                  placeholder="e.g., linkedin.com/in/yourprofile"
-                  icon={<Linkedin className="w-4 h-4" />}
-                />
-                <CleanInput
-                  label="Portfolio/Website"
-                  value={localData.personalInfo.website || ''}
-                  onChange={(value) => setLocalData({
-                    ...localData,
-                    personalInfo: { ...localData.personalInfo, website: value }
-                  })}
-                  placeholder="e.g., yourportfolio.com or github.com/username"
-                  icon={<Globe className="w-4 h-4" />}
-                />
-              </div>
-              
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Professional Summary
-                  </label>
-                  <SuggestionBadge
-                    count={getSuggestionsForSection('summary').length}
-                    section="summary"
-                  />
-                </div>
-                {localData.enableProfessionalSummary && (
-                  <div className="space-y-2">
-                    {/* Always-visible inline summary suggestions */}
-                    {suggestionsEnabled && <InlineSummarySuggestions />}
-                    <EnhancedRichText
-                      value={localData.professionalSummary}
-                      onChange={(value) => setLocalData({
-                        ...localData,
-                        professionalSummary: value
-                      })}
-                      multiline
-                      showHighlight
-                      placeholder="Write a compelling professional summary..."
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                )}
-                {!localData.enableProfessionalSummary && (
-                  <div className="text-xs text-gray-500 italic p-3 bg-gray-50 rounded-lg">
-                    Professional summary is disabled and won't appear on your resume.
-                  </div>
-                )}
-              </div>
+              <PersonalInfoSection
+                localData={localData}
+                setLocalData={setLocalData}
+                updateField={updateField}
+                saveNow={saveNow}
+                setImageToCrop={setImageToCrop}
+                suggestionsEnabled={suggestionsEnabled}
+                getSuggestionForField={getSuggestionForField}
+                acceptSuggestion={acceptSuggestion}
+                declineSuggestion={declineSuggestion}
+                getSuggestionsForSection={getSuggestionsForSection}
+                InlineSummarySuggestions={InlineSummarySuggestions}
+              />
             </SectionCard>
 
             {/* Experience */}
@@ -1632,135 +1328,16 @@ export function PerfectStudio({
                 })
               }}
             >
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                {localData.experience.map((exp, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
-                    <button
-                      onClick={() => {
-                        setLocalData({
-                          ...localData,
-                          experience: localData.experience.filter((_, i) => i !== index)
-                        })
-                      }}
-                      className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500 z-10"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <CleanInput
-                        label="Position"
-                        value={exp.position}
-                        onChange={(value) => {
-                          const newExp = [...localData.experience]
-                          newExp[index].position = value
-                          setLocalData({ ...localData, experience: newExp })
-                        }}
-                      />
-                      <CleanInput
-                        label="Company"
-                        value={exp.company}
-                        onChange={(value) => {
-                          const newExp = [...localData.experience]
-                          newExp[index].company = value
-                          setLocalData({ ...localData, experience: newExp })
-                        }}
-                      />
-                    </div>
-                    
-                    <CleanInput
-                      label="Duration"
-                      value={exp.duration}
-                      onChange={(value) => {
-                        const newExp = [...localData.experience]
-                        newExp[index].duration = value
-                        setLocalData({ ...localData, experience: newExp })
-                      }}
-                      icon={<Calendar className="w-4 h-4" />}
-                    />
-                    
-                    <div className="mt-3">
-                      <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-2">
-                        Responsibilities & Achievements
-                        {/* Show suggestion count for this experience */}
-                        {suggestionsEnabled && (
-                          <span className="ml-2">
-                            <SuggestionBadge
-                              count={getSuggestionsForSection('experience').filter(s => 
-                                s.targetPath?.startsWith(`experience.${index}`)
-                              ).length}
-                              section={`experience-${index}`}
-                            />
-                          </span>
-                        )}
-                      </label>
-                      {/* Render suggestions not anchored to an existing bullet (e.g., additions) */}
-                      {suggestionsEnabled && (
-                        <div className="space-y-2 mb-2">
-                          {getSuggestionsForSection('experience')
-                            .filter(s => s.targetPath?.startsWith(`experience.${index}`))
-                            .map((s, i) => (
-                              <InlineSuggestionRow key={`${s.id}-${i}`} s={s} />
-                            ))}
-                        </div>
-                      )}
-                      {exp.achievements?.map((achievement, achIndex) => {
-                        const suggestionPath = `experience.${index}.achievements.${achIndex}`
-                        const suggestion = suggestionsEnabled ? getSuggestionForField(suggestionPath) : null
-                        
-                        return (
-                          <div key={achIndex} className="space-y-1 mb-2">
-                            {/* Show suggestion indicator if available */}
-                            {suggestion && (
-                              <SuggestionIndicator
-                                suggestion={suggestion}
-                                onAccept={acceptSuggestion}
-                                onDecline={declineSuggestion}
-                                compact={false}
-                              />
-                            )}
-                            <div className="flex items-start gap-2">
-                              <span className="text-purple-500 mt-1">•</span>
-                              <EnhancedRichText
-                                value={achievement}
-                                onChange={(value) => {
-                                  const newExp = [...localData.experience]
-                                  newExp[index].achievements[achIndex] = value
-                                  setLocalData({ ...localData, experience: newExp })
-                                }}
-                                showHighlight
-                                placeholder="Describe key responsibility or achievement..."
-                                className="flex-1"
-                              />
-                              <button
-                                onClick={() => {
-                                  const newExp = [...localData.experience]
-                                  newExp[index].achievements = newExp[index].achievements.filter((_, i) => i !== achIndex)
-                                  setLocalData({ ...localData, experience: newExp })
-                                }}
-                                className="text-red-500 hover:text-red-700 p-1"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                      <button
-                        onClick={() => {
-                          const newExp = [...localData.experience]
-                          newExp[index].achievements = [...(newExp[index].achievements || []), '']
-                          setLocalData({ ...localData, experience: newExp })
-                        }}
-                        className="text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center gap-1 mt-2"
-                      >
-                        <Plus className="w-3 h-3" />
-                        Add Responsibility
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ExperienceSection
+                localData={localData}
+                setLocalData={setLocalData}
+                suggestionsEnabled={suggestionsEnabled}
+                getSuggestionsForSection={getSuggestionsForSection}
+                getSuggestionForField={getSuggestionForField}
+                acceptSuggestion={acceptSuggestion}
+                declineSuggestion={declineSuggestion}
+                InlineSuggestionRow={InlineSuggestionRow}
+              />
             </SectionCard>
 
             {/* Projects */}
@@ -1784,123 +1361,15 @@ export function PerfectStudio({
                 })
               }}
             >
-              <div className="space-y-4">
-                {localData.projects?.map((project, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
-                    <button
-                      onClick={() => {
-                        setLocalData({
-                          ...localData,
-                          projects: localData.projects?.filter((_, i) => i !== index) || []
-                        })
-                      }}
-                      className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <CleanInput
-                        label="Project Name"
-                        value={project.name}
-                        onChange={(value) => {
-                          const newProjects = [...(localData.projects || [])]
-                          newProjects[index].name = value
-                          setLocalData({ ...localData, projects: newProjects })
-                        }}
-                        placeholder="e.g., E-commerce Platform"
-                      />
-                      <CleanInput
-                        label="Date/Duration"
-                        value={project.date}
-                        onChange={(value) => {
-                          const newProjects = [...(localData.projects || [])]
-                          newProjects[index].date = value
-                          setLocalData({ ...localData, projects: newProjects })
-                        }}
-                        placeholder="e.g., Jan 2024 - Mar 2024"
-                        icon={<Calendar className="w-4 h-4" />}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1">
-                        Description
-                        {/* Show suggestion badge for this project */}
-                        {suggestionsEnabled && (
-                          <span className="ml-2">
-                            <SuggestionBadge
-                              count={getSuggestionsForSection('projects').filter(s => 
-                                s.targetPath === `projects.${index}`
-                              ).length}
-                              section={`project-${index}`}
-                            />
-                          </span>
-                        )}
-                      </label>
-                      {/* Show suggestion indicator if available */}
-                      {suggestionsEnabled && getSuggestionForField(`projects.${index}`) && (
-                        <div className="mb-2">
-                          <SuggestionIndicator
-                            suggestion={getSuggestionForField(`projects.${index}`)!}
-                            onAccept={acceptSuggestion}
-                            onDecline={declineSuggestion}
-                            compact={false}
-                          />
-                        </div>
-                      )}
-                      <CleanInput
-                        value={project.description}
-                        onChange={(value) => {
-                          const newProjects = [...(localData.projects || [])]
-                          newProjects[index].description = value
-                          setLocalData({ ...localData, projects: newProjects })
-                        }}
-                        placeholder="Brief description of the project..."
-                        multiline
-                      />
-                    </div>
-                    
-                    <div className="mt-3">
-                      <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-2">
-                        Technologies Used
-                      </label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {project.technologies?.map((tech, techIndex) => (
-                          <span key={techIndex} className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 px-2 py-1 rounded-lg text-xs">
-                            {tech}
-                            <button
-                              onClick={() => {
-                                const newProjects = [...(localData.projects || [])]
-                                newProjects[index].technologies = newProjects[index].technologies?.filter((_, i) => i !== techIndex) || []
-                                setLocalData({ ...localData, projects: newProjects })
-                              }}
-                              className="text-orange-600 hover:text-orange-800"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Add technology (press Enter)"
-                          className="flex-1 px-3 py-1 border border-gray-200 rounded-lg text-xs"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && e.target.value.trim()) {
-                              const newProjects = [...(localData.projects || [])]
-                              newProjects[index].technologies = [...(newProjects[index].technologies || []), e.target.value.trim()]
-                              setLocalData({ ...localData, projects: newProjects })
-                              e.target.value = ''
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ProjectsSection
+                localData={localData}
+                setLocalData={setLocalData}
+                suggestionsEnabled={suggestionsEnabled}
+                getSuggestionsForSection={getSuggestionsForSection}
+                getSuggestionForField={getSuggestionForField}
+                acceptSuggestion={acceptSuggestion}
+                declineSuggestion={declineSuggestion}
+              />
             </SectionCard>
 
             {/* Enhanced Skills Manager */}
@@ -2080,57 +1549,10 @@ export function PerfectStudio({
                 })
               }}
             >
-              <div className="space-y-3">
-                {localData.certifications?.map((cert, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
-                    <button
-                      onClick={() => {
-                        setLocalData({
-                          ...localData,
-                          certifications: localData.certifications?.filter((_, i) => i !== index) || []
-                        })
-                      }}
-                      className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <CleanInput
-                        label="Certification Name"
-                        value={cert.name}
-                        onChange={(value) => {
-                          const newCerts = [...(localData.certifications || [])]
-                          newCerts[index].name = value
-                          setLocalData({ ...localData, certifications: newCerts })
-                        }}
-                        placeholder="e.g., AWS Certified Developer"
-                      />
-                      <CleanInput
-                        label="Issuing Organization"
-                        value={cert.issuer}
-                        onChange={(value) => {
-                          const newCerts = [...(localData.certifications || [])]
-                          newCerts[index].issuer = value
-                          setLocalData({ ...localData, certifications: newCerts })
-                        }}
-                        placeholder="e.g., Amazon Web Services"
-                      />
-                      <CleanInput
-                        label="Date Obtained"
-                        value={cert.date}
-                        onChange={(value) => {
-                          const newCerts = [...(localData.certifications || [])]
-                          newCerts[index].date = value
-                          setLocalData({ ...localData, certifications: newCerts })
-                        }}
-                        placeholder="e.g., Jan 2024"
-                        icon={<Calendar className="w-4 h-4" />}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <CertificationsSection
+                localData={localData}
+                setLocalData={setLocalData}
+              />
             </SectionCard>
 
             {/* Education */}
@@ -2154,87 +1576,11 @@ export function PerfectStudio({
                 })
               }}
             >
-              <div className="space-y-4">
-                {localData.education.length > 0 ? (
-                  localData.education.map((edu, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg relative group">
-                      <button
-                        onClick={() => handleRemoveEducation(index)}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded text-red-500 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <CleanInput
-                          label="Degree"
-                          value={edu.degree}
-                          onChange={(value) => {
-                            const newEdu = [...localData.education]
-                            newEdu[index].degree = value
-                            setLocalData({ ...localData, education: newEdu })
-                          }}
-                          placeholder="e.g., Bachelor of Science"
-                        />
-                        <CleanInput
-                          label="Field of Study"
-                          value={edu.field_of_study || edu.field || ''}
-                          onChange={(value) => {
-                            const newEdu = [...localData.education]
-                            newEdu[index].field_of_study = value
-                            setLocalData({ ...localData, education: newEdu })
-                          }}
-                          placeholder="e.g., Computer Science"
-                        />
-                        <CleanInput
-                          label="Institution"
-                          value={edu.institution}
-                          onChange={(value) => {
-                            const newEdu = [...localData.education]
-                            newEdu[index].institution = value
-                            setLocalData({ ...localData, education: newEdu })
-                          }}
-                          placeholder="University name"
-                        />
-                        <CleanInput
-                          label="Duration"
-                          value={edu.duration || edu.year || ''}
-                          onChange={(value) => {
-                            const newEdu = [...localData.education]
-                            newEdu[index].duration = value
-                            setLocalData({ ...localData, education: newEdu })
-                          }}
-                          placeholder="e.g., 2020-2024"
-                          icon={<Calendar className="w-4 h-4" />}
-                        />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                      <GraduationCap className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">No education added yet</p>
-                    <button
-                      onClick={() => {
-                        setLocalData({
-                          ...localData,
-                          education: [...localData.education, {
-                            degree: '',
-                            field_of_study: '',
-                            institution: '',
-                            duration: ''
-                          }]
-                        })
-                      }}
-                      className="text-sm text-amber-600 hover:text-amber-700 font-medium"
-                    >
-                      Add your first degree
-                    </button>
-                  </div>
-                )}
-              </div>
+              <EducationSection
+                localData={localData}
+                setLocalData={setLocalData}
+                handleRemoveEducation={handleRemoveEducation}
+              />
             </SectionCard>
 
             {/* Divider before Custom Sections */}
@@ -2573,6 +1919,15 @@ export function PerfectStudio({
           )}
         </div>
       </div>
+
+      {/* Image Crop Modal */}
+      {imageToCrop && (
+        <ImageCropModal
+          image={imageToCrop}
+          onComplete={handleCroppedImage}
+          onCancel={() => setImageToCrop(null)}
+        />
+      )}
     </div>
   )
 }

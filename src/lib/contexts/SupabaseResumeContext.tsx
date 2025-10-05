@@ -223,6 +223,17 @@ export function SupabaseResumeProvider({
     }
   }, [])
 
+  // Use loaded data or fallback
+  const dataToUse = resumeDataFromDB || initialData
+
+  // DEBUG: Log photoUrl before passing to ResumeProvider (must be before early return)
+  React.useEffect(() => {
+    if (!isLoading) {
+      console.log('📊 SUPABASE CONTEXT: dataToUse photoUrl before ResumeProvider:', (dataToUse as any)?.photoUrl)
+      console.log('📊 SUPABASE CONTEXT: resumeDataFromDB photoUrl:', (resumeDataFromDB as any)?.photoUrl)
+    }
+  }, [dataToUse, resumeDataFromDB, isLoading])
+
   // Show loading state while initializing
   if (isLoading) {
     return (
@@ -234,9 +245,6 @@ export function SupabaseResumeProvider({
       </div>
     )
   }
-
-  // Use loaded data or fallback
-  const dataToUse = resumeDataFromDB || initialData
 
   return (
     <ResumeProvider initialData={dataToUse}>

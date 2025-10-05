@@ -334,16 +334,21 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
   const knownCategories = new Set(['core', 'technical', 'creative', 'business', 'interpersonal', 'languages', 'specialized', 'tools', 'soft_skills']);
 
   // Process any custom categories (this handles AI-generated categories that made it into resumeData.skills)
-  Object.entries((resumeData as any).skills).forEach(([categoryKey, skillArray]) => {
-    if (knownCategories.has(categoryKey) || !Array.isArray(skillArray) || skillArray.length === 0) {
-      return;
-    }
+  // Sort entries to ensure consistent order between editor and preview
+  const customEntries = Object.entries((resumeData as any).skills)
+    .filter(([categoryKey, skillArray]) => {
+      if (knownCategories.has(categoryKey) || !Array.isArray(skillArray) || skillArray.length === 0) {
+        return false;
+      }
+      // Skip language categories - they are displayed in a separate Languages section
+      if (categoryKey.toLowerCase().includes('language')) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => a[0].localeCompare(b[0])); // Sort alphabetically by category key
 
-    // Skip language categories - they are displayed in a separate Languages section
-    if (categoryKey.toLowerCase().includes('language')) {
-      return;
-    }
-
+  customEntries.forEach(([categoryKey, skillArray]) => {
     const displayName = categoryKey
       .replace(/___/g, ' & ')
       .split('_')

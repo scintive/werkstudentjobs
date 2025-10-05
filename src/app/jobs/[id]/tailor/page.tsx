@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { 
+import {
   Target, FileText, Mail, ArrowLeft, Sparkles, TrendingUp,
   CheckCircle, AlertCircle, Copy, Download, Save, RotateCcw, X,
   Wand2, Zap, Crown, Diamond, Eye, Edit3, Users, Globe2,
   Award, Star, MessageCircle, Brain, Lightbulb, ChevronDown,
   ChevronUp, PenTool, Layers, Palette, Layout, Search, Filter,
-  Settings
+  Settings, Loader2
 } from 'lucide-react';
 
 import type { JobStrategy, CoverLetter, ResumePatch } from '@/lib/types/jobStrategy';
@@ -188,16 +188,46 @@ function TailorApplicationPage() {
         // If we have a variant_id in URL, we're in editor mode
         setIsEditorMode(true);
       }
+
+      // Read tab from URL
+      const tabParam = urlParams.get('tab') as TabId;
+      if (tabParam && ['strategy', 'resume', 'cover-letter'].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+
+      // Handle browser back/forward buttons
+      const handlePopState = () => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab') as TabId;
+        if (tab && ['strategy', 'resume', 'cover-letter'].includes(tab)) {
+          setActiveTab(tab);
+        } else {
+          setActiveTab('strategy');
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
     }
   }, []);
-  
+
   // Get resume data from Supabase context
   const { resumeData, isLoading: resumeLoading, resumeId } = useSupabaseResumeContext();
   const supabaseActions = useSupabaseResumeActions();
-  
+
   // Debug logs removed
-  
+
   const [activeTab, setActiveTab] = useState<TabId>('strategy');
+
+  // Function to change tabs and update URL
+  const handleTabChange = (newTab: TabId) => {
+    setActiveTab(newTab);
+
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', newTab);
+    window.history.pushState({}, '', url.toString());
+  };
   const [job, setJob] = useState<JobWithCompany | null>(null);
   const [strategy, setStrategy] = useState<JobStrategy | null>(null);
   const [studentStrategy, setStudentStrategy] = useState<StudentJobStrategy | null>(null);
@@ -206,13 +236,21 @@ function TailorApplicationPage() {
   const [patches, setPatches] = useState<any[]>([]);
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [variantId, setVariantId] = useState<string | null>(null); // Store variant ID from pre-analysis
+  const [preAnalysisComplete, setPreAnalysisComplete] = useState(false); // Track if pre-analysis is done
   const [loading, setLoading] = useState({
     job: true,
     strategy: false,
     patches: false,
-    letter: false
+    letter: false,
+    preAnalysis: false // Track pre-analysis loading
   });
-  
+
+  // Student info toggles
+  const [includeUniversity, setIncludeUniversity] = useState(true);
+  const [includeSemester, setIncludeSemester] = useState(true);
+  const [includeHours, setIncludeHours] = useState(true);
+
   // Load job data on mount
   useEffect(() => {
     loadJobData();
@@ -246,6 +284,13 @@ function TailorApplicationPage() {
       loadStrategy();
     }
   }, [job]);
+
+  // Run upfront analysis when job and resume are ready (runs analyze-with-tailoring early)
+  useEffect(() => {
+    if (job && resumeData && resumeId && !preAnalysisComplete && !loading.preAnalysis) {
+      runUpfrontAnalysis();
+    }
+  }, [job, resumeData, resumeId]);
   
   const loadJobData = async () => {
     try {
@@ -360,10 +405,79 @@ function TailorApplicationPage() {
       setLoading(prev => ({ ...prev, strategy: false }));
     }
   };
-  
-  const generateCoverLetter = async (tone: string, length: string) => {
+
+  // Run analyze-with-tailoring upfront so Resume Studio tab doesn't need to wait
+  const runUpfrontAnalysis = async () => {
+    if (!job || !resumeData || !resumeId) return;
+
+    setLoading(prev => ({ ...prev, preAnalysis: true }));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('⚠️ Auth session missing; skipping upfront analysis');
+        setPreAnalysisComplete(true);
+        setLoading(prev => ({ ...prev, preAnalysis: false }));
+        return;
+      }
+
+      // FIRST: Check if variant already exists in database (instant)
+      console.log('🔍 UPFRONT ANALYSIS: Checking for existing variant...');
+      const { data: existingVariants } = await supabase
+        .from('resume_variants')
+        .select('id, updated_at')
+        .eq('job_id', job.id)
+        .eq('base_resume_id', resumeId)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (existingVariants && existingVariants.length > 0) {
+        const existingVariantId = existingVariants[0].id;
+        console.log('✅ UPFRONT ANALYSIS: Found existing variant, using cached:', existingVariantId);
+        setVariantId(existingVariantId);
+        setCurrentVariantId(existingVariantId);
+        setPreAnalysisComplete(true);
+        setLoading(prev => ({ ...prev, preAnalysis: false }));
+        return;
+      }
+
+      // SECOND: No existing variant, run analysis (7-12 seconds)
+      console.log('🚀 UPFRONT ANALYSIS: No existing variant, creating new one...');
+
+      const analyzeResp = await fetch('/api/jobs/analyze-with-tailoring', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          job_id: job.id,
+          base_resume_id: resumeId,
+          force_refresh: false
+        })
+      });
+
+      if (analyzeResp.ok) {
+        const analyzeData = await analyzeResp.json();
+        if (analyzeData.variant_id) {
+          setVariantId(analyzeData.variant_id);
+          setCurrentVariantId(analyzeData.variant_id); // Sync with parent state
+          console.log('✅ UPFRONT ANALYSIS: Complete! New variant created:', analyzeData.variant_id);
+        }
+      }
+
+      setPreAnalysisComplete(true);
+    } catch (error) {
+      console.error('❌ UPFRONT ANALYSIS: Failed', error);
+      setPreAnalysisComplete(true); // Mark as complete even on error to prevent retry loops
+    } finally {
+      setLoading(prev => ({ ...prev, preAnalysis: false }));
+    }
+  };
+
+  const generateCoverLetter = async (tone: string, length: string, customInstructions?: string) => {
     setLoading(prev => ({ ...prev, letter: true }));
-    
+
     try {
       // Get profile using authenticated request; block until JWT exists
       const { data: session } = await supabase.auth.getSession();
@@ -402,27 +516,49 @@ function TailorApplicationPage() {
       const isStudentProfile = !!(isEnrolled || expectedGradIsFuture);
       const endpoint = (isWerkstudent || isStudentProfile) ? '/api/jobs/cover-letter-student' : '/api/jobs/cover-letter';
 
-      const userProfileId = (endpoint.includes('student')) ? 'latest' : fetchedProfile.id;
-      
-      console.log(`🎯 Using ${endpoint} for cover letter generation`);
-      
+      // Always use 'latest' - the API handles this correctly now
+      const userProfileId = 'latest';
+
+      console.log(`🎯 Using ${endpoint} for cover letter generation with user_profile_id: ${userProfileId}`);
+
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           job_id: jobId,
           user_profile_id: userProfileId,
           tone,
-          length,
-          strategy_context: studentStrategy || strategy
+          length, // Use selected length
+          strategy_context: studentStrategy || strategy,
+          custom_instructions: customInstructions || '',
+          include_university: includeUniversity,
+          include_semester: includeSemester,
+          include_hours: includeHours
         })
       });
-      
+
       const data = await response.json();
-      
+
+      if (!response.ok) {
+        console.error('🎯 Cover letter API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          details: data.details
+        });
+        alert(`Failed to generate cover letter: ${data.error || 'Unknown error'}\n${data.details || ''}`);
+        return;
+      }
+
       if (data.success) {
         setCoverLetter(data.cover_letter);
-        console.log('🎯 Cover letter generated');
+        console.log('🎯 Cover letter generated successfully');
+      } else {
+        console.error('🎯 Cover letter generation failed:', data);
+        alert(`Cover letter generation failed: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Cover letter generation failed:', error);
@@ -465,80 +601,42 @@ function TailorApplicationPage() {
     };
   };
 
-  // PDF Export for Cover Letters
-  const exportCoverLetterPDF = async (coverLetter: CoverLetter, job: JobWithCompany) => {
+  // PDF Export for Cover Letters with Premium Templates
+  const exportCoverLetterPDF = async (
+    coverLetter: CoverLetter,
+    job: JobWithCompany,
+    template: 'professional' | 'modern' | 'elegant' | 'minimal' = 'professional'
+  ) => {
     try {
-      const fullText = `${coverLetter.content.intro}\n\n${coverLetter.content.body_paragraphs.join('\n\n')}\n\n${coverLetter.content.closing}\n\n${coverLetter.content.sign_off}`;
-      
-      // Create HTML template for PDF
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Times New Roman', serif; line-height: 1.6; margin: 40px; color: #333; }
-            .header { margin-bottom: 40px; }
-            .date { text-align: right; margin-bottom: 20px; }
-            .recipient { margin-bottom: 30px; }
-            .content { margin-bottom: 30px; white-space: pre-line; }
-            .signature { margin-top: 40px; }
-            h1 { font-size: 18px; margin: 0; }
-            h2 { font-size: 16px; margin: 0; }
-            p { margin: 15px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>${userProfile?.name || 'Your Name'}</h1>
-            <p>${userProfile?.email || 'your.email@example.com'} | ${userProfile?.phone || '+49 XXX XXX XXXX'}</p>
-            <p>${userProfile?.location || 'Your City, Germany'}</p>
-          </div>
-          
-          <div class="date">
-            ${new Date().toLocaleDateString('de-DE')}
-          </div>
-          
-          <div class="recipient">
-            <h2>${job.companies?.name || job.company_name || 'Hiring Manager'}</h2>
-            <p>${job.location_city || 'City'}</p>
-          </div>
-          
-          <div class="content">
-            <p><strong>Subject: Application for ${job.title}</strong></p>
-            <div>${fullText}</div>
-          </div>
-        </body>
-        </html>
-      `;
-      
-      // Send to PDF generation API
-      const response = await fetch('/api/resume/pdf-download', {
+      const response = await fetch('/api/cover-letter/pdf-download', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          html: htmlContent,
-          filename: `Cover_Letter_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
-        })
+          coverLetter,
+          userProfile,
+          job,
+          template
+        }),
       });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Cover_Letter_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        console.error('PDF generation failed');
-        alert('PDF generation failed. Please try again.');
+
+      if (!response.ok) {
+        throw new Error('PDF generation failed');
       }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Cover_Letter_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      console.error('PDF export error:', error);
-      alert('PDF export failed. Please try again.');
+      console.error('Cover letter PDF export failed:', error);
+      alert('Failed to export PDF. Please try again.');
     }
   };
   
@@ -634,82 +732,94 @@ function TailorApplicationPage() {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation Header */}
+      {/* Compact Navigation Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-8 py-6">
-          <div className="flex items-center justify-between">
-            {/* Back Button & Title */}
-            <div className="flex items-center gap-4">
-              <Link 
-                href="/jobs"
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+        <div className="px-6 py-3">
+          {/* Single Row Layout */}
+          <div className="flex items-center justify-between gap-6">
+            {/* Left: Back + Title */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Link href="/jobs" className="btn-icon btn-ghost btn-sm flex-shrink-0">
+                <ArrowLeft className="w-5 h-5" />
               </Link>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">AI Tailor Studio</h1>
-                <p className="text-sm text-gray-600">
-                  {job?.title} • {job?.companies?.name}
+              <div className="min-w-0 flex-1">
+                <h1 className="text-heading-4 truncate mb-1">AI Tailor Studio</h1>
+                <p className="text-body font-medium text-gray-800 truncate mb-1">
+                  {job?.title}
                 </p>
+                <div className="flex items-center gap-3 text-caption text-gray-600">
+                  {job?.companies?.name && (
+                    <span className="font-medium text-blue-600">{job.companies.name}</span>
+                  )}
+                  {job?.location_city && (
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                      {job.location_city}
+                    </span>
+                  )}
+                  {job?.work_mode && (
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-xs font-medium">
+                      {job.work_mode}
+                    </span>
+                  )}
+                  {job?.is_werkstudent && (
+                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs font-medium">
+                      Werkstudent
+                    </span>
+                  )}
+                  {job?.posted_at && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                      {(() => {
+                        const posted = new Date(job.posted_at);
+                        const now = new Date();
+                        const diffMs = now.getTime() - posted.getTime();
+                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                        if (diffDays === 0) return 'Today';
+                        if (diffDays === 1) return '1 day ago';
+                        if (diffDays < 7) return `${diffDays} days ago`;
+                        if (diffDays < 14) return '1 week ago';
+                        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+                        if (diffDays < 60) return '1 month ago';
+                        return `${Math.floor(diffDays / 30)} months ago`;
+                      })()}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            
-            {/* Step Navigation */}
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                1
-              </div>
-              <span className="text-sm font-medium text-blue-600">Upload</span>
-              <div className="w-6 h-0.5 bg-blue-600 rounded"></div>
-              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                2
-              </div>
-              <span className="text-sm font-medium text-blue-600">Jobs</span>
-              <div className="w-6 h-0.5 bg-blue-600 rounded"></div>
-              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                3
-              </div>
-              <span className="text-sm font-medium text-blue-600">Tailor</span>
-              <div className="w-6 h-0.5 bg-gray-200 rounded"></div>
-              <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-xs font-semibold">
-                4
-              </div>
-              <span className="text-sm font-medium text-gray-400">Generate</span>
+
+            {/* Center: Tabs */}
+            <div className="flex items-center gap-2">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium',
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    {tab.id === 'strategy' && (strategy || studentStrategy) && !isActive && (
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          </div>
-        </div>
-        
-        {/* Tab Navigation */}
-        <div className="px-8 border-t border-gray-100">
-          <div className="flex items-center">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-3 border-b-2 transition-colors text-sm font-medium',
-                    isActive 
-                      ? 'border-blue-600 text-blue-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                  {tab.id === 'strategy' && (strategy || studentStrategy) && (
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  )}
-                </button>
-              );
-            })}
+
           </div>
         </div>
       </div>
       
-      {/* Full Width Tab Content */}
+      {/* Tab Content */}
       <div className="w-full">
         <div className={cn(
           activeTab === 'resume' ? "" : "px-8 py-8"
@@ -747,6 +857,8 @@ function TailorApplicationPage() {
                   isEditorMode={isEditorMode}
                   currentVariantId={currentVariantId}
                   onVariantIdChange={setCurrentVariantId}
+                  preAnalysisComplete={preAnalysisComplete}
+                  cachedVariantId={variantId}
                 />
               )}
               
@@ -760,6 +872,12 @@ function TailorApplicationPage() {
                   loading={loading.letter}
                   userProfile={userProfile}
                   exportPDF={exportCoverLetterPDF}
+                  includeUniversity={includeUniversity}
+                  setIncludeUniversity={setIncludeUniversity}
+                  includeSemester={includeSemester}
+                  setIncludeSemester={setIncludeSemester}
+                  includeHours={includeHours}
+                  setIncludeHours={setIncludeHours}
                 />
               )}
             </motion.div>
@@ -914,12 +1032,19 @@ function StrategyTab({
       </motion.div>
 
       {/* Toggle for additional details */}
-      <div className="flex items-center justify-end -mt-4">
-        <button
-          onClick={() => setShowDetails(v => !v)}
-          className="text-xs font-semibold text-blue-700 hover:underline"
-        >
-          {showDetails ? 'Hide details' : 'Show details'}
+      <div className="flex items-center justify-center">
+        <button onClick={() => setShowDetails(v => !v)} className="btn btn-secondary">
+          {showDetails ? (
+            <>
+              <ChevronUp className="w-5 h-5" />
+              Hide details
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-5 h-5" />
+              Show more details
+            </>
+          )}
         </button>
       </div>
 
@@ -1308,20 +1433,73 @@ function ResumeStudioTab({
   loading,
   isEditorMode,
   currentVariantId,
-  onVariantIdChange
+  onVariantIdChange,
+  preAnalysisComplete = false, // NEW: Flag from parent if upfront analysis already ran
+  cachedVariantId = null // NEW: Variant ID from upfront analysis
 }: any) {
-  const [localVariantId, setLocalVariantId] = useState<string | null>(null);
+  const [localVariantId, setLocalVariantId] = useState<string | null>(cachedVariantId);
   const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
-  const [preparing, setPreparing] = useState<boolean>(true);
-  
-  // Trigger pre-analysis (which upserts/returns variant id server-side)
+  const [preparing, setPreparing] = useState<boolean>(!preAnalysisComplete); // Start as not preparing if already done
+
+  // Sync cached variant ID from parent when it changes
   useEffect(() => {
+    if (cachedVariantId && cachedVariantId !== localVariantId) {
+      console.log('🔄 RESUME STUDIO: Syncing cached variant ID:', cachedVariantId);
+      setLocalVariantId(cachedVariantId);
+    }
+  }, [cachedVariantId]);
+
+  // Trigger pre-analysis ONLY if parent hasn't already done it
+  useEffect(() => {
+    // Skip if we already have data loaded
+    if (localVariantId && tailoredResumeData) {
+      console.log('✅ RESUME STUDIO: Already loaded, skipping');
+      return;
+    }
+
     const prepare = async () => {
       if (!resumeId || !job?.id) return;
+
+      // If upfront analysis already completed, just load the variant data (INSTANT)
+      if (preAnalysisComplete && cachedVariantId) {
+        console.log('⚡ RESUME STUDIO: Loading cached variant instantly:', cachedVariantId);
+        setPreparing(true);
+
+        try {
+          // Load variant data from database
+          const { data: variantRow } = await supabase
+            .from('resume_variants')
+            .select('tailored_data')
+            .eq('id', cachedVariantId)
+            .single();
+
+          if (variantRow?.tailored_data) {
+            setTailoredResumeData(variantRow.tailored_data);
+            setLocalVariantId(cachedVariantId);
+            onVariantIdChange?.(cachedVariantId);
+            console.log('✅ RESUME STUDIO: Loaded cached variant instantly!');
+          } else {
+            // Fallback to base resume if variant not found
+            console.warn('⚠️ Cached variant not found, using base resume');
+            setTailoredResumeData(resumeData);
+            setLocalVariantId(cachedVariantId); // Still set the ID
+          }
+        } catch (error) {
+          console.error('❌ Failed to load cached variant:', error);
+          setTailoredResumeData(resumeData);
+          setLocalVariantId(cachedVariantId); // Still set the ID
+        }
+
+        setPreparing(false);
+        return;
+      }
+
+      // No cached variant, run full analysis
+      console.log('🔄 RESUME STUDIO: No cache, running full analysis...');
       await runPreAnalysis();
     };
     prepare();
-  }, [job, resumeId]);
+  }, [job?.id, resumeId, preAnalysisComplete, cachedVariantId]);
   
   // Pre-analysis pipeline: (1) analyze-with-tailoring → saves variant + suggestions
   // (2) load fresh tailored data and suggestions, (3) enhance skills via GPT for organized view
@@ -1334,6 +1512,22 @@ function ResumeStudioTab({
         setTailoredResumeData(resumeData);
         setPreparing(false);
         return;
+      }
+
+      // Fetch photoUrl from API since the outer provider uses skipProfileApiFetch
+      let photoUrlFromApi = null;
+      try {
+        const profileResp = await fetch('/api/profile/latest', {
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        if (profileResp.ok) {
+          const profileData = await profileResp.json();
+          photoUrlFromApi = profileData.resumeData?.photoUrl || null;
+          console.log('📸 TAILOR: Fetched photoUrl from API:', photoUrlFromApi);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch photoUrl for tailor editor:', e);
       }
 
       // Always analyze before loading editor to ensure fresh suggestions
@@ -1365,6 +1559,12 @@ function ResumeStudioTab({
           tailoredResume.skillsCategoryPlan = planFromPayload;
         }
 
+        // Add photoUrl from API to tailored resume
+        if (photoUrlFromApi && !tailoredResume.photoUrl) {
+          tailoredResume.photoUrl = photoUrlFromApi;
+          console.log('📸 TAILOR: Added photoUrl to tailored resume:', photoUrlFromApi);
+        }
+
         latestTailored = tailoredResume;
         setTailoredResumeData(tailoredResume);
 
@@ -1382,10 +1582,22 @@ function ResumeStudioTab({
             .maybeSingle();
           latestTailored = variantRow?.tailored_data || resumeData;
           latestPlan = latestTailored?.skillsCategoryPlan || null;
+
+          // Add photoUrl from API to fallback variant
+          if (photoUrlFromApi && !latestTailored.photoUrl) {
+            latestTailored.photoUrl = photoUrlFromApi;
+            console.log('📸 TAILOR FALLBACK: Added photoUrl to variant:', photoUrlFromApi);
+          }
+
           setTailoredResumeData(latestTailored);
         } else {
           latestTailored = resumeData;
-          setTailoredResumeData(resumeData);
+          // Add photoUrl even when using base resumeData
+          if (photoUrlFromApi && !latestTailored.photoUrl) {
+            latestTailored = { ...latestTailored, photoUrl: photoUrlFromApi };
+            console.log('📸 TAILOR NO VARIANT: Added photoUrl to base resume:', photoUrlFromApi);
+          }
+          setTailoredResumeData(latestTailored);
         }
       }
 
@@ -1482,37 +1694,156 @@ function ResumeStudioTab({
   );
 }
 
+// Cover Letter Template Selector Component
+function CoverLetterTemplateSelector({
+  selectedTemplate,
+  onChange
+}: {
+  selectedTemplate: string;
+  onChange: (template: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const templates = [
+    { id: 'professional', name: 'Professional', description: 'Corporate Excellence', color: 'bg-blue-600' },
+    { id: 'modern', name: 'Modern', description: 'Clean & Contemporary', color: 'bg-purple-600' },
+    { id: 'elegant', name: 'Elegant', description: 'Sophisticated Style', color: 'bg-amber-600' },
+    { id: 'minimal', name: 'Minimal', description: 'Simple & Clear', color: 'bg-gray-700' }
+  ];
+
+  const activeTemplate = templates.find(t => t.id === selectedTemplate) || templates[0];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="group h-9 pl-3 pr-4 flex items-center gap-3 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+      >
+        <FileText className="w-4 h-4 text-gray-600" />
+        <div className="text-left">
+          <div className="text-xs text-gray-500 font-medium">Template</div>
+          <div className="text-sm font-semibold text-gray-900 -mt-0.5">{activeTemplate.name}</div>
+        </div>
+        <svg
+          className={cn(
+            'w-4 h-4 text-gray-500 transition-transform duration-200',
+            isOpen && 'rotate-180'
+          )}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50"
+              style={{ minWidth: '200px' }}
+            >
+              <div className="p-3">
+                <div className="px-1 pb-3 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900">Choose Template</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Select your cover letter design</p>
+                </div>
+
+                <div className="mt-3 space-y-1">
+                  {templates.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => {
+                        onChange(template.id);
+                        setIsOpen(false);
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left',
+                        selectedTemplate === template.id
+                          ? 'bg-gray-100 ring-2 ring-gray-900 ring-inset'
+                          : 'hover:bg-gray-50'
+                      )}
+                    >
+                      <div className={cn('w-3 h-3 rounded-full', template.color)} />
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-gray-900">{template.name}</div>
+                        <div className="text-xs text-gray-500">{template.description}</div>
+                      </div>
+                      {selectedTemplate === template.id && (
+                        <CheckCircle className="w-4 h-4 text-gray-900" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // Revolutionary Cover Letter Studio with inline editing
-function CoverLetterStudioTab({ 
-  job, 
-  strategy, 
-  coverLetter, 
-  onGenerate, 
+function CoverLetterStudioTab({
+  job,
+  strategy,
+  coverLetter,
+  onGenerate,
   onCoverLetterChange,
   loading,
   userProfile,
-  exportPDF
+  exportPDF,
+  includeUniversity,
+  setIncludeUniversity,
+  includeSemester,
+  setIncludeSemester,
+  includeHours,
+  setIncludeHours
 }: {
   job: JobWithCompany;
   strategy: JobStrategy | null;
   coverLetter: CoverLetter | null;
-  onGenerate: (tone: string, length: string) => void;
+  onGenerate: (tone: string, length: string, customInstructions?: string) => void;
   onCoverLetterChange: (letter: CoverLetter | null) => void;
   loading: boolean;
   userProfile: any;
-  exportPDF: (letter: CoverLetter, job: JobWithCompany) => void;
+  exportPDF: (letter: CoverLetter, job: JobWithCompany, template?: string) => void;
+  includeUniversity: boolean;
+  setIncludeUniversity: (value: boolean) => void;
+  includeSemester: boolean;
+  setIncludeSemester: (value: boolean) => void;
+  includeHours: boolean;
+  setIncludeHours: (value: boolean) => void;
 }) {
   const [selectedTone, setSelectedTone] = useState<'confident' | 'warm' | 'direct'>('confident');
   const [selectedLength, setSelectedLength] = useState<'short' | 'medium' | 'long'>('medium');
-  const [isEditing, setIsEditing] = useState(false);
   const [editableContent, setEditableContent] = useState(coverLetter);
-  
+  const [customInstructions, setCustomInstructions] = useState('');
+  const [regenerationCount, setRegenerationCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const MAX_REGENERATIONS = 2;
+  const selectedTemplate = 'professional'; // Always use professional template
+
+  // Show AI insights automatically when cover letter exists
+  const showAIInsights = !!coverLetter;
+
   // Update editable content when coverLetter changes
   useEffect(() => {
-    if (coverLetter && !isEditing) {
+    if (coverLetter) {
       setEditableContent(coverLetter);
     }
-  }, [coverLetter, isEditing]);
+  }, [coverLetter]);
   
   const toneDescriptions = {
     confident: 'Authority and proven results',
@@ -1521,110 +1852,192 @@ function CoverLetterStudioTab({
   };
   
   const lengthDescriptions = {
-    short: '150-200 words (concise)',
-    medium: '220-300 words (balanced)', 
-    long: '360-370 words (detailed)'
+    short: '180-200 words (concise)',
+    medium: '250-270 words (balanced)',
+    long: '350 words (detailed)'
+  };
+
+  // Removed auto-generation - user must click Generate button
+  // useEffect(() => {
+  //   if (!coverLetter && !loading) {
+  //     console.log('🎯 Auto-generating cover letter on first load');
+  //     onGenerate(selectedTone, selectedLength, '');
+  //   }
+  // }, []);
+
+  const handleRegenerate = () => {
+    if (regenerationCount >= MAX_REGENERATIONS) {
+      alert(`Maximum ${MAX_REGENERATIONS} regenerations allowed`);
+      return;
+    }
+
+    onGenerate(selectedTone, selectedLength, customInstructions);
+    setRegenerationCount(prev => prev + 1);
+    setCustomInstructions(''); // Clear after use
   };
 
   const handleContentChange = (field: string, value: string) => {
     if (!editableContent) return;
-    
-    setEditableContent(prev => ({
-      ...prev!,
+
+    const updatedContent = {
+      ...editableContent,
       content: {
-        ...prev!.content,
+        ...editableContent.content,
         [field]: value
       }
-    }));
+    };
+
+    setEditableContent(updatedContent);
+    // Auto-save to parent component (debounced by EnhancedRichText)
+    onCoverLetterChange(updatedContent);
   };
 
   const handleBodyParagraphChange = (index: number, value: string) => {
     if (!editableContent) return;
-    
+
     const newParagraphs = [...editableContent.content.body_paragraphs];
     newParagraphs[index] = value;
-    
-    setEditableContent(prev => ({
-      ...prev!,
+
+    const updatedContent = {
+      ...editableContent,
       content: {
-        ...prev!.content,
+        ...editableContent.content,
         body_paragraphs: newParagraphs
       }
-    }));
-  };
+    };
 
-  const saveChanges = () => {
-    if (editableContent) {
-      onCoverLetterChange(editableContent);
-    }
-    setIsEditing(false);
-  };
-
-  const discardChanges = () => {
-    setEditableContent(coverLetter);
-    setIsEditing(false);
+    setEditableContent(updatedContent);
+    // Auto-save to parent component (debounced by EnhancedRichText)
+    onCoverLetterChange(updatedContent);
   };
 
   const copyToClipboard = () => {
     if (!editableContent) return;
-    
-    const fullText = `${editableContent.content.intro}\n\n${editableContent.content.body_paragraphs.join('\n\n')}\n\n${editableContent.content.closing}\n\n${editableContent.content.sign_off}`;
+
+    const fullText = `${editableContent.content.subject}\n\n${editableContent.content.salutation},\n\n${editableContent.content.intro}\n\n${editableContent.content.body_paragraphs.join('\n\n')}\n\n${editableContent.content.closing}\n\n${editableContent.content.sign_off}`;
     navigator.clipboard.writeText(fullText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExportPDF = async () => {
+    if (!editableContent) return;
+    setIsExporting(true);
+    try {
+      await exportPDF(editableContent, job, selectedTemplate);
+    } finally {
+      setTimeout(() => setIsExporting(false), 1000);
+    }
   };
   
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <motion.div 
-        className="relative bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/30 backdrop-blur-xl rounded-3xl border border-white/50 p-8 shadow-2xl overflow-hidden"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-2xl" />
-        
-        <div className="relative">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl shadow-lg">
-              <PenTool className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900">Letter Craft Studio</h2>
-              <p className="text-gray-600 text-lg">AI-powered writing meets interactive editing</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        {/* Controls Panel */}
-        <motion.div 
-          className="xl:col-span-1 space-y-6"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+    <div className="space-y-6">
+      {/* AI Insights Panel - Top Banner */}
+      {showAIInsights && strategy && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="relative bg-gradient-to-br from-white via-blue-50/50 to-indigo-50/30 backdrop-blur-xl rounded-3xl border border-white/50 p-6 shadow-xl overflow-hidden">
-            <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-xl" />
-            
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg shadow-md">
-                  <Settings className="w-5 h-5 text-white" />
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-4 h-4 text-gray-600" />
+              <h3 className="text-sm font-semibold text-gray-900">AI Analysis</h3>
+            </div>
+
+            {/* Matched Data - Horizontal Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  Skills ({strategy.matchCalculation?.skillsOverlap?.matched?.length || 0})
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {(strategy.matchCalculation?.skillsOverlap?.matched || []).slice(0, 6).map((skill: string, i: number) => (
+                    <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                      {skill}
+                    </span>
+                  ))}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Letter Options</h3>
               </div>
-              
-              <div className="space-y-6">
+
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Settings className="w-3.5 h-3.5" />
+                  Tools ({strategy.matchCalculation?.toolsOverlap?.matched?.length || 0})
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {(strategy.matchCalculation?.toolsOverlap?.matched || []).slice(0, 6).map((tool: string, i: number) => (
+                    <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" />
+                  Top Task
+                </h4>
+                {(strategy.tasks || [])
+                  .sort((a: any, b: any) => (b.alignment_score || 0) - (a.alignment_score || 0))
+                  .slice(0, 1)
+                  .map((task: any, i: number) => (
+                    <div key={i}>
+                      <div className="text-xs font-medium text-blue-600 mb-1">
+                        {Math.round((task.alignment_score || 0) * 100)}% match
+                      </div>
+                      <p className="text-xs text-gray-600 line-clamp-2">{task.task_description || task.task}</p>
+                    </div>
+                  ))}
+              </div>
+
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <h4 className="text-xs font-medium text-green-900 mb-2 flex items-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  Why It Works
+                </h4>
+                <ul className="space-y-1 text-xs text-gray-700">
+                  <li className="flex items-start gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span><strong>{strategy.matchCalculation?.skillsOverlap?.matched?.length || 0}</strong> exact matches</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span><strong>{strategy.competitive_advantages?.length || 0}</strong> advantages</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6">
+        {/* Controls Panel */}
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="w-4 h-4 text-gray-600" />
+              <h3 className="text-sm font-semibold text-gray-900">Letter Options</h3>
+            </div>
+
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Writing Tone</label>
-                  <div className="space-y-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Writing Tone</label>
+                  <div className="space-y-2">
                     {Object.entries(toneDescriptions).map(([tone, desc]) => (
-                      <motion.label 
-                        key={tone} 
-                        className="flex items-center gap-3 cursor-pointer group"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <label
+                        key={tone}
+                        className="flex items-center gap-2 cursor-pointer group"
                       >
                         <input
                           type="radio"
@@ -1632,30 +2045,28 @@ function CoverLetterStudioTab({
                           value={tone}
                           checked={selectedTone === tone}
                           onChange={(e) => setSelectedTone(e.target.value as any)}
-                          className="w-4 h-4 text-blue-600"
+                          className="w-3.5 h-3.5 text-blue-600"
                         />
-                        <div className={`flex-1 p-3 rounded-xl border-2 transition-all duration-200 ${
-                          selectedTone === tone 
-                            ? 'border-blue-500 bg-blue-50' 
-                            : 'border-gray-200 bg-white group-hover:border-blue-300 group-hover:bg-blue-50/50'
+                        <div className={`flex-1 p-2 rounded-lg border transition-all duration-200 ${
+                          selectedTone === tone
+                            ? 'border-blue-500 bg-blue-50/50'
+                            : 'border-gray-200 bg-gray-50/50'
                         }`}>
-                          <div className="font-bold text-gray-900 capitalize">{tone}</div>
-                          <div className="text-sm text-gray-600">{desc}</div>
+                          <div className="text-sm font-medium text-gray-900 capitalize">{tone}</div>
+                          <div className="text-xs text-gray-500">{desc}</div>
                         </div>
-                      </motion.label>
+                      </label>
                     ))}
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Length</label>
-                  <div className="space-y-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Length</label>
+                  <div className="space-y-2">
                     {Object.entries(lengthDescriptions).map(([length, desc]) => (
-                      <motion.label 
-                        key={length} 
-                        className="flex items-center gap-3 cursor-pointer group"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <label
+                        key={length}
+                        className="flex items-center gap-2 cursor-pointer group"
                       >
                         <input
                           type="radio"
@@ -1663,94 +2074,107 @@ function CoverLetterStudioTab({
                           value={length}
                           checked={selectedLength === length}
                           onChange={(e) => setSelectedLength(e.target.value as any)}
-                          className="w-4 h-4 text-emerald-600"
+                          className="w-3.5 h-3.5 text-emerald-600"
                         />
-                        <div className={`flex-1 p-3 rounded-xl border-2 transition-all duration-200 ${
-                          selectedLength === length 
-                            ? 'border-emerald-500 bg-emerald-50' 
-                            : 'border-gray-200 bg-white group-hover:border-emerald-300 group-hover:bg-emerald-50/50'
+                        <div className={`flex-1 p-2 rounded-lg border transition-all duration-200 ${
+                          selectedLength === length
+                            ? 'border-emerald-500 bg-emerald-50/50'
+                            : 'border-gray-200 bg-gray-50/50'
                         }`}>
-                          <div className="font-bold text-gray-900 capitalize">{length}</div>
-                          <div className="text-sm text-gray-600">{desc}</div>
+                          <div className="text-sm font-medium text-gray-900 capitalize">{length}</div>
+                          <div className="text-xs text-gray-500">{desc}</div>
                         </div>
-                      </motion.label>
+                      </label>
                     ))}
                   </div>
                 </div>
+
+                {/* Student Info Toggles */}
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-3.5 h-3.5 text-gray-500" />
+                    <span className="text-xs font-medium text-gray-600">Student Details</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={includeUniversity}
+                        onChange={(e) => setIncludeUniversity(e.target.checked)}
+                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                      />
+                      <span className="text-xs text-gray-700">University & Degree</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={includeSemester}
+                        onChange={(e) => setIncludeSemester(e.target.checked)}
+                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                      />
+                      <span className="text-xs text-gray-700">Semester Info</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={includeHours}
+                        onChange={(e) => setIncludeHours(e.target.checked)}
+                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                      />
+                      <span className="text-xs text-gray-700">Weekly Hours</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Custom Instructions Field */}
+                <div className="pt-3 border-t border-gray-200 space-y-2">
+                  <label className="text-xs font-medium text-gray-600">
+                    Custom Instructions
+                  </label>
+                  <textarea
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    placeholder="E.g., 'Emphasize Python skills'"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={2}
+                    disabled={regenerationCount >= MAX_REGENERATIONS || loading}
+                  />
+                  <p className="text-xs text-gray-500">
+                    {MAX_REGENERATIONS - regenerationCount} regenerations left
+                  </p>
+                </div>
               </div>
-              
-              <motion.button
-                onClick={() => onGenerate(selectedTone, selectedLength)}
-                disabled={loading}
-                className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-bold text-lg disabled:opacity-50 disabled:hover:scale-100"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+
+              <button
+                onClick={handleRegenerate}
+                disabled={loading || regenerationCount >= MAX_REGENERATIONS}
+                className={cn(
+                  "w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed",
+                  regenerationCount >= MAX_REGENERATIONS
+                    ? "bg-gray-100 text-gray-500 border border-gray-200"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                )}
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Crafting...
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Generating...
                   </>
+                ) : regenerationCount >= MAX_REGENERATIONS ? (
+                  <span>Max regenerations reached</span>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5" />
-                    Generate Cover Letter
+                    <Sparkles className="w-4 h-4" />
+                    {coverLetter ? 'Regenerate' : 'Generate Letter'}
                   </>
                 )}
-              </motion.button>
-            </div>
+              </button>
           </div>
 
-          {/* Quick Actions */}
-          {coverLetter && (
-            <motion.div 
-              className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-lg"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                Quick Actions
-              </h4>
-              <div className="space-y-2">
-                <motion.button
-                  onClick={copyToClipboard}
-                  className="w-full flex items-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors font-medium"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Copy className="w-4 h-4" />
-                  Copy to Clipboard
-                </motion.button>
-                
-                <motion.button
-                  onClick={() => exportPDF(coverLetter, job)}
-                  className="w-full flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-medium"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Download className="w-4 h-4" />
-                  Export PDF
-                </motion.button>
-                
-                <motion.button
-                  onClick={() => onCoverLetterChange(null)}
-                  className="w-full flex items-center gap-2 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl transition-colors font-medium"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Start Over
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
         </motion.div>
-        
+
         {/* Interactive Preview/Editor */}
-        <motion.div 
-          className="xl:col-span-2"
+        <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
@@ -1759,72 +2183,79 @@ function CoverLetterStudioTab({
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5" />
             
             <div className="relative">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-slate-600 to-gray-600 rounded-lg shadow-md">
-                    <Eye className="w-5 h-5 text-white" />
+              {/* Elegant Header Bar */}
+              <div className="bg-white border-b border-gray-200">
+                <div className="px-6 h-16 flex items-center justify-between">
+                  {/* Left: Auto-save indicator */}
+                  <div className="flex items-center gap-2.5 text-xs text-gray-500">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="font-medium">Auto-saved</span>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {isEditing ? 'Interactive Editor' : 'Live Preview'}
-                  </h3>
+
+                  {/* Right: Actions */}
+                  {coverLetter && (
+                    <div className="flex items-center gap-3">
+                      {/* Copy Link Button */}
+                      <button
+                        onClick={copyToClipboard}
+                        className="h-9 px-3 flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-150 border border-transparent hover:border-gray-200"
+                      >
+                        {copied ? (
+                          <>
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-600">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span className="text-sm font-medium">Copy Text</span>
+                          </>
+                        )}
+                      </button>
+
+                      <div className="h-6 w-px bg-gray-300" />
+
+                      {/* Export PDF Button */}
+                      <button
+                        onClick={handleExportPDF}
+                        disabled={isExporting}
+                        className={cn(
+                          'h-9 px-4 flex items-center gap-2 rounded-lg font-medium transition-all duration-200',
+                          isExporting
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-900 hover:bg-gray-800 text-white shadow-sm hover:shadow-md'
+                        )}
+                      >
+                        {isExporting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm">Exporting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            <span className="text-sm">Export PDF</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                
-                {coverLetter && (
-                  <div className="flex items-center gap-2">
-                    {isEditing && (
-                      <>
-                        <motion.button
-                          onClick={saveChanges}
-                          className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Save
-                        </motion.button>
-                        <motion.button
-                          onClick={discardChanges}
-                          className="flex items-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <X className="w-4 h-4" />
-                          Cancel
-                        </motion.button>
-                      </>
-                    )}
-                    
-                    <motion.button
-                      onClick={() => setIsEditing(!isEditing)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
-                        isEditing 
-                          ? 'bg-gray-600 text-white hover:bg-gray-700' 
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Edit3 className="w-4 h-4" />
-                      {isEditing ? 'Preview Mode' : 'Edit Mode'}
-                    </motion.button>
-                  </div>
-                )}
               </div>
 
               {/* Content */}
-              <div className="p-8 min-h-[600px]">
+              <div className="p-8 min-h-[600px] max-h-[800px] overflow-y-auto">
                 {coverLetter && editableContent ? (
-                  <div className="max-w-2xl mx-auto">
+                  <div className="w-full">
                     {/* Letter Header */}
-                    <div className="mb-8 pb-4 border-b border-gray-200">
+                    <div className="mb-8">
                       <h4 className="font-bold text-gray-900 text-lg mb-2">
-                        {userProfile?.name || 'Your Name'}
+                        {userProfile?.personal_details?.name || userProfile?.personalInfo?.name || userProfile?.name || 'Varun Mishra'}
                       </h4>
                       <p className="text-gray-600">
-                        {userProfile?.email || 'your.email@example.com'} | {userProfile?.phone || '+49 XXX XXX XXXX'}
+                        {userProfile?.personal_details?.email || userProfile?.personalInfo?.email || userProfile?.email || 'varunmisra@gmail.com'} | {userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone || '+49 XXX XXX XXXX'}
                       </p>
-                      <p className="text-gray-600">{userProfile?.location || 'Your City, Germany'}</p>
+                      <p className="text-gray-600">{userProfile?.personal_details?.location || userProfile?.personalInfo?.location || userProfile?.location || 'Germany'}</p>
                       <div className="mt-4 text-right text-gray-600">
                         {new Date().toLocaleDateString('de-DE')}
                       </div>
@@ -1835,104 +2266,73 @@ function CoverLetterStudioTab({
                       <h4 className="font-bold text-gray-900">
                         {job.companies?.name || job.company_name || 'Hiring Manager'}
                       </h4>
-                      <p className="text-gray-600">{job.location_city || 'City'}</p>
+                      {job.location_city && (
+                        <p className="text-gray-600">{job.location_city}</p>
+                      )}
                     </div>
 
                     {/* Subject */}
-                    <div className="mb-6">
-                      <p className="font-bold text-gray-900">
-                        Subject: Application for {job.title}
-                      </p>
+                    <div className="mb-4">
+                      <EnhancedRichText
+                        value={editableContent.content.subject || `Application for ${job.title}`}
+                        onChange={(value) => handleContentChange('subject', value)}
+                        className="text-gray-900 border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
+                        placeholder="Subject line..."
+                      />
                     </div>
 
-                    {/* Letter Content */}
-                    <div className="space-y-6">
+                    {/* Letter Content - Seamless Notion-style Editing */}
+                    <div className="space-y-1">
+                      {/* Salutation */}
+                      <EnhancedRichText
+                        value={editableContent.content.salutation || 'Dear Hiring Team'}
+                        onChange={(value) => handleContentChange('salutation', value)}
+                        className="text-gray-800 border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
+                        placeholder="Salutation..."
+                      />
+
                       {/* Intro */}
-                      <div>
-                        {isEditing ? (
-                          <EnhancedRichText
-                            value={editableContent.content.intro}
-                            onChange={(value) => handleContentChange('intro', value)}
-                            className="p-4 bg-white/80 rounded-xl border-2 border-blue-200 focus-within:border-blue-500 transition-colors"
-                            multiline={true}
-                            placeholder="Introduction paragraph..."
-                          />
-                        ) : (
-                          <motion.p 
-                            className="text-gray-800 leading-relaxed font-medium"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            {editableContent.content.intro}
-                          </motion.p>
-                        )}
-                      </div>
+                      <EnhancedRichText
+                        value={editableContent.content.intro}
+                        onChange={(value) => handleContentChange('intro', value)}
+                        className="text-gray-800 leading-relaxed font-medium border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
+                        multiline={true}
+                        placeholder="Click to write introduction..."
+                      />
 
                       {/* Body Paragraphs */}
                       {editableContent.content.body_paragraphs.map((paragraph, index) => (
-                        <div key={index}>
-                          {isEditing ? (
-                            <EnhancedRichText
-                              value={paragraph}
-                              onChange={(value) => handleBodyParagraphChange(index, value)}
-                              className="p-4 bg-white/80 rounded-xl border-2 border-emerald-200 focus-within:border-emerald-500 transition-colors"
-                              multiline={true}
-                              placeholder={`Body paragraph ${index + 1}...`}
-                            />
-                          ) : (
-                            <motion.p 
-                              className="text-gray-800 leading-relaxed"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: (index + 1) * 0.1 }}
-                            >
-                              {paragraph}
-                            </motion.p>
-                          )}
-                        </div>
+                        <EnhancedRichText
+                          key={index}
+                          value={paragraph}
+                          onChange={(value) => handleBodyParagraphChange(index, value)}
+                          className="text-gray-800 leading-relaxed border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
+                          multiline={true}
+                          placeholder={`Click to write paragraph ${index + 1}...`}
+                        />
                       ))}
 
                       {/* Closing */}
-                      <div>
-                        {isEditing ? (
-                          <EnhancedRichText
-                            value={editableContent.content.closing}
-                            onChange={(value) => handleContentChange('closing', value)}
-                            className="p-4 bg-white/80 rounded-xl border-2 border-purple-200 focus-within:border-purple-500 transition-colors"
-                            multiline={true}
-                            placeholder="Closing paragraph..."
-                          />
-                        ) : (
-                          <motion.p 
-                            className="text-gray-800 leading-relaxed font-medium"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.4 }}
-                          >
-                            {editableContent.content.closing}
-                          </motion.p>
-                        )}
-                      </div>
+                      <EnhancedRichText
+                        value={editableContent.content.closing}
+                        onChange={(value) => handleContentChange('closing', value)}
+                        className="text-gray-800 leading-relaxed font-medium border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
+                        multiline={true}
+                        placeholder="Click to write closing..."
+                      />
 
                       {/* Sign-off */}
                       <div className="pt-4">
-                        {isEditing ? (
-                          <EnhancedRichText
-                            value={editableContent.content.sign_off}
-                            onChange={(value) => handleContentChange('sign_off', value)}
-                            className="p-3 bg-white/80 rounded-lg border-2 border-gray-200 focus-within:border-gray-500 transition-colors"
-                            placeholder="Sign off..."
-                          />
-                        ) : (
-                          <motion.p 
-                            className="text-gray-800 font-medium"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.5 }}
-                          >
-                            {editableContent.content.sign_off}
-                          </motion.p>
-                        )}
+                        <EnhancedRichText
+                          value={editableContent.content.sign_off}
+                          onChange={(value) => handleContentChange('sign_off', value)}
+                          className="text-gray-800 border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
+                          placeholder="Click to add sign-off..."
+                        />
+                        {/* User name after sign-off */}
+                        <div className="mt-1 text-gray-800">
+                          {userProfile?.personalInfo?.name || userProfile?.personal_details?.name || userProfile?.name || 'Varun Mishra'}
+                        </div>
                       </div>
                     </div>
 

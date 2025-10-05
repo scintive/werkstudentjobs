@@ -1,11 +1,10 @@
 'use client';
 
-import React from 'react';
-import { 
+import * as React from 'react';
+import {
   Building2, Globe, Users, MapPin, Calendar, Star,
   ExternalLink, Briefcase, Award, ChevronDown, ChevronUp, CheckCircle
 } from 'lucide-react';
-import React from 'react';
 
 interface CompanyIntelligencePanelProps {
   company: {

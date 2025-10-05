@@ -294,11 +294,21 @@ interface ResumeProviderProps {
 }
 
 export function ResumeProvider({ children, initialData = initialResumeData }: ResumeProviderProps) {
+  // DEBUG: Log initialData photoUrl
+  React.useEffect(() => {
+    console.log('🎯 RESUME CONTEXT: initialData photoUrl:', (initialData as any)?.photoUrl)
+  }, [initialData])
+
   const [state, dispatch] = React.useReducer(resumeReducer, {
     present: initialData,
     past: [],
     future: []
   })
+
+  // DEBUG: Log state.present photoUrl
+  React.useEffect(() => {
+    console.log('🎯 RESUME CONTEXT: state.present (resumeData) photoUrl:', (state.present as any)?.photoUrl)
+  }, [state.present])
 
   const contextValue = React.useMemo(() => ({
     resumeData: state.present,

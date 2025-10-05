@@ -300,14 +300,14 @@ export const EnhancedRichText = ({
   const displayStyles = cn(
     baseStyles,
     readOnly ? "cursor-default" : "cursor-text",
-    "p-2 border border-transparent hover:border-gray-200",
+    "p-2 border-0",
     !localValue && "text-gray-400",
-    !readOnly && "relative hover:bg-gray-50/50"
+    !readOnly && "relative"
   )
-  
+
   const editingStyles = cn(
     baseStyles,
-    "outline-2 outline-blue-400 outline-offset-0 bg-white focus:outline-none p-2 border border-blue-300 shadow-sm"
+    "outline-none focus:outline-none bg-transparent p-2 border-0"
   )
 
   return (

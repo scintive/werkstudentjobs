@@ -23,8 +23,6 @@ import {
   User,
   Upload,
   ChevronRight,
-  Menu,
-  X,
   Sparkles,
   LayoutDashboard,
   PenTool,
@@ -43,7 +41,7 @@ interface NavigationItem {
 export default function AppHeader() {
   const [email, setEmail] = React.useState<string | null>(null)
   const [userName, setUserName] = React.useState<string>('')
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [photoUrl, setPhotoUrl] = React.useState<string | null>(null)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -66,16 +64,30 @@ export default function AppHeader() {
       if (user) {
         setEmail(user.email || null)
 
-        // Try to get user's name from resume_data
+        // Try to get user's name and photo from resume_data
         const { data: resumeData } = await supabase
           .from('resume_data')
-          .select('personal_info')
+          .select('personal_info, photo_url')
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false })
           .limit(1)
 
         if (resumeData && resumeData[0]) {
           setUserName(resumeData[0].personal_info?.name || '')
+          setPhotoUrl(resumeData[0].photo_url || null)
+        }
+
+        // If no photo in resume_data, check user_profiles
+        if (!resumeData?.[0]?.photo_url) {
+          const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('photo_url')
+            .eq('user_id', user.id)
+            .single()
+
+          if (profileData?.photo_url) {
+            setPhotoUrl(profileData.photo_url)
+          }
         }
       }
     }
@@ -172,11 +184,19 @@ export default function AppHeader() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="relative">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--primary)' }}>
-                          <span className="text-white text-sm font-medium">
-                            {userName ? userName[0].toUpperCase() : email[0].toUpperCase()}
-                          </span>
-                        </div>
+                        {photoUrl ? (
+                          <img
+                            src={photoUrl}
+                            alt={userName || 'User'}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--primary)' }}>
+                            <span className="text-white text-sm font-medium">
+                              {userName ? userName[0].toUpperCase() : email[0].toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                         <div className="hidden sm:block text-left">
                           <p className="text-sm font-medium text-gray-900">
                             {userName || 'User'}
@@ -188,13 +208,6 @@ export default function AppHeader() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      <div>
-                        <p className="font-medium">{userName || 'User'}</p>
-                        <p className="text-xs text-gray-500 font-normal">{email}</p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => router.push('/settings')}>
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
@@ -230,54 +243,8 @@ export default function AppHeader() {
                 </Button>
               </div>
             )}
-
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
-            </Button>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-2 space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon
-              const isActive = isActiveRoute(item.href)
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "px-3 py-2 text-sm font-medium rounded-md flex items-center gap-2 transition-colors",
-                    isActive
-                      ? "bg-orange-50 text-orange-600 font-medium"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
-                  {item.badge && (
-                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-xs">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-        )}
       </div>
 
     </header>

@@ -24,8 +24,11 @@ export function generateProfessionalResumeHTML(data: any): string {
             --accent-subtle: #f0f9ff;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: A4; margin: 15mm 0 20mm 0; }
-        @page:first { margin: 0; }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
         
         /* Page break optimization */
         .experience-item, .project-item, .education-item, .certification-item {
@@ -64,28 +67,66 @@ export function generateProfessionalResumeHTML(data: any): string {
         .resume-container {
             width: 100%;
             max-width: none;
-            min-height: 297mm;
-            display: grid;
-            grid-template-columns: 38% 62%;
+            min-height: 100vh;
+            position: relative;
             margin: 0;
         }
-        
+
+        /* Continuous sidebar background and border across all pages */
+        .resume-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 38%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--accent-subtle) 100%);
+            z-index: 0;
+        }
+
+        .resume-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 38%;
+            width: 3px;
+            height: 100%;
+            background: var(--primary-color);
+            z-index: 1;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: 38% 62%;
+            min-height: 100vh;
+        }
+
         /* For PDF generation, use exact measurements */
         @media print {
-            .resume-container {
+            .resume-container::before {
+                width: 75mm;
+            }
+            .resume-container::after {
+                left: 75mm;
+            }
+            .content-wrapper {
                 width: 210mm;
                 max-width: 210mm;
-                grid-template-columns: 75mm 125mm;
+                grid-template-columns: 75mm 135mm;
                 margin: 0 auto;
             }
         }
         .sidebar {
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--accent-subtle) 100%);
-            padding: 6mm 6mm 10mm 6mm;
-            border-right: 3px solid var(--primary-color);
+            padding: 8mm 6mm 10mm 6mm;
+            position: relative;
+            z-index: 2;
         }
         .main-content {
-            padding: 6mm 6mm 10mm 6mm;
+            padding: 8mm 8mm 10mm 8mm;
+            position: relative;
+            z-index: 2;
         }
         .profile-section {
             text-align: center;
@@ -313,6 +354,7 @@ export function generateProfessionalResumeHTML(data: any): string {
 </head>
 <body>
     <div class="resume-container">
+        <div class="content-wrapper">
         <aside class="sidebar">
             <div class="profile-section">
                 ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
@@ -463,6 +505,7 @@ export function generateProfessionalResumeHTML(data: any): string {
             </section>
             ` : ''}
         </main>
+        </div>
     </div>
 </body>
 </html>`;

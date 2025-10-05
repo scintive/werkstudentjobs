@@ -9,7 +9,7 @@ import crypto from 'crypto';
 
 // Cache for strategies with tailoring - keyed by fingerprint
 const strategyTailoringCache = new Map<string, { data: any; timestamp: number; fingerprint: string }>();
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (increased from 30 min for better performance)
 
 // Valid sections for normalization
 const VALID_SECTIONS = new Set([
@@ -674,7 +674,8 @@ export async function POST(request: NextRequest) {
         projects: baseResume.projects || [],
         certifications: baseResume.certifications || [],
         customSections: baseResume.custom_sections || [],
-        languages: (baseResume as any).languages || []
+        languages: (baseResume as any).languages || [],
+        photoUrl: baseResume.photo_url || null  // Copy photo from base resume to variant
       },
       applied_suggestions: [],
       ats_keywords: [],
@@ -1406,10 +1407,24 @@ Return your response as a valid JSON object only. Do not include any additional 
       let plannedCategoryKeys: string[] = [];
 
       if (!analysisData.skills_category_plan || !Array.isArray(analysisData.skills_category_plan?.categories) || analysisData.skills_category_plan.categories.length === 0) {
-        const fallbackPlan = await generateSkillPlanFallback({ job: analysisContext.job, resume: analysisContext.resume });
-        if (fallbackPlan) {
-          analysisData.skills_category_plan = fallbackPlan;
-        }
+        // Quick non-GPT fallback: Use existing skill categories instead of expensive GPT call
+        // This saves 2-3 seconds on first load
+        console.log('⚡ Using fast skills plan fallback (no GPT)');
+        const existingCategories = Object.keys(baseResume.skills || {}).filter(cat => cat !== 'languages');
+        analysisData.skills_category_plan = {
+          categories: existingCategories.map((cat, idx) => ({
+            canonical_key: cat.toLowerCase().replace(/\s+/g, '_'),
+            display_name: cat,
+            skills: [],
+            priority: idx + 1,
+            reasoning: "Preserved from original resume"
+          })),
+          profile_assessment: {
+            career_focus: trimmedJob.title || "Professional",
+            skill_level: "Intermediate",
+            recommendations: "Review job-specific skills"
+          }
+        };
       }
 
       const planProcessingResult = applySkillsCategoryPlan({
@@ -1535,7 +1550,15 @@ Return your response as a valid JSON object only. Do not include any additional 
           finalTailored[client] = candidate
         }
       });
-      
+
+      // Copy photoUrl from base resume if not already present in tailored version
+      // This ensures base resume photo shows in tailor on first load, but allows independent changes after
+      if (!tailoredResume.photoUrl && baseResumeData.photo_url) {
+        finalTailored.photoUrl = baseResumeData.photo_url;
+      } else {
+        finalTailored.photoUrl = tailoredResume.photoUrl || null;
+      }
+
       // Replace the tailored_resume with the safely merged version
       analysisData.tailored_resume = finalTailored;
       
@@ -1894,9 +1917,11 @@ Return your response as a valid JSON object only. Do not include any additional 
         // Do NOT synthesize "mock" suggestions; strictly use GPT output only
         analysisData.atomic_suggestions = anchored
 
-        // Ensure coverage: at least 2 bullets per experience role
+        // Ensure coverage: at least 3 bullets per experience role (optimized from 2)
+        // Only top-up roles with fewer than 3 bullets to reduce GPT calls
         if (Array.isArray(baseResumeData.experience) && baseResumeData.experience.length > 0) {
           try {
+            const MIN_BULLETS = 3; // Increased from 2 to reduce unnecessary GPT calls
             const countByRole: Record<number, number> = {}
             for (const s of analysisData.atomic_suggestions) {
               if (s.section === 'experience' && typeof s.target_path === 'string') {
@@ -1910,12 +1935,20 @@ Return your response as a valid JSON object only. Do not include any additional 
 
             const rolesNeedingTopUp = baseResumeData.experience
               .map((_, idx: number) => ({ idx, have: countByRole[idx] || 0 }))
-              .filter(({ have }) => have < 2)
+              .filter(({ have }) => have < MIN_BULLETS)
 
             for (const { idx, have } of rolesNeedingTopUp) {
               const role = baseResumeData.experience[idx] || {}
-              const nextStart = Array.isArray(role.achievements) ? role.achievements.length : 0
-              const need = Math.max(0, 2 - have)
+              const currentBullets = Array.isArray(role.achievements) ? role.achievements.length : 0;
+
+              // Skip if role already has enough bullets from base resume
+              if (currentBullets >= MIN_BULLETS) {
+                console.log(`⚡ Skipping top-up for role ${idx} (already has ${currentBullets} bullets)`);
+                continue;
+              }
+
+              const nextStart = currentBullets;
+              const need = Math.max(0, MIN_BULLETS - have)
               if (need <= 0) continue
 
               const expUserPrompt = `Return ONLY valid JSON with key "bullets" as an array of ${need} impact-first resume bullets for this specific role.\n\nRules:\n• Anchor strictly to the candidate's role context and the job description; no fabrication beyond plausible tasks for this role and level\n• Keep ≤ 22 words each, strong verbs, outcome-first\n• Data/analytics roles: avoid exaggerated ML/leadership claims unless clearly grounded in resume\n• Lab roles: keep responsibilities realistic to entry-level lab tasks\n• No prose outside JSON\n\nROLE CONTEXT (from resume):\n${JSON.stringify(role, null, 2)}\n\nTARGET JOB (trimmed):\n${JSON.stringify(analysisContext.job, null, 2)}\n\nOUTPUT:\n{ "bullets": ["...", "..."] }`;

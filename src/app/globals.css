@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/design-system.css";
+@import "../styles/components.css";
 
 @keyframes shimmer {
   0% {
@@ -105,8 +106,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Fix button rendering issues */
-button {
+/* Fix button rendering issues - only apply reset to unstyled buttons */
+button:not([class]) {
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;

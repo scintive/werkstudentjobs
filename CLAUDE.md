@@ -242,3 +242,4 @@ src/
 8. **Session persistence** - Maintain user state across navigation
 9. **Security first** - Sanitize HTML, validate inputs, use RLS
 10. **Performance** - Optimize bundle size, minimize API calls
+- whenever making any design edits, check DESIGN_SYSTEM.md for refernece and then find the correct reference and go there to make edits

@@ -24,14 +24,48 @@ export function generateImpactResumeHTML(data: any): string {
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        @page { 
-            size: A4; 
-            margin: 0;
+        @page {
+            size: A4;
+            margin: 8mm 0 8mm 0;
         }
-        
+
         /* Page break optimization */
-        .section { page-break-inside: avoid; }
-        .experience-item, .project-item { page-break-inside: avoid; }
+        .section {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .experience-item, .project-item, .education-item, .certification-item, .custom-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .section-header {
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+
+        /* Prevent orphans and widows */
+        .achievements li {
+            orphans: 2;
+            widows: 2;
+        }
+
+        /* Ensure columns don't split awkwardly on page breaks */
+        .content-grid {
+            page-break-inside: auto;
+        }
+
+        .left-column, .right-column {
+            page-break-inside: auto;
+        }
+
+        /* Add space at top of new pages */
+        @media print {
+            .section:first-child {
+                margin-top: 0;
+            }
+        }
         
         body {
             font-family: 'Inter', -apple-system, sans-serif;
@@ -61,25 +95,25 @@ export function generateImpactResumeHTML(data: any): string {
         
         /* Compact Header - No Background */
         .hero-header {
-            padding: 6mm 12mm;
-            border-bottom: 3px solid ${colors.primary};
+            padding: 5mm 12mm;
+            border-bottom: 2px solid #e5e7eb;
             position: relative;
         }
-        
+
         .header-content {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            gap: 8mm;
+            align-items: center;
+            gap: 5mm;
         }
 
         .profile-photo {
-            width: 40mm;
-            height: 40mm;
+            width: 22mm;
+            height: 22mm;
             object-fit: cover;
             border-radius: 50%;
-            border: 4px solid ${colors.primary};
-            box-shadow: 0 0 0 2px white, 0 4px 12px rgba(0,0,0,0.15);
+            border: 2px solid ${colors.primary};
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             flex-shrink: 0;
         }
 
@@ -125,25 +159,53 @@ export function generateImpactResumeHTML(data: any): string {
             display: inline-block;
         }
         
-        /* Main Content Grid - Smaller Sidebar */
+        /* Main Content Layout - Two Column with Flexbox */
+        .content-wrapper {
+            padding: 6mm 12mm 10mm 12mm;
+        }
+
         .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 45mm;
+            display: flex;
             gap: 6mm;
-            padding: 5mm 12mm 8mm 12mm;
+            align-items: flex-start;
         }
-        
+
         .left-column {
-            grid-column: 1;
+            flex: 1;
+            min-width: 0;
+            padding-top: 0;
         }
-        
+
         .right-column {
-            grid-column: 2;
+            width: 45mm;
+            flex-shrink: 0;
+            padding-top: 0;
         }
-        
-        /* Summary goes full width */
+
+        /* Add top margin to sections that appear at top of new page */
+        .left-column > .section:first-child,
+        .right-column > .section:first-child {
+            margin-top: 0;
+        }
+
+        /* Ensure proper spacing when page breaks occur */
+        @media print {
+            .left-column, .right-column {
+                padding-top: 6mm;
+            }
+
+            .content-grid {
+                padding-top: 0;
+            }
+        }
+
+        /* Full-width sections */
+        .full-width {
+            width: 100%;
+            margin-bottom: 4mm;
+        }
+
         .summary-section {
-            grid-column: 1 / -1;
             margin-bottom: 4mm;
         }
         
@@ -485,11 +547,9 @@ export function generateImpactResumeHTML(data: any): string {
         
         /* Custom sections */
         .custom-item {
-            margin-bottom: 4mm;
-            padding: 3mm;
-            background: linear-gradient(135deg, #fefce8, #ffffff);
-            border-left: 3px solid ${colors.warning};
-            border-radius: 0 6px 6px 0;
+            margin-bottom: 3mm;
+            padding-left: 3mm;
+            border-left: 2px solid ${colors.warning};
         }
         
         /* Languages */
@@ -535,10 +595,12 @@ export function generateImpactResumeHTML(data: any): string {
         <!-- Compact Header -->
         <div class="hero-header">
             <div class="header-content">
-                ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
-                <div class="name-section">
-                    <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
-                    ${professionalTitle ? `<div class="title" data-section="title">${professionalTitle}</div>` : ''}
+                <div style="display: flex; align-items: center; gap: 4mm; flex: 1;">
+                    ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
+                    <div class="name-section">
+                        <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
+                        ${professionalTitle ? `<div class="title" data-section="title">${professionalTitle}</div>` : ''}
+                    </div>
                 </div>
                 <div class="contact-grid">
                     ${personalInfo.email ? `
@@ -589,19 +651,21 @@ export function generateImpactResumeHTML(data: any): string {
             </div>
         </div>
         
-        <!-- Content Grid -->
-        <div class="content-grid">
+        <!-- Content Wrapper -->
+        <div class="content-wrapper">
             ${enableProfessionalSummary && professionalSummary ? `
             <!-- Summary - Full Width -->
-            <section class="full-width" data-section="summary">
+            <section class="full-width summary-section" data-section="summary">
                 <div class="summary-box">
                     <div class="summary-text">${professionalSummary}</div>
                 </div>
             </section>
             ` : ''}
-            
-            <!-- Left Column -->
-            <div class="left-column">
+
+            <!-- Two Column Layout -->
+            <div class="content-grid">
+                <!-- Left Column -->
+                <div class="left-column">
                 ${experience.length > 0 ? `
                 <!-- Experience Section -->
                 <section class="section experience-section" data-section="experience">
@@ -772,44 +836,42 @@ export function generateImpactResumeHTML(data: any): string {
                     `).join('')}
                 </section>
                 ` : ''}
-            </div>
-            
-            ${customSections && customSections.length > 0 ? `
-                ${customSections.map(section => `
-                <!-- Custom Section - Full Width -->
-                <section class="section full-width">
-                    <div class="section-header" style="border-color: ${colors.warning};">
-                        <div class="section-icon" style="background: linear-gradient(135deg, ${colors.warning}, ${colors.secondary});">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 3l1.912 5.813 6.088.437-4.55 4.05L17.362 19l-5.362-2.9L6.638 19l1.912-5.7L4 9.25l6.088-.437z"/>
-                            </svg>
+
+                ${customSections && customSections.length > 0 ? `
+                    ${customSections.map(section => `
+                    <!-- Custom Section -->
+                    <section class="section">
+                        <div class="section-header" style="border-color: ${colors.warning};">
+                            <div class="section-icon" style="background: linear-gradient(135deg, ${colors.warning}, ${colors.secondary});">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 3l1.912 5.813 6.088.437-4.55 4.05L17.362 19l-5.362-2.9L6.638 19l1.912-5.7L4 9.25l6.088-.437z"/>
+                                </svg>
+                            </div>
+                            <h2 class="section-title" style="color: ${colors.warning};">${section.title}</h2>
                         </div>
-                        <h2 class="section-title" style="color: ${colors.warning};">${section.title}</h2>
-                    </div>
-                    ${section.items.map(item => `
-                        <div class="custom-item">
-                            ${item.title || item.field1 ? `
-                                <div style="font-size: 11px; font-weight: 700; color: #1e293b; margin-bottom: 1mm;">
-                                    ${item.title || item.field1}
-                                    ${item.date || item.field3 ? `<span style="float: right; font-size: 9px; color: ${colors.warning}; font-weight: 600;">${item.date || item.field3}</span>` : ''}
-                                </div>
-                            ` : ''}
-                            ${item.subtitle || item.field2 ? `
-                                <div style="font-size: 10px; color: #64748b; margin-bottom: 1mm;">${item.subtitle || item.field2}</div>
-                            ` : ''}
-                            ${item.description || item.field4 ? `
-                                <div style="font-size: 10px; color: #475569; line-height: 1.5;">${item.description || item.field4}</div>
-                            ` : ''}
-                            ${item.details && item.details.length > 0 ? `
-                                <ul class="achievements" style="margin-top: 2mm;">
-                                    ${item.details.map(detail => `<li>${detail}</li>`).join('')}
-                                </ul>
-                            ` : ''}
-                        </div>
+                        ${section.items.map(item => `
+                            <div class="custom-item">
+                                ${item.title || item.field1 ? `
+                                    <div style="font-size: 10px; font-weight: 700; color: #1e293b; margin-bottom: 1mm;">
+                                        ${item.title || item.field1}
+                                    </div>
+                                ` : ''}
+                                ${item.date || item.field3 ? `
+                                    <div style="font-size: 9px; color: ${colors.warning}; font-weight: 600; margin-bottom: 0.5mm;">${item.date || item.field3}</div>
+                                ` : ''}
+                                ${item.subtitle || item.field2 ? `
+                                    <div style="font-size: 9px; color: #64748b; margin-bottom: 1mm;">${item.subtitle || item.field2}</div>
+                                ` : ''}
+                                ${item.description || item.field4 ? `
+                                    <div style="font-size: 9px; color: #475569; line-height: 1.4;">${item.description || item.field4}</div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </section>
                     `).join('')}
-                </section>
-                `).join('')}
-            ` : ''}
+                ` : ''}
+                </div>
+            </div>
         </div>
     </div>
 </body>

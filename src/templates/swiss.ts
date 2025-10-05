@@ -23,8 +23,12 @@ export function generateSwissResumeHTML(data: any): string {
             --border-color: #e2e8f0;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: A4; margin: 15mm 0 20mm 0; }
-        @page:first { margin: 0; }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background: var(--bg-primary);
@@ -36,44 +40,74 @@ export function generateSwissResumeHTML(data: any): string {
             width: 100%;
             overflow-x: hidden;
         }
+
         .resume-container {
             width: 100%;
             max-width: none;
-            min-height: 297mm;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Sidebar background that extends full height */
+        .resume-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 32%;
+            height: 100%;
+            background: #fafbfc;
+            z-index: 0;
+        }
+
+        /* Content wrapper for grid */
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
             display: grid;
             grid-template-columns: 32% 2% 66%;
-            padding: 0;
-            margin: 0;
+            min-height: 100vh;
         }
-        
+
         /* For PDF generation, use exact measurements */
         @media print {
-            .resume-container {
+            .resume-container::before {
+                width: 68mm;
+            }
+
+            .content-wrapper {
                 width: 210mm;
                 max-width: 210mm;
                 grid-template-columns: 68mm 4mm 138mm;
                 margin: 0 auto;
             }
         }
-        
+
         /* Page break optimization */
         .experience-item, .project-item, .education-item, .certification-item {
             page-break-inside: avoid;
             break-inside: avoid;
         }
-        
+
         .section {
             page-break-inside: avoid;
             break-inside: avoid;
         }
-        
+
+        .section-header {
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+
         .sidebar {
             orphans: 3;
             widows: 3;
-            background: #fafbfc;
-            padding: 6mm 5mm;
+            padding: 8mm 5mm;
             grid-column: 1;
+            position: relative;
+            z-index: 2;
         }
+
         .profile-photo {
             width: 100%;
             max-width: 50mm;
@@ -85,17 +119,21 @@ export function generateSwissResumeHTML(data: any): string {
             border: 2px solid var(--primary-color);
             box-shadow: 0 2mm 6mm rgba(59, 130, 246, 0.15);
         }
-        
+
         .swiss-gutter {
             grid-column: 2;
-            background: var(--bg-primary);
+            background: transparent;
+            position: relative;
+            z-index: 2;
         }
-        
+
         .main-content {
             orphans: 3;
             widows: 3;
-            padding: 6mm 6mm 6mm 0;
+            padding: 8mm 8mm 8mm 0;
             grid-column: 3;
+            position: relative;
+            z-index: 2;
         }
         .name {
             font-size: 18px;
@@ -317,7 +355,8 @@ export function generateSwissResumeHTML(data: any): string {
 </head>
 <body>
     <div class="resume-container">
-        <aside class="sidebar">
+        <div class="content-wrapper">
+            <aside class="sidebar">
             ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
             <header>
                 <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
@@ -476,6 +515,7 @@ export function generateSwissResumeHTML(data: any): string {
             ` : ''}
 
         </main>
+        </div>
     </div>
 </body>
 </html>`;

@@ -65,6 +65,7 @@ import { cn } from '@/lib/utils'
 import { SkillsAnalysisPanel } from './SkillsAnalysisPanel'
 import { CompanyIntelligencePanel } from './CompanyIntelligencePanel'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
+import { AITailorButton } from '@/components/ui/AITailorButton'
 import { useGeoEnhancedJobs } from '@/lib/hooks/useGeoEnhancedJobs'
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker'
 import type { StudentProfile } from '@/lib/types/studentProfile'
@@ -699,106 +700,100 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
             />
           </div>
 
-          {/* Elegant Filter Row */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-gray-500">Filter by:</span>
-            
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-              <Laptop className="w-3 h-3 text-gray-400" />
-              <select
-                value={selectedWorkMode}
-                onChange={(e) => setSelectedWorkMode(e.target.value)}
-                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[80px]"
-              >
-                <option value="all">Any mode</option>
-                <option value="remote">Remote</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="onsite">On-site</option>
-              </select>
-            </div>
+          {/* Modern Filter Row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-gray-600">Filter by:</span>
 
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-              <Briefcase className="w-3 h-3 text-gray-400" />
-              <select
-                value={selectedJobType}
-                onChange={(e) => setSelectedJobType(e.target.value)}
-                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[70px]"
-              >
-                <option value="all">All types</option>
-                <option value="internship">Internships</option>
-                <option value="werkstudent">Werkstudent</option>
-              </select>
-            </div>
+            {/* Work Mode Filter */}
+            <Select value={selectedWorkMode} onValueChange={setSelectedWorkMode}>
+              <SelectTrigger className="h-9 w-[140px] bg-white border-gray-200 text-sm">
+                <div className="flex items-center gap-2">
+                  <Laptop className="w-4 h-4 text-gray-500" />
+                  <SelectValue placeholder="Any mode" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any mode</SelectItem>
+                <SelectItem value="remote">Remote</SelectItem>
+                <SelectItem value="hybrid">Hybrid</SelectItem>
+                <SelectItem value="onsite">On-site</SelectItem>
+              </SelectContent>
+            </Select>
 
+            {/* Job Type Filter */}
+            <Select value={selectedJobType} onValueChange={setSelectedJobType}>
+              <SelectTrigger className="h-9 w-[160px] bg-white border-gray-200 text-sm">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-gray-500" />
+                  <SelectValue placeholder="All types" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="internship">Internships</SelectItem>
+                <SelectItem value="werkstudent">Werkstudent</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Location Input */}
             <div className="relative">
-              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-                <MapPin className="w-3 h-3 text-gray-400" />
+              <div className="flex items-center gap-2 h-9 bg-white border border-gray-200 rounded-md px-3 min-w-[220px]">
+                <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <input
                   type="text"
-                  placeholder="e.g. Berlin, Munich, Frankfurt..."
+                  placeholder="e.g. Berlin, Munich, Frankfurt."
                   value={locationSearch}
                   onChange={(e) => {
                     setLocationSearch(e.target.value);
                     if (e.target.value.trim()) {
-                      setSelectedLocation('all'); // Clear selection when typing
+                      setSelectedLocation('all');
                     }
                   }}
-                  className="text-xs bg-transparent border-none outline-none text-gray-700 min-w-[120px] placeholder-gray-400"
+                  className="flex-1 text-sm bg-transparent border-none outline-none text-gray-700 placeholder-gray-400"
                 />
                 {locationSearch && (
                   <button
                     onClick={() => setLocationSearch('')}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
-              
-              {/* Quick location suggestions */}
-              {!locationSearch && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm py-1 z-10 hidden group-hover:block">
-                  {['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne'].map(city => (
-                    <button
-                      key={city}
-                      onClick={() => setLocationSearch(city)}
-                      className="block w-full text-left px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                    >
-                      {city}
-                    </button>
-                  ))}
+            </div>
+
+            {/* Distance Filter */}
+            <Select value={String(distanceRadius)} onValueChange={(val) => setDistanceRadius(Number(val))}>
+              <SelectTrigger className="h-9 w-[100px] bg-white border-gray-200 text-sm">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-gray-500" />
+                  <SelectValue />
                 </div>
-              )}
-            </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="20">20km</SelectItem>
+                <SelectItem value="50">50km</SelectItem>
+                <SelectItem value="100">100km</SelectItem>
+                <SelectItem value="200">200km</SelectItem>
+                <SelectItem value="500">500km</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-              <Target className="w-3 h-3 text-gray-400" />
-              <select
-                value={distanceRadius}
-                onChange={(e) => setDistanceRadius(Number(e.target.value))}
-                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[50px]"
-              >
-                <option value={20}>20km</option>
-                <option value={50}>50km</option>
-                <option value={100}>100km</option>
-                <option value={200}>200km</option>
-                <option value={500}>500km</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1.5">
-              <Globe2 className="w-3 h-3 text-gray-400" />
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="text-xs bg-transparent border-none outline-none cursor-pointer text-gray-700 min-w-[90px]"
-              >
-                <option value="all">Any language</option>
-                <option value="EN">English only</option>
-                <option value="DE">German required</option>
-                <option value="BOTH">Both required</option>
-              </select>
-            </div>
+            {/* Language Filter */}
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+              <SelectTrigger className="h-9 w-[150px] bg-white border-gray-200 text-sm">
+                <div className="flex items-center gap-2">
+                  <Globe2 className="w-4 h-4 text-gray-500" />
+                  <SelectValue placeholder="Any language" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any language</SelectItem>
+                <SelectItem value="EN">English only</SelectItem>
+                <SelectItem value="DE">German required</SelectItem>
+                <SelectItem value="BOTH">Both required</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -1115,15 +1110,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
           {selectedJob ? (
             <div className="h-full">
               {/* Job Header - Enhanced with match score emphasis */}
-              <motion.div 
-                className={cn(
-                  "border-b border-gray-200 p-3 relative overflow-hidden",
-                  selectedJob.match_score && selectedJob.match_score >= 85 
-                    ? "bg-gradient-to-r from-emerald-50/80 to-green-50/80" 
-                    : selectedJob.match_score && selectedJob.match_score >= 70
-                    ? "bg-gradient-to-r from-blue-50/80 to-indigo-50/80"
-                    : "bg-gradient-to-r from-gray-50 to-blue-50"
-                )}
+              <motion.div
+                className="border-b border-gray-200 p-3 relative overflow-hidden bg-white"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -1259,27 +1247,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                   {/* Action Buttons - Compact */}
                   <div className="ml-3 flex gap-1 flex-shrink-0">
-                    {/* Tailor Application Button - Prominent */}
-                    <Button
-                      size="sm"
-                      className="gap-1.5 h-9 text-sm bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-md font-semibold px-4 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105"
-                      onClick={() => router.push(`/jobs/${selectedJob.id}/tailor`)}
-                      title="Tailor resume + cover letter for this job"
-                    >
-                      <Sparkles className="w-4 h-4 animate-pulse" />
-                      AI Tailor
-                    </Button>
-                    
-                    {(selectedJob.application_url || selectedJob.linkedin_url) && (
-                      <Button 
-                        size="sm"
-                        className="gap-1 h-9 text-sm px-4"
-                        onClick={() => window.open(selectedJob.application_url || selectedJob.linkedin_url!, '_blank')}
-                      >
-                        Apply
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    )}
+                    <AITailorButton jobId={selectedJob.id} />
+
                     <Button
                       variant={savedJobs.has(selectedJob.id) ? "default" : "outline"}
                       size="sm"
@@ -1651,8 +1620,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     
                     {/* Company Intelligence Panel - Moved below skills */}
                     <div className="transform scale-90 origin-top">
-                      <CompanyIntelligencePanel 
-                        company={selectedJob.company} 
+                      <CompanyIntelligencePanel
+                        company={selectedJob.company}
                         jobSpecificInsights={{
                           hiring_manager: selectedJob.hiring_manager,
                           additional_insights: selectedJob.additional_insights
@@ -1661,6 +1630,19 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     </div>
                   </div>
                 </div>
+
+                {/* Apply Button - Bottom of Card */}
+                {(selectedJob.application_url || selectedJob.linkedin_url) && (
+                  <div className="px-3 pb-3 pt-0">
+                    <Button
+                      className="w-full gap-2 h-11 text-base font-medium"
+                      onClick={() => window.open(selectedJob.application_url || selectedJob.linkedin_url!, '_blank')}
+                    >
+                      Apply on Company Website
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

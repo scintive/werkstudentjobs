@@ -23,6 +23,8 @@ export default function LoginPage() {
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) router.replace('/dashboard')
+    }).catch(() => {
+      // Suppress auth errors during navigation
     })
   }, [router])
 

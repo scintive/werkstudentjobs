@@ -422,68 +422,71 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
   const isEstimated = !(Number.isFinite(serverScore) && serverScore > 0);
 
   return (
-    <div className="bg-white/90 border border-gray-200 rounded-xl p-4 shadow-sm">
+    <div className="card card-elevated" style={{ padding: '2rem' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-blue-600 text-white rounded-md flex items-center justify-center">
-            <Target className="w-3.5 h-3.5" />
+      <div className="card-header" style={{ paddingBottom: '1.5rem', marginBottom: '2rem' }}>
+        <div className="flex items-center gap-4 flex-1">
+          <div className="icon-container icon-container-lg icon-container-primary">
+            <Target className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-[11px] text-gray-500">AI Strategy One‑Pager</div>
-            <div className="text-sm font-semibold text-gray-900 leading-tight line-clamp-1">{jobData?.title}</div>
+            <div className="text-heading-2">Job Analysis</div>
+            <div className="text-caption mt-1">AI-powered task breakdown and skill matching</div>
           </div>
         </div>
-        <div className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200" title={isEstimated ? 'Estimated from task analysis' : 'Server match score'}>
-          {matchScore}% match{isEstimated ? '' : ''}
+        <div className="badge badge-success badge-lg" title={isEstimated ? 'Estimated from task analysis' : 'Server match score'}>
+          {matchScore}% match
         </div>
       </div>
 
-      {/* Dense grid: 3 columns on xl (2 columns tasks + 1 evidence) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+      {/* Grid layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Tasks grid (spans two columns on xl) */}
-        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5">
           {taskCards.map((c, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
-              className="border border-gray-200 rounded-lg p-2.5 hover:shadow-sm transition-shadow group min-w-0 overflow-hidden"
+              className="card"
+              style={{ padding: '1.25rem' }}
             >
-              <div className="flex items-center justify-between gap-2 mb-1 min-w-0">
-                <div className="text-[12px] text-gray-900 font-medium leading-snug line-clamp-2 break-words overflow-hidden flex-1 w-0">{c.task}</div>
-                <div className="text-[11px] font-bold text-gray-700">{c.pct}%</div>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="text-body-large font-semibold leading-snug line-clamp-2 flex-1">{c.task}</div>
+                <div className="text-lg font-bold text-blue-600 flex-shrink-0">{c.pct}%</div>
               </div>
-              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${c.pct>=80? 'bg-green-500': c.pct>=60? 'bg-blue-500': c.pct>=40? 'bg-yellow-500':'bg-red-500'}`}
-                  style={{ width: `${c.pct}%` }}
-                />
+              <div className="progress-bar mb-4">
+                <div className="progress-bar-fill" style={{ width: `${c.pct}%` }} />
               </div>
               {aiTasks[i]?.task_explainer && (
-                <div className="mt-1 text-[11px] text-gray-600 leading-snug line-clamp-3 break-words overflow-hidden">{aiTasks[i]!.task_explainer}</div>
+                <div className="text-body-small mb-4 leading-relaxed line-clamp-3">{aiTasks[i]!.task_explainer}</div>
               )}
-              <div className="mt-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-                  {(verifiedLinks[i] || c.learn).slice(0,2).map((l, idx2) => (
-                    <a key={`${l.url}-${i}-${idx2}`} href={l.url} target="_blank" rel="noopener noreferrer" title={verifyOk[l.url] ? 'Verified link' : undefined} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border break-words max-w-[12rem] truncate whitespace-nowrap align-middle ${verifyOk[l.url] ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                      {l.label}
-                      {verifyOk[l.url] && <CheckCircle className="w-3 h-3 text-emerald-500" />}
-                    </a>
-                  ))}
-                  {isVerifying && (
-                    <div className="ml-1 w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" aria-label="Verifying links" />
-                  )}
-                </div>
+              <div className="flex items-center gap-2 flex-wrap mb-4">
+                {(verifiedLinks[i] || c.learn).slice(0,2).map((l, idx2) => (
+                  <a
+                    key={`${l.url}-${i}-${idx2}`}
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="badge badge-emerald"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    {l.label}
+                    {verifyOk[l.url] && <CheckCircle className="w-3.5 h-3.5" />}
+                  </a>
+                ))}
+                {isVerifying && (
+                  <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" aria-label="Verifying links" />
+                )}
               </div>
-              {/* Evidence tooltip on hover */}
+              {/* Evidence info box */}
               {(aiTasks[i]?.user_alignment || c.evidence.length > 0) && (
-                <div className="mt-1.5 text-[10px] text-gray-500 flex items-center gap-1 min-w-0 overflow-hidden">
-                  <Info className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                  <span className="block w-full break-words overflow-hidden line-clamp-2" title={aiTasks[i]?.user_alignment || c.evidence[0]}>
+                <div className="info-box info-box-primary">
+                  <Info className="info-box-icon" />
+                  <div className="info-box-content line-clamp-3">
                     {aiTasks[i]?.user_alignment || c.evidence[0]}
-                  </span>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -491,77 +494,88 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
         </div>
 
         {/* Evidence column */}
-        <div className="xl:col-span-1 border border-gray-200 rounded-lg p-3 xl:border-l xl:pl-4">
-          <div className="space-y-2">
-            <div className="bg-gray-50/60 border border-gray-200 rounded-md p-3 hover:shadow-sm transition-shadow">
-              <div className="flex items-center gap-2 mb-2">
-                <Briefcase className="w-4 h-4 text-gray-700" />
-                <div className="text-[12px] font-semibold text-gray-800">Relevant Experience</div>
+        <div className="xl:col-span-1 space-y-5">
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="icon-container icon-container-md icon-container-primary">
+                <Briefcase className="w-5 h-5" />
               </div>
-              <ul className="space-y-2">
-                {(userProfile?.experience || []).slice(0,3).map((e: any, idx: number) => {
-                  const first = stripTags(e?.achievements?.[0] || e?.description || '');
-                  // Strict relevance: only derive a relation if overlap is strong (>50%)
-                  const maybe = bestRelatedTask(first || `${e?.position} ${e?.company}`, taskCards.map(t => t.task));
-                  const related = maybe && jaccard(new Set(norm(maybe).split(' ').filter(w => w.length>3)), new Set((first?norm(first):'').split(' ').filter(w => w.length>3))) > 0.5 ? maybe : null;
-                  return (
-                    <li key={idx} className="text-[12px] text-gray-800 leading-snug">
-                      <div className="font-semibold text-gray-900">{e?.position} <span className="text-gray-500">@ {e?.company}</span></div>
-                      {first && <div className="text-[12px] text-gray-700 line-clamp-2">{first}</div>}
-                      {related && (
-                        <div className="mt-1">
-                          <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] border border-blue-200">relates: {related}</span>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-                {(!userProfile?.experience || userProfile.experience.length===0) && (
-                  <li className="text-[12px] text-gray-500">No prior experience listed</li>
-                )}
-              </ul>
+              <div className="text-heading-4">Relevant Experience</div>
             </div>
+            <ul className="space-y-4">
+              {(userProfile?.experience || []).slice(0,3).map((e: any, idx: number) => {
+                const first = stripTags(e?.achievements?.[0] || e?.description || '');
+                // Strict relevance: only derive a relation if overlap is strong (>50%)
+                const maybe = bestRelatedTask(first || `${e?.position} ${e?.company}`, taskCards.map(t => t.task));
+                const related = maybe && jaccard(new Set(norm(maybe).split(' ').filter(w => w.length>3)), new Set((first?norm(first):'').split(' ').filter(w => w.length>3))) > 0.5 ? maybe : null;
+                return (
+                  <li key={idx} className="text-body-small leading-relaxed">
+                    <div className="text-label">{e?.position}</div>
+                    <div className="text-caption mb-2">@ {e?.company}</div>
+                    {first && <div className="text-body-small line-clamp-2 mb-2 leading-relaxed">{first}</div>}
+                    {related && (
+                      <span className="badge badge-primary badge-sm">
+                        Relates to: {related}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+              {(!userProfile?.experience || userProfile.experience.length===0) && (
+                <li className="text-caption">No prior experience listed</li>
+              )}
+            </ul>
+          </div>
 
-            <div className="bg-gray-50/60 border border-gray-200 rounded-md p-3 hover:shadow-sm transition-shadow">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4 text-gray-700" />
-                <div className="text-[12px] font-semibold text-gray-800">Projects</div>
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="icon-container icon-container-md icon-container-success">
+                <FileText className="w-5 h-5" />
               </div>
-              <ul className="space-y-2">
-                {(userProfile?.projects || []).slice(0,3).map((p: any, idx: number) => {
-                  const desc = stripTags(p?.description || '');
-                  const related = bestRelatedTask(desc || p?.name || '', taskCards.map(t => t.task));
-                  return (
-                    <li key={idx} className="text-[12px] text-gray-800 leading-snug">
-                      <div className="font-semibold text-gray-900">{p?.name}</div>
-                      {desc && <div className="text-[12px] text-gray-700 line-clamp-2">{desc}</div>}
-                      {related && (
-                        <div className="mt-1">
-                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] border border-emerald-200">relates: {related}</span>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-                {(!userProfile?.projects || userProfile.projects.length===0) && (
-                  <li className="text-[12px] text-gray-500">No projects listed</li>
-                )}
-              </ul>
+              <div className="text-heading-4">Projects</div>
             </div>
+            <ul className="space-y-4">
+              {(userProfile?.projects || []).slice(0,3).map((p: any, idx: number) => {
+                const desc = stripTags(p?.description || '');
+                const related = bestRelatedTask(desc || p?.name || '', taskCards.map(t => t.task));
+                return (
+                  <li key={idx} className="text-body-small leading-relaxed">
+                    <div className="text-label">{p?.name}</div>
+                    {desc && <div className="text-body-small line-clamp-2 mb-2 leading-relaxed">{desc}</div>}
+                    {related && (
+                      <span className="badge badge-emerald badge-sm">
+                        Relates to: {related}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+              {(!userProfile?.projects || userProfile.projects.length===0) && (
+                <li className="text-caption">No projects listed</li>
+              )}
+            </ul>
+          </div>
 
-            <div className="bg-gray-50/60 border border-gray-200 rounded-md p-3 hover:shadow-sm transition-shadow">
-              <div className="flex items-center gap-2 mb-2">
-                <Award className="w-4 h-4 text-gray-700" />
-                <div className="text-[12px] font-semibold text-gray-800">Certifications</div>
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="icon-container icon-container-md icon-container-purple">
+                <Award className="w-5 h-5" />
               </div>
-              <div className="flex flex-wrap gap-1">
-                {(userProfile?.certifications || []).slice(0,4).map((c: any, idx: number) => (
-                  <span key={idx} className="px-1.5 py-0.5 bg-white text-gray-800 rounded-full text-[10px] border border-gray-200" title={c?.issuer || ''}>{c?.name}</span>
-                ))}
-                {(!userProfile?.certifications || userProfile.certifications.length===0) && (
-                  <span className="text-[12px] text-gray-500">No certifications</span>
-                )}
-              </div>
+              <div className="text-heading-4">Certifications</div>
+            </div>
+            <div className="space-y-2">
+              {(userProfile?.certifications || []).slice(0,4).map((c: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 flex-shrink-0" />
+                  <div>
+                    <div className="text-body font-medium text-gray-900">{c?.name}</div>
+                    {c?.issuer && <div className="text-caption text-gray-500">{c?.issuer} {c?.date && `• ${c?.date}`}</div>}
+                  </div>
+                </div>
+              ))}
+              {(!userProfile?.certifications || userProfile.certifications.length===0) && (
+                <span className="text-caption">No certifications</span>
+              )}
             </div>
           </div>
         </div>
