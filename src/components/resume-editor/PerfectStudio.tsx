@@ -557,6 +557,7 @@ interface PerfectStudioProps {
   jobId?: string
   jobData?: any
   baseResumeId?: string
+  strategy?: any
 }
 
 export function PerfectStudio({
@@ -565,7 +566,8 @@ export function PerfectStudio({
   variantId,
   jobId,
   jobData,
-  baseResumeId
+  baseResumeId,
+  strategy
 }: PerfectStudioProps) {
   const { resumeData } = useSupabaseResumeContext()
   const {
@@ -1235,6 +1237,8 @@ export function PerfectStudio({
         activeTemplate={activeTemplate}
         onChange={(tpl) => setActiveTemplate(tpl)}
         onExport={exportToPDF}
+        resumeId={resumeData?.id}
+        variantId={variantId}
       />
 
       {/* Main Editor Layout */}
@@ -1396,7 +1400,7 @@ export function PerfectStudio({
                   }}
                   organizedSkills={organizedSkills}
                   jobData={jobData}
-                  strategy={jobData ? { ats_keywords: jobData.keywords || [] } : undefined}
+                  strategy={strategy || (jobData ? { ats_keywords: jobData.keywords || [] } : undefined)}
                   aiMode={true}
                 />
               ) : (

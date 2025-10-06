@@ -26,7 +26,7 @@ export function generateSwissResumeHTML(data: any): string {
 
         @page {
             size: A4;
-            margin: 0;
+            margin: 8mm 0 8mm 0;
         }
 
         body {
@@ -48,16 +48,27 @@ export function generateSwissResumeHTML(data: any): string {
             position: relative;
         }
 
-        /* Sidebar background that extends full height */
+        /* Sidebar background that extends across all pages */
+        @page {
+            background: linear-gradient(90deg, #fafbfc 0%, #fafbfc 32.5%, transparent 32.5%);
+        }
+
+        /* Fallback for non-PDF */
         .resume-container::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             width: 32%;
-            height: 100%;
+            min-height: 100%;
             background: #fafbfc;
             z-index: 0;
+        }
+
+        @media print {
+            @page {
+                background: linear-gradient(90deg, #fafbfc 0%, #fafbfc 68mm, transparent 68mm);
+            }
         }
 
         /* Content wrapper for grid */
@@ -71,10 +82,6 @@ export function generateSwissResumeHTML(data: any): string {
 
         /* For PDF generation, use exact measurements */
         @media print {
-            .resume-container::before {
-                width: 68mm;
-            }
-
             .content-wrapper {
                 width: 210mm;
                 max-width: 210mm;
@@ -102,7 +109,7 @@ export function generateSwissResumeHTML(data: any): string {
         .sidebar {
             orphans: 3;
             widows: 3;
-            padding: 8mm 5mm;
+            padding: 0 5mm;
             grid-column: 1;
             position: relative;
             z-index: 2;
@@ -130,7 +137,7 @@ export function generateSwissResumeHTML(data: any): string {
         .main-content {
             orphans: 3;
             widows: 3;
-            padding: 8mm 8mm 8mm 0;
+            padding: 0 8mm 0 0;
             grid-column: 3;
             position: relative;
             z-index: 2;

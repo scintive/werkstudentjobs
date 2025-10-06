@@ -173,12 +173,46 @@ export async function POST(request: NextRequest) {
     
     const profileHash = generateProfileHash(profileData);
     const cacheKey = `student_v3_${job_id}_${profileHash}`; // v3 to force cache refresh with real data
-    
-    // DISABLE CACHE FOR REAL RESUME DATA - Force regeneration to ensure real analysis
-    console.log('🎓 STUDENT STRATEGY: Cache disabled - generating fresh analysis with real data');
-    
-    // Clear any existing cache for this job to force real data analysis
-    studentStrategyCache.delete(cacheKey);
+
+    // Get user session/email for DB cache lookup
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get('user_session')?.value;
+    const userEmail = cookieStore.get('user_email')?.value;
+
+    // Check Supabase cache first (7-day TTL)
+    console.log('🎓 STUDENT STRATEGY: Checking Supabase cache...');
+
+    const { data: cachedStrategy, error: cacheError } = await supabase
+      .from('job_analysis_cache')
+      .select('*')
+      .eq('job_id', job_id)
+      .eq('analysis_type', 'student_strategy')
+      .eq('profile_hash', profileHash)
+      .or(sessionId ? `user_session_id.eq.${sessionId}` : `user_email.eq.${userEmail}`)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!cacheError && cachedStrategy?.strategy_data) {
+      console.log('🎓 STUDENT STRATEGY: Found cached strategy in Supabase');
+      return NextResponse.json({
+        success: true,
+        strategy: cachedStrategy.strategy_data,
+        cached: true,
+        cached_at: cachedStrategy.created_at,
+        context: {
+          job_title: jobData.title,
+          company: jobData.company_name,
+          is_werkstudent: jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent'),
+          coursework_matches: cachedStrategy.strategy_data.coursework_alignment?.length || 0,
+          project_matches: cachedStrategy.strategy_data.project_alignment?.length || 0,
+          eligibility_score: Object.values(cachedStrategy.strategy_data.eligibility_checklist || {}).filter((v: any) => v).length
+        }
+      });
+    }
+
+    console.log('🎓 STUDENT STRATEGY: No cache found - generating fresh analysis');
     
     // Create compact context for student-focused AI analysis
     const compactContext = {
@@ -274,10 +308,18 @@ export async function POST(request: NextRequest) {
 💡 TASK-BY-TASK ANALYSIS (RICH OUTPUT):
 For each job responsibility, provide:
 1) task_explainer: a crisp 1–2 sentence explanation of what the task actually entails in this role/company (no fluff, no generic definitions)
-2) compatibility_score: realistic 0–100, based on:
+2) compatibility_score: INTEGER from 0-100 (NOT decimal), score generously based on transferable skills:
    - Certifications (weight: 40% if directly relevant)
-   - Experience (weight: 35% for relevant roles/tasks)
-   - Projects/Skills (weight: 25% for demonstrated abilities)
+   - Experience (weight: 35% for relevant roles/tasks, COUNT WERKSTUDENT/INTERN EXPERIENCE)
+   - Projects/Skills (weight: 25% for demonstrated abilities, COUNT ACADEMIC PROJECTS)
+
+   SCORING EXAMPLES (use as reference):
+   - 80-100: Direct experience with this exact task (e.g., "Built automation system" for "Automation" task)
+   - 60-79: Related experience that transfers well (e.g., "UI/UX design" for "Content design" task)
+   - 40-59: Some relevant skills but not direct experience (e.g., "Project management" for "Program planning")
+   - 20-39: Foundational skills present, significant gap (e.g., "Communication skills" for "Marketing strategy")
+   - 0-19: No relevant experience or skills
+
 3) user_alignment: a specific, organic sentence tying user's best relevant certification/experience/project to this task (reference the exact item name). If nothing truly relevant exists, say so clearly (e.g., "No direct WordPress experience")
 4) learning_paths: concrete actions grouped as { quick_wins, certifications, deepening } with DIRECT LINKS
    - Shape for each list: [{ label: string, url: string }]
@@ -409,7 +451,7 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
         ],
         model: 'gpt-4o-mini', // Using GPT-4o-mini for better analysis
         temperature: 0.3,
-        max_tokens: 8000  // Increased to ensure complete response with all task details
+        max_tokens: 12000  // Increased to ensure complete response with all task details
       });
       
       const rawContent = aiResponse.choices?.[0]?.message?.content || '{}';
@@ -458,9 +500,58 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
       try {
         strategyData = JSON.parse(cleanedContent);
       } catch (parseError) {
-        console.error('🎓 STUDENT STRATEGY: JSON parsing failed even after cleanup:', parseError);
-        console.error('🎓 STUDENT STRATEGY: Cleaned content:', cleanedContent.slice(0, 500));
-        throw new Error('Failed to parse AI response as JSON');
+        console.error('🎓 STUDENT STRATEGY: JSON parsing failed, attempting manual extraction');
+
+        // Try to extract at least the job_task_analysis section
+        try {
+          const taskAnalysisMatch = cleanedContent.match(/"job_task_analysis":\s*\[([^\]]+)\]/s);
+          if (taskAnalysisMatch) {
+            // Build minimal valid JSON with just the tasks
+            const minimalJson = `{
+              "user_profile_summary": {"name": "Student", "current_position": "Student", "key_strengths": [], "experience_level": "junior"},
+              "job_task_analysis": [${taskAnalysisMatch[1]}],
+              "skills_analysis": {"matched_skills": [], "skill_gaps": [], "skills_to_remove": [], "skills_to_add": []},
+              "content_suggestions": {"experience_rewrites": [], "project_rewrites": []},
+              "win_strategy": {"main_positioning": "", "key_differentiators": [], "interview_talking_points": [], "application_strategy": ""},
+              "eligibility_checklist": {},
+              "coursework_alignment": [],
+              "project_alignment": [],
+              "ats_keywords": [],
+              "german_keywords": []
+            }`;
+            strategyData = JSON.parse(minimalJson);
+            console.log('🎓 STUDENT STRATEGY: Recovered partial data successfully');
+          } else {
+            // If we can't extract anything, return minimal structure
+            strategyData = {
+              user_profile_summary: { name: "Student", current_position: "Student", key_strengths: [], experience_level: "junior" },
+              job_task_analysis: [],
+              skills_analysis: { matched_skills: [], skill_gaps: [], skills_to_remove: [], skills_to_add: [] },
+              content_suggestions: { experience_rewrites: [], project_rewrites: [] },
+              win_strategy: { main_positioning: "", key_differentiators: [], interview_talking_points: [], application_strategy: "" },
+              eligibility_checklist: {},
+              coursework_alignment: [],
+              project_alignment: [],
+              ats_keywords: [],
+              german_keywords: []
+            };
+            console.log('🎓 STUDENT STRATEGY: Using fallback minimal structure');
+          }
+        } catch (recoveryError) {
+          console.error('🎓 STUDENT STRATEGY: Recovery failed, using minimal structure:', recoveryError);
+          strategyData = {
+            user_profile_summary: { name: "Student", current_position: "Student", key_strengths: [], experience_level: "junior" },
+            job_task_analysis: [],
+            skills_analysis: { matched_skills: [], skill_gaps: [], skills_to_remove: [], skills_to_add: [] },
+            content_suggestions: { experience_rewrites: [], project_rewrites: [] },
+            win_strategy: { main_positioning: "", key_differentiators: [], interview_talking_points: [], application_strategy: "" },
+            eligibility_checklist: {},
+            coursework_alignment: [],
+            project_alignment: [],
+            ats_keywords: [],
+            german_keywords: []
+          };
+        }
       }
       
       // Add German keywords to ATS keywords if job is in Germany
@@ -498,12 +589,31 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
         german_keywords: strategyData.german_keywords || germanKeywords
       };
       
-      // Cache the strategy
+      // Save to Supabase for persistent caching (7 days)
+      try {
+        await supabase
+          .from('job_analysis_cache')
+          .insert({
+            job_id,
+            user_session_id: sessionId,
+            user_email: userEmail,
+            analysis_type: 'student_strategy',
+            strategy_data: strategy,
+            profile_hash: profileHash,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+          });
+        console.log('🎓 STUDENT STRATEGY: Saved to Supabase cache');
+      } catch (saveError) {
+        console.error('🎓 STUDENT STRATEGY: Failed to save to Supabase:', saveError);
+        // Continue even if save fails
+      }
+
+      // Also cache in memory for fast access during session
       studentStrategyCache.set(cacheKey, {
         strategy,
         timestamp: Date.now()
       });
-      
+
       console.log(`🎓 STUDENT STRATEGY: Generated - ${strategy.coursework_alignment.length} courses, ${strategy.project_alignment.length} projects aligned`);
       
       return NextResponse.json({

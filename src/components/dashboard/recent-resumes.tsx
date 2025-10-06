@@ -1,3 +1,5 @@
+'use client'
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +37,13 @@ const statusColors = {
 export function RecentResumes({ resumes }: RecentResumesProps) {
   const router = useRouter()
 
+  const handleResumeClick = (jobId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('🔍 Clicking resume, navigating to:', `/jobs/${jobId}/tailor?tab=strategy`)
+    router.push(`/jobs/${jobId}/tailor?tab=strategy`)
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -49,7 +58,8 @@ export function RecentResumes({ resumes }: RecentResumesProps) {
           resumes.map((resume) => (
             <div
               key={resume.id}
-              className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-border transition-colors group"
+              onClick={(e) => handleResumeClick(resume.job_id, e)}
+              className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-border transition-colors group cursor-pointer"
             >
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
@@ -72,32 +82,34 @@ export function RecentResumes({ resumes }: RecentResumesProps) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-right space-y-1">
-                  <div className="text-sm font-medium">{resume.match_score || 0}% match</div>
-                  <Badge variant="outline" className={statusColors.optimized}>
-                    optimized
-                  </Badge>
-                </div>
+                <Badge variant="outline" className={statusColors.optimized}>
+                  Tailored
+                </Badge>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-8 h-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-8 h-8"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor`)}>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/jobs/${resume.job_id}/tailor?tab=resume`); }}>
                       <Eye className="w-4 h-4 mr-2" />
                       View Resume
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor`)}>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/jobs/${resume.job_id}/tailor?tab=resume`); }}>
                       <Edit3 className="w-4 h-4 mr-2" />
                       Edit Resume
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                       <Download className="w-4 h-4 mr-2" />
                       Download PDF
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

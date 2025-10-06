@@ -134,7 +134,7 @@ export default function DashboardPage() {
         setStats(prev => ({ ...prev, profileCompletion: completion }))
       }
 
-      // Load tailored resumes
+      // Load tailored resumes with match scores from resume_variants
       const { data: variants } = await supabase
         .from('resume_variants')
         .select(`
@@ -161,85 +161,76 @@ export default function DashboardPage() {
         setStats(prev => ({ ...prev, activeApplications: variants.length }))
       }
 
-      // Load job matches count
-      const { data: jobs } = await supabase
-        .from('jobs')
-        .select('id, title, companies(name)', { count: 'exact' })
+      // Load job matches count from resume_variants (tailored resumes from last 7 days)
+      const { count } = await supabase
+        .from('resume_variants')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
 
-      if (jobs) {
-        setStats(prev => ({ ...prev, jobMatches: jobs.length }))
+      if (count !== null) {
+        setStats(prev => ({ ...prev, jobMatches: count }))
       }
 
-      // Calculate average match score from variants
-      if (variants && variants.length > 0) {
-        const avgScore = variants.reduce((acc, v) => acc + (v.match_score || 0), 0) / variants.length
+      // Calculate average match score from resume_variants
+      const { data: allVariants } = await supabase
+        .from('resume_variants')
+        .select('match_score')
+        .eq('user_id', userId)
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+
+      if (allVariants && allVariants.length > 0) {
+        const avgScore = allVariants.reduce((acc, v) => acc + (v.match_score || 0), 0) / allVariants.length
         setStats(prev => ({ ...prev, avgMatchScore: Math.round(avgScore) }))
       }
 
-      // Load high match jobs (90%+) for notifications
-      // For demo, we'll create mock high-match jobs
-      const mockHighMatches: HighMatchJob[] = [
-        {
-          id: '1',
-          title: 'Senior React Developer',
-          company: 'TechCorp',
-          match_score: 95,
-          posted_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '2',
-          title: 'Full Stack Engineer',
-          company: 'StartupXYZ',
-          match_score: 92,
-          posted_date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-      setHighMatchJobs(mockHighMatches)
+      // Load high match jobs (90%+) from resume_variants
+      const { data: highMatches } = await supabase
+        .from('resume_variants')
+        .select(`
+          job_id,
+          match_score,
+          jobs (
+            id,
+            title,
+            posted_at,
+            companies (
+              name
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .gte('match_score', 90)
+        .order('match_score', { ascending: false })
+        .limit(5)
 
-      // Create recent activities
+      if (highMatches) {
+        const formattedHighMatches: HighMatchJob[] = highMatches.map(m => ({
+          id: m.jobs?.id || '',
+          title: m.jobs?.title || '',
+          company: m.jobs?.companies?.name || '',
+          match_score: m.match_score || 0,
+          posted_date: m.jobs?.posted_at || new Date().toISOString()
+        }))
+        setHighMatchJobs(formattedHighMatches)
+      }
+
+      // Create recent activities from real data only
       const recentActivities: Activity[] = []
 
+      // Add tailored resume activities
       if (variants && variants.length > 0) {
-        variants.slice(0, 3).forEach(v => {
+        variants.slice(0, 5).forEach(v => {
           recentActivities.push({
             id: v.id,
             type: 'tailor',
             title: `Resume tailored for ${v.jobs?.companies?.name || 'Company'}`,
             description: v.jobs?.title || 'Position',
-            timestamp: v.created_at,
+            timestamp: v.updated_at,
             icon: 'info'
           })
         })
       }
-
-      // Add mock activities for demo
-      recentActivities.push(
-        {
-          id: 'act1',
-          type: 'application',
-          title: 'Application submitted to TechCorp',
-          description: 'Your application for Senior React Developer has been submitted',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          icon: 'success'
-        },
-        {
-          id: 'act2',
-          type: 'resume_edit',
-          title: 'Resume optimized for AI/ML role',
-          description: 'Added machine learning skills and relevant projects',
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'info'
-        },
-        {
-          id: 'act3',
-          type: 'job_view',
-          title: 'New job matches found',
-          description: '5 new positions match your profile',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'info'
-        }
-      )
 
       setActivities(recentActivities.slice(0, 5))
 
@@ -396,7 +387,7 @@ export default function DashboardPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Recent Resumes & Activity */}
+        {/* Left Column - Recent Resumes */}
         <div className="lg:col-span-2 space-y-6">
           {/* Recent Tailored Resumes */}
           <div className="bg-white rounded-xl border border-[var(--border)] p-6">
@@ -404,7 +395,11 @@ export default function DashboardPage() {
               <h2 className="heading-md" style={{ color: 'var(--text-primary)' }}>
                 Recent Tailored Resumes
               </h2>
-              <button className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <button
+                className="text-sm font-medium hover:underline cursor-pointer"
+                style={{ color: 'var(--text-secondary)' }}
+                onClick={() => router.push('/jobs')}
+              >
                 View All →
               </button>
             </div>
@@ -412,7 +407,14 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {tailoredResumes.length > 0 ? (
                 tailoredResumes.map((resume) => (
-                  <div key={resume.id} className="resume-item">
+                  <div
+                    key={resume.id}
+                    className="resume-item cursor-pointer"
+                    onClick={() => {
+                      console.log('🔍 Clicking resume card, navigating to:', `/jobs/${resume.job_id}/tailor?tab=strategy`)
+                      router.push(`/jobs/${resume.job_id}/tailor?tab=strategy`)
+                    }}
+                  >
                     <div className="resume-icon">
                       <FileText className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
                     </div>
@@ -431,12 +433,9 @@ export default function DashboardPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="resume-actions">
-                      <span className={`badge ${resume.match_score >= 90 ? 'badge-success' : resume.match_score >= 75 ? 'badge-warning' : 'badge-info'}`}>
-                        {resume.match_score || 0}% match
-                      </span>
+                    <div className="resume-actions" onClick={(e) => e.stopPropagation()}>
                       <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 font-medium">
-                        optimized
+                        Tailored
                       </span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -445,17 +444,17 @@ export default function DashboardPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor`)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
+                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor?tab=strategy`)}>
+                            <Target className="w-4 h-4 mr-2" />
+                            Job Strategy
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor`)}>
+                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor?tab=resume`)}>
                             <Edit3 className="w-4 h-4 mr-2" />
-                            Edit
+                            Resume
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download PDF
+                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor?tab=cover-letter`)}>
+                            <FileText className="w-4 h-4 mr-2" />
+                            Cover Letter
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -477,8 +476,10 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Recent Activity */}
+        {/* Right Column - Recent Activity */}
+        <div className="space-y-4">
           <div className="bg-white rounded-xl border border-[var(--border)] p-6">
             <h2 className="heading-md mb-5" style={{ color: 'var(--text-primary)' }}>
               Recent Activity
@@ -530,73 +531,6 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Right Column - Quick Actions */}
-        <div className="space-y-4">
-          <h2 className="heading-sm mb-4" style={{ color: 'var(--text-primary)' }}>
-            Quick Actions
-          </h2>
-
-          {/* Find Your Next Job */}
-          <div className="quick-action" onClick={() => router.push('/jobs')}>
-            <div className="quick-action-icon" style={{ background: 'var(--primary-light)' }}>
-              <Search className="w-6 h-6" style={{ color: 'var(--primary)' }} />
-            </div>
-            <div className="quick-action-content">
-              <div className="quick-action-title">Find Your Next Job</div>
-              <div className="quick-action-desc">Browse tailored job matches</div>
-            </div>
-            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          </div>
-
-          {/* Optimize Resume */}
-          <div className="quick-action" onClick={() => router.push('/?edit=1')}>
-            <div className="quick-action-icon" style={{ background: 'rgba(124, 58, 237, 0.1)' }}>
-              <Wand2 className="w-6 h-6" style={{ color: '#7c3aed' }} />
-            </div>
-            <div className="quick-action-content">
-              <div className="quick-action-title">Optimize Resume</div>
-              <div className="quick-action-desc">AI-powered improvements</div>
-            </div>
-            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          </div>
-
-          {/* Career Insights */}
-          <div className="quick-action">
-            <div className="quick-action-icon" style={{ background: 'var(--warning-bg)' }}>
-              <BarChart3 className="w-6 h-6" style={{ color: 'var(--warning)' }} />
-            </div>
-            <div className="quick-action-content">
-              <div className="quick-action-title">Career Insights</div>
-              <div className="quick-action-desc">Track your progress</div>
-            </div>
-            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          </div>
-
-          {/* Skill Assessment */}
-          <div className="quick-action">
-            <div className="quick-action-icon" style={{ background: 'var(--error-bg)' }}>
-              <Target className="w-6 h-6" style={{ color: 'var(--error)' }} />
-            </div>
-            <div className="quick-action-content">
-              <div className="quick-action-title">Skill Assessment</div>
-              <div className="quick-action-desc">Identify skill gaps</div>
-            </div>
-            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          </div>
-
-          {/* Interview Prep */}
-          <div className="quick-action">
-            <div className="quick-action-icon" style={{ background: 'var(--success-bg)' }}>
-              <BookOpen className="w-6 h-6" style={{ color: 'var(--success)' }} />
-            </div>
-            <div className="quick-action-content">
-              <div className="quick-action-title">Interview Prep</div>
-              <div className="quick-action-desc">Practice with AI</div>
-            </div>
-            <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
           </div>
         </div>
       </div>

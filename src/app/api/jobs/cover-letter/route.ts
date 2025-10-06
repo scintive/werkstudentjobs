@@ -1,58 +1,173 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { llmService } from '@/lib/services/llmService';
-import type { CoverLetter } from '@/lib/types/jobStrategy';
+import type { StudentProfile } from '@/lib/types/studentProfile';
 
-// Cache for cover letters (keyed by job_id + profile_id + tone + length)
-const letterCache = new Map<string, { letter: CoverLetter; timestamp: number }>();
+interface StudentCoverLetter {
+  id: string;
+  job_id: string;
+  user_profile_id: string;
+  tone: 'motivated' | 'professional' | 'enthusiastic';
+  length: 'short' | 'balanced';
+  language: 'DE' | 'EN';
+  content: {
+    intro: string;
+    body_paragraphs: string[];
+    closing: string;
+    sign_off: string;
+  };
+  student_specifics: {
+    enrollment_mentioned: boolean;
+    availability_mentioned: boolean;
+    projects_highlighted: string[];
+    coursework_referenced: string[];
+  };
+  used_keywords: string[];
+  german_keywords?: string[];
+  created_at: string;
+}
+
+// Cache for student cover letters
+const studentLetterCache = new Map<string, { letter: StudentCoverLetter; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
- * POST /api/jobs/cover-letter
- * Generate tailored cover letter with tone/length options
+ * POST /api/jobs/cover-letter-student
+ * Generate Werkstudent-optimized cover letter (180-240 words)
  */
 export async function POST(request: NextRequest) {
   try {
     const {
       job_id,
       user_profile_id,
-      tone = 'confident',
+      student_profile,
+      tone = 'motivated',
       length = '250words', // Fixed at 250 words
+      load_only = false, // If true, only load existing letter, don't generate
+      force_regenerate = false, // If true, regenerate even if existing letter found
       language = 'AUTO',
-      strategy_context = null, // Optional: pass strategy data to avoid re-fetch
-      custom_instructions = '' // NEW: User's custom instructions
+      strategy_context = null,
+      custom_instructions = '', // User's custom instructions
+      include_university = true, // NEW: Toggle for university/degree
+      include_semester = true, // NEW: Toggle for semester info
+      include_hours = true // NEW: Toggle for weekly hours
     } = await request.json();
-
-    if (!job_id || !user_profile_id) {
+    
+    if (!job_id || (!user_profile_id && !student_profile)) {
       return NextResponse.json(
-        { error: 'job_id and user_profile_id are required' },
+        { error: 'job_id and either user_profile_id or student_profile required' },
         { status: 400 }
       );
     }
-
-    console.log(`🎯 COVER LETTER: Generating ${tone} ${length} letter for job ${job_id}, user_profile_id: ${user_profile_id}`);
+    
+    console.log(`🎓 STUDENT COVER LETTER: Generating ${tone} ${length} letter for job ${job_id}`);
     if (custom_instructions) {
-      console.log(`🎯 COVER LETTER: Custom instructions provided: ${custom_instructions.substring(0, 100)}...`);
+      console.log(`🎓 STUDENT COVER LETTER: Custom instructions provided: ${custom_instructions.substring(0, 100)}...`);
     }
 
-    // Check cache (skip cache if custom instructions provided)
-    const cacheKey = `${job_id}_${user_profile_id}_${tone}_${length}_${language}`;
-    const cached = letterCache.get(cacheKey);
+    // Check cache (skip if custom instructions provided)
+    const cacheKey = `student_${job_id}_${user_profile_id || 'profile'}_${tone}_${length}_${language}`;
+    const cached = studentLetterCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL && !custom_instructions) {
-      console.log('🎯 COVER LETTER: Cache hit');
+      console.log('🎓 STUDENT COVER LETTER: Cache hit');
       return NextResponse.json({
         success: true,
         cover_letter: cached.letter,
-        cached: true,
-        cache_age: Math.round((Date.now() - cached.timestamp) / 1000)
+        cached: true
       });
     }
 
     // Create server-side Supabase client
     const supabase = createServerSupabase(request);
 
+    // Check for existing cover letter in variant
+    const { data: variants } = await supabase
+      .from('resume_variants')
+      .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count')
+      .eq('job_id', job_id)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    const existingVariant = variants?.[0];
+
+    // If variant exists with cover letter, return it (unless regenerating)
+    if (existingVariant?.cover_letter_content && !custom_instructions && !force_regenerate) {
+      console.log('📋 COVER LETTER: Found existing cover letter in variant');
+      const savedData = JSON.parse(existingVariant.cover_letter_content);
+
+      // Handle versioned format vs legacy format
+      let versions = [];
+      let currentVersion = 1;
+
+      if (savedData.versions && Array.isArray(savedData.versions)) {
+        // New versioned format
+        versions = savedData.versions;
+        currentVersion = savedData.current_version || versions.length;
+      } else {
+        // Legacy format - convert to versioned
+        versions = [{
+          version: 1,
+          generated_at: existingVariant.cover_letter_generated_at || new Date().toISOString(),
+          cover_letter: savedData
+        }];
+        currentVersion = 1;
+      }
+
+      // Get the current version for display
+      const currentLetter = versions.find(v => v.version === currentVersion) || versions[versions.length - 1];
+      const savedLetter = currentLetter.cover_letter;
+
+      // Calculate word count for existing letter
+      const fullText = savedLetter.content
+        ? `${savedLetter.content.intro} ${savedLetter.content.body_paragraphs.join(' ')} ${savedLetter.content.closing}`
+        : '';
+      const wordCount = fullText.split(' ').filter(w => w.length > 0).length;
+
+      return NextResponse.json({
+        success: true,
+        cover_letter: savedLetter, // Return the current version
+        cached: true,
+        from_variant: true,
+        versions: versions, // Return all versions for version selector
+        current_version: currentVersion,
+        metadata: {
+          word_count: wordCount,
+          generation_count: existingVariant.cover_letter_generation_count || 0,
+          generation_limit: 2,
+          generated_at: currentLetter.generated_at,
+          total_versions: versions.length
+        }
+      });
+    }
+
+    // If load_only flag is set and no existing letter found, return empty
+    if (load_only) {
+      console.log('📋 COVER LETTER: load_only=true, no existing letter found');
+      return NextResponse.json({
+        success: true,
+        cover_letter: null,
+        versions: [],
+        current_version: 0,
+        metadata: {
+          generation_count: 0,
+          generation_limit: 2
+        }
+      });
+    }
+
+    // Enforce 2-generation limit
+    if (existingVariant && existingVariant.cover_letter_generation_count >= 2) {
+      console.log('⚠️ COVER LETTER: Generation limit reached (2/2)');
+      return NextResponse.json({
+        error: 'Cover letter generation limit reached',
+        message: 'You can only generate 2 cover letters per job. Please use the existing one or edit it manually.',
+        generation_count: existingVariant.cover_letter_generation_count
+      }, { status: 429 });
+    }
+
     // Fetch job data
-    const { data: jobData, error: jobError} = await supabase
+    const { data: jobData, error: jobError } = await supabase
       .from('jobs')
       .select(`
         *,
@@ -65,29 +180,27 @@ export async function POST(request: NextRequest) {
       `)
       .eq('id', job_id)
       .single();
-
+    
     if (jobError || !jobData) {
-      console.error('🎯 COVER LETTER: Job fetch failed:', { job_id, error: jobError?.message });
       return NextResponse.json(
-        { error: 'Job not found', details: jobError?.message },
+        { error: 'Job not found' },
         { status: 404 }
       );
     }
-
-    console.log('🎯 COVER LETTER: Job found:', jobData.title);
     
-    // Fetch user profile (handle 'latest' special case)
-    let profileData = null;
-    let profileError = null;
+    // Use provided student profile or fetch from database
+    let profileData: Partial<StudentProfile> = student_profile || {};
+    
+    if (!student_profile && user_profile_id) {
+      if (user_profile_id === 'latest') {
+        // Use the profile API to get the latest profile
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-    if (user_profile_id === 'latest') {
-      // Use the profile API to get the latest profile
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      const authHeader = request.headers.get('authorization');
+        // Get auth header from request
+        const authHeader = request.headers.get('authorization');
 
-      console.log('🎯 COVER LETTER: Fetching profile from /api/profile/latest');
+        console.log('🎓 STUDENT COVER LETTER: Fetching profile from /api/profile/latest');
 
-      try {
         const profileResponse = await fetch(`${baseUrl}/api/profile/latest`, {
           headers: authHeader ? {
             'Authorization': authHeader
@@ -95,121 +208,205 @@ export async function POST(request: NextRequest) {
           credentials: 'include'
         });
 
-        if (profileResponse.ok) {
-          const profileDataResponse = await profileResponse.json();
-          if (profileDataResponse.success && profileDataResponse.profile) {
-            profileData = profileDataResponse.profile;
-            console.log('🎯 COVER LETTER: Found profile via API');
-          } else {
-            console.error('🎯 COVER LETTER: No profile in response');
-          }
-        } else {
-          console.error('🎯 COVER LETTER: Profile API failed:', profileResponse.status);
+        if (!profileResponse.ok) {
+          console.error('🎓 STUDENT COVER LETTER: Profile API failed:', profileResponse.status);
+          return NextResponse.json(
+            { error: 'User profile not found', details: 'Profile API request failed' },
+            { status: 404 }
+          );
         }
-      } catch (fetchError) {
-        console.error('🎯 COVER LETTER: Profile fetch error:', fetchError);
+
+        const profileResponse_data = await profileResponse.json();
+
+        if (!profileResponse_data.success || !profileResponse_data.profile) {
+          console.error('🎓 STUDENT COVER LETTER: No profile in response');
+          return NextResponse.json(
+            { error: 'User profile not found', details: 'No profile data in response' },
+            { status: 404 }
+          );
+        }
+
+        console.log('🎓 STUDENT COVER LETTER: Found profile via API');
+        const dbProfile = profileResponse_data.profile;
+
+        // Extract user's actual name from profile
+        const userName = dbProfile.personalInfo?.name ||
+                        dbProfile.personal_info?.name ||
+                        dbProfile.name ||
+                        'Varun Mishra';
+
+        console.log('🎓 STUDENT COVER LETTER: Extracted user name:', userName);
+
+        // Extract CURRENT (latest) education from education array
+        const currentEducation = dbProfile.education && dbProfile.education.length > 0
+          ? dbProfile.education.sort((a: any, b: any) => {
+              const yearA = parseInt(a.year) || 0;
+              const yearB = parseInt(b.year) || 0;
+              return yearB - yearA; // Sort descending (most recent first)
+            })[0]
+          : null;
+
+        // Calculate current year of study based on expected graduation
+        const expectedGradYear = currentEducation?.year ? parseInt(currentEducation.year) : new Date().getFullYear();
+        const currentYear = new Date().getFullYear();
+        const yearsUntilGrad = expectedGradYear - currentYear;
+        const estimatedTotalYears = currentEducation?.degree?.includes('Bachelor') ? 3 :
+                                     currentEducation?.degree?.includes('Master') ? 2 : 3;
+        const currentYearOfStudy = Math.max(1, estimatedTotalYears - yearsUntilGrad);
+
+        profileData = {
+          name: userName, // Add actual user name
+          degree_program: currentEducation?.field_of_study || dbProfile.degree_program || 'Computer Science',
+          university: currentEducation?.institution || dbProfile.university || '',
+          current_year: currentYearOfStudy,
+          expected_graduation: currentEducation?.year || dbProfile.expected_graduation || '2025-06',
+          weekly_availability: dbProfile.weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
+          earliest_start_date: dbProfile.earliest_start_date || 'immediately',
+          preferred_duration: dbProfile.preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
+          enrollment_status: 'enrolled',
+          language_proficiencies: dbProfile.language_proficiencies || [],
+          academic_projects: dbProfile.projects || dbProfile.academic_projects || [],
+          relevant_coursework: dbProfile.relevant_coursework || []
+        };
+      } else {
+        const { data: dbProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user_profile_id)
+          .single();
+        
+        if (profileError || !dbProfile) {
+          return NextResponse.json(
+            { error: 'User profile not found' },
+            { status: 404 }
+          );
+        }
+        
+        // Convert database profile to student profile format
+        profileData = {
+          degree_program: dbProfile.degree_program || 'Computer Science',
+          university: dbProfile.university || '',
+          current_year: dbProfile.current_year || 3,
+          expected_graduation: dbProfile.expected_graduation || '2025-06',
+          weekly_availability: dbProfile.weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
+          earliest_start_date: dbProfile.earliest_start_date || 'immediately',
+          preferred_duration: dbProfile.preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
+          enrollment_status: 'enrolled',
+          language_proficiencies: dbProfile.language_proficiencies || [],
+          academic_projects: dbProfile.academic_projects || [],
+          relevant_coursework: dbProfile.relevant_coursework || []
+        };
       }
-    } else {
-      const result = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user_profile_id)
-        .single();
-
-      profileData = result.data;
-      profileError = result.error;
     }
-
-    if (!profileData) {
-      console.error('🎯 COVER LETTER: Profile fetch failed:', { user_profile_id, error: profileError?.message });
-      return NextResponse.json(
-        { error: 'User profile not found', details: profileError?.message },
-        { status: 404 }
-      );
-    }
-
-    console.log('🎯 COVER LETTER: Profile found:', profileData.name || profileData.email);
     
-    // Convert data to UserProfile format (handle both user_profiles and resume_data)
-    const userProfile = {
-      personal_details: {
-        name: profileData.name || profileData.personal_details?.name || '',
-        email: profileData.email || profileData.personal_details?.email || '',
-        phone: profileData.phone || profileData.personal_details?.phone || '',
-        location: profileData.location || profileData.personal_details?.location || '',
-        professional_title: profileData.current_job_title || profileData.personal_details?.professional_title || profileData.professional_summary || ''
-      },
-      skills: profileData.skills || {
-        technical: [],
-        tools: []
-      },
-      experience: profileData.experience || [],
-      education: profileData.education || [],
-      projects: profileData.projects || [],
-      languages: profileData.languages_spoken ? Object.keys(profileData.languages_spoken) : (profileData.languages || [])
-    };
-    
-    // Determine language
+    // Determine language based on job requirements
     let targetLanguage = language;
     if (language === 'AUTO') {
       const jobLang = jobData.language_required || jobData.german_required || 'EN';
-      targetLanguage = jobLang.includes('DE') ? 'DE' : 'EN';
+      const isGermanCompany = jobData.location_country?.toLowerCase().includes('germany') || 
+                             jobData.location_city?.toLowerCase().includes('berlin') ||
+                             jobData.location_city?.toLowerCase().includes('munich') ||
+                             jobData.location_city?.toLowerCase().includes('hamburg');
+      targetLanguage = (jobLang.includes('DE') || isGermanCompany) ? 'DE' : 'EN';
     }
     
-    // Word count ranges for letter content (excluding header/greetings)
+    // German keywords for Werkstudent positions
+    const germanKeywords = targetLanguage === 'DE' ? [
+      'Werkstudent', 'immatrikuliert', 'Studium', 
+      `${profileData.weekly_availability?.hours_min || 15}-${profileData.weekly_availability?.hours_max || 20} Stunden/Woche`,
+      'Praxiserfahrung', 'Semester', 'Universität'
+    ] : [];
+    
+    // Word count ranges for letter content
     const wordCounts = {
       short: '180-200',
       medium: '250-270',
       balanced: '250-270',
-      long: '350',
+      long: '340-360', // Changed from '350' to be a range
       '250words': '250-270'
     };
     
-    // Create COMPREHENSIVE context with ALL available data
+    // Extract RICH data from strategy_context
+    const matchedSkills = strategy_context?.matchCalculation?.skillsOverlap?.matched || [];
+    const matchedTools = strategy_context?.matchCalculation?.toolsOverlap?.matched || [];
+    const topTasks = (strategy_context?.tasks || [])
+      .sort((a: any, b: any) => (b.alignment_score || 0) - (a.alignment_score || 0))
+      .slice(0, 5); // Top 5 tasks with highest alignment
+    const competitiveAdvantages = strategy_context?.competitive_advantages || [];
+    const positioning = strategy_context?.positioning || {};
+    const evidenceMap = strategy_context?.evidence_map || {};
+
+    console.log('🎓 STRATEGY DATA AVAILABLE:');
+    console.log('  - Matched Skills:', matchedSkills.length, matchedSkills.slice(0, 5));
+    console.log('  - Matched Tools:', matchedTools.length, matchedTools.slice(0, 5));
+    console.log('  - Top Tasks:', topTasks.length, topTasks.map((t: any) => `${t.task?.substring(0, 50)}... (${Math.round(t.alignment_score * 100)}%)`));
+    console.log('  - Competitive Advantages:', competitiveAdvantages.length);
+    console.log('  - Positioning:', positioning.elevator_pitch?.substring(0, 100));
+
+    // Create COMPREHENSIVE context for student cover letter with ALL data
     const letterContext = {
       job: {
         title: jobData.title,
-        company: jobData.company_name || 'Unknown',
+        company: jobData.company_name || 'Your company',
         company_description: jobData.companies?.description || '',
         company_industry: jobData.companies?.industry || '',
-        company_website: jobData.companies?.website_url || '',
+        is_werkstudent: jobData.title?.toLowerCase().includes('werkstudent') ||
+                        jobData.title?.toLowerCase().includes('working student'),
         requirements: {
           skills: jobData.skills_original || [],
           tools: jobData.tools_original || [],
           responsibilities: jobData.responsibilities_original || []
         },
-        work_mode: jobData.work_mode,
         location: jobData.location_city,
-        is_werkstudent: jobData.is_werkstudent || false,
+        work_mode: jobData.work_mode,
         description_excerpt: jobData.description?.slice(0, 500) || ''
       },
-      profile: {
-        name: userProfile.personal_details?.name || 'Applicant',
-        title: userProfile.personal_details?.professional_title || 'Professional',
-        email: userProfile.personal_details?.email || '',
-        phone: userProfile.personal_details?.phone || '',
-        location: userProfile.personal_details?.location || '',
-        summary: userProfile.personal_details?.summary || userProfile.summary || '',
-        achievements: (userProfile.experience || [])
-          .slice(0, 4)
-          .map(exp => ({
-            role: exp.position || exp.title,
-            company: exp.company,
-            duration: exp.duration || '',
-            achievements: exp.achievements || exp.description || '',
-            technologies: exp.technologies || []
-          })),
-        skills: {
-          all: Object.values(userProfile.skills || {}).flat().slice(0, 12),
-          by_category: userProfile.skills || {}
-        },
-        projects: userProfile.projects?.slice(0, 3) || [],
-        education: userProfile.education || []
+      // RICH STRATEGY DATA - This is the goldmine!
+      strategy: {
+        matched_skills: matchedSkills,
+        matched_tools: matchedTools,
+        top_aligned_tasks: topTasks.map((task: any) => ({
+          task: task.task_description || task.task,
+          alignment_score: task.alignment_score,
+          why_qualified: task.evidence_from_profile || task.why_qualified || '',
+          specific_experience: task.specific_experience || ''
+        })),
+        competitive_advantages: competitiveAdvantages,
+        positioning_themes: positioning.themes || [],
+        elevator_pitch: positioning.elevator_pitch || '',
+        evidence_map: evidenceMap
+      },
+      student: {
+        name: profileData.name || 'Varun Mishra', // Use actual user name
+        degree: profileData.degree_program,
+        university: profileData.university,
+        year: profileData.current_year,
+        graduation: profileData.expected_graduation,
+        availability: `${profileData.weekly_availability?.hours_min || 15}-${profileData.weekly_availability?.hours_max || 20}h/week`,
+        start_date: profileData.earliest_start_date || 'immediately',
+        duration: profileData.preferred_duration ?
+          `${profileData.preferred_duration.months_min}-${profileData.preferred_duration.months_max} months` :
+          '6-12 months',
+        projects: (profileData.academic_projects || []).slice(0, 3).map(p => ({
+          title: p.title,
+          description: p.description,
+          technologies: p.technologies || [],
+          metrics: p.metrics || [],
+          outcomes: p.outcomes || ''
+        })),
+        coursework: (profileData.relevant_coursework || []).slice(0, 4).map(c => ({
+          course_name: c.course_name,
+          key_topics: c.key_topics || [],
+          relevance: c.relevance_to_job || ''
+        })),
+        languages: profileData.language_proficiencies || [],
+        skills: profileData.technical_skills || [],
+        tools: profileData.tools_familiar_with || []
       },
       strategy: strategy_context || {
         positioning: {
-          themes: ['relevant experience', 'strong technical fit', 'proven results'],
-          elevator_pitch: 'Experienced professional with proven track record in relevant technologies'
+          themes: ['academic excellence', 'practical projects', 'eager to learn'],
+          elevator_pitch: 'Motivated student with strong academic foundation and hands-on project experience'
         },
         ats_keywords: [],
         must_have_gaps: [],
@@ -220,127 +417,160 @@ export async function POST(request: NextRequest) {
       word_count: wordCounts[length]
     };
     
-    // Tone-specific guidance
-    const toneGuidance = {
-      confident: 'Show quiet confidence through specific achievements. Let your work speak for itself.',
-      warm: 'Write like you\'re genuinely excited to share your story with someone you admire. Be authentic and enthusiastic.',
-      direct: 'Be honest and straightforward. No fluff, just genuine interest and clear value.'
+    // Tone-specific prompts for students
+    const tonePrompts = {
+      motivated: 'Show genuine enthusiasm for learning and contributing. Emphasize growth mindset.',
+      professional: 'Maintain formal tone while highlighting academic achievements and project work.',
+      enthusiastic: 'Express excitement about the role and company. Show passion for the field.'
     };
+    
+    const systemPrompt = `You are an elite Werkstudent cover letter writer with access to DEEP MATCHING DATA between the candidate and this specific job. ${tonePrompts[tone]}
 
-    // Structure varies by length
-    const structureGuidance = length === 'short'
-      ? '2 body paragraphs (intro + 2 body + closing)'
-      : length === 'long'
-      ? '3-4 body paragraphs with deeper examples and stories'
-      : '2-3 body paragraphs with solid examples';
+🎯 CRITICAL ADVANTAGE: You have PRECISE DATA showing exactly why this candidate is qualified:
+- ${matchedSkills.length} MATCHED SKILLS with the job requirements
+- ${matchedTools.length} MATCHED TOOLS they already know
+- ${topTasks.length} SPECIFIC TASKS from the job with evidence of qualification
+- ${competitiveAdvantages.length} unique competitive advantages
 
-    const systemPrompt = `You're writing a cover letter that feels like it's genuinely coming from the heart of someone who's truly excited about this opportunity. ${toneGuidance[tone]}
+PHILOSOPHY:
+Write a cover letter that PROVES the candidate can do THIS SPECIFIC JOB using CONCRETE EVIDENCE. Every claim must be backed by:
+1. A matched skill/tool they have
+2. A specific task they can handle
+3. Real project/experience that demonstrates it
 
-CORE PHILOSOPHY:
-This isn't a corporate template. This is a real person sharing why they care about this role and company. Write like you're telling your mentor why this opportunity feels perfect for you - honest, specific, and genuinely enthusiastic.
-
-🚨🚨🚨 CRITICAL WORD COUNT REQUIREMENT - ABSOLUTE MANDATE 🚨🚨🚨:
+🚨 CRITICAL WORD COUNT REQUIREMENT - THIS IS MANDATORY:
 - TARGET: ${wordCounts[length]} WORDS for letter content (intro + body_paragraphs + closing combined)
-- This is NOT a suggestion - it's a REQUIREMENT that will be VERIFIED
 - Count ONLY the actual letter paragraphs, NOT the sign_off
-- ${length === 'long' ? 'FOR LONG (350 words): You MUST write AT LEAST 340 words. Write detailed, rich paragraphs with examples, stories, and context. If you only write 200 words, you have FAILED.' : ''}
-- ${length === 'medium' ? 'FOR MEDIUM (250-270 words): You MUST write AT LEAST 245 words.' : ''}
+- ${length === 'long' ? '⚠️ FOR LONG (350 words): You MUST write EXACTLY 340-360 words. This is NON-NEGOTIABLE. Write detailed, rich paragraphs with specific examples and metrics. Do NOT write short paragraphs.' : ''}
+- ${length === 'medium' || length === '250words' ? 'FOR MEDIUM (250-270 words): You MUST write AT LEAST 245 words with strong detail.' : ''}
 - ${length === 'short' ? 'FOR SHORT (180-200 words): You MUST write AT LEAST 180 words.' : ''}
-- If you finish and your word count is too low, ADD MORE CONTENT until you reach the target
-- ${targetLanguage === 'DE' ? 'Write in German with native fluency and natural expression' : 'Write in English with native fluency and natural expression'}
+- ${targetLanguage === 'DE' ? 'Write in German (native speaker quality, formal business German)' : 'Write in English (native speaker quality)'}
+- ${length === 'long' ? '⚠️ LONG LETTER STRUCTURE: Write intro (2-3 sentences), body paragraph 1 (5-6 sentences), body paragraph 2 (4-5 sentences), body paragraph 3 (3-4 sentences), closing (2-3 sentences). Each sentence should be detailed and specific.' : ''}
 
-AUTHENTICITY OVER FORMALITY:
-- Write in first person with genuine emotion ("I was genuinely excited when...", "What really draws me to...")
-- Share specific moments of discovery ("When I learned about your work in...", "I've been following your...")
-- Use real, conversational language - not corporate jargon
-- Show you've done your homework about the company - mention specific products, values, recent news
-- Connect your personal journey to their mission in a way that feels real, not manufactured
+MUST INCLUDE (Werkstudent-specific):
+${include_university ? `- Enrollment status: "${letterContext.student.degree} im ${letterContext.student.year}. Semester"` : ''}
+${include_semester ? `- Current semester: ${letterContext.student.year}. Semester` : ''}
+${include_hours ? `- Weekly availability: ${letterContext.student.availability}` : ''}
+- Start date: ${letterContext.student.start_date}
+- Desired duration: ${letterContext.student.duration}
 
-STRUCTURE (${structureGuidance}):
+🎯 USE THIS GOLDMINE OF DATA (from AI job analysis):
 
-INTRO (Opening hook):
-- Start with a genuine moment of connection or discovery
-- "When I came across this role..." or "I've been following [Company]'s work in [specific area]..."
-- Express real enthusiasm - what specifically excites you about THIS company?
-- Briefly preview why you're a strong fit
+MATCHED SKILLS (${matchedSkills.length}):
+${matchedSkills.slice(0, 8).join(', ')}
+→ These are EXACT matches - weave them into your letter naturally
 
-BODY PARAGRAPHS:
-Each paragraph should tell a mini-story:
-- Lead with a specific experience or achievement
-- Include real numbers and outcomes when possible
-- Connect it directly to what the role needs
-- Show how you think and solve problems, not just what you did
-- Mention specific technologies, tools, or methods that match their needs
+MATCHED TOOLS (${matchedTools.length}):
+${matchedTools.slice(0, 6).join(', ')}
+→ Mention specific tools you know they need
 
-For SHORT (180-200 words): 2 focused body paragraphs
-- Para 1: Your most relevant achievement/experience
-- Para 2: Why you're excited about their specific work
+TOP 5 JOB TASKS with EVIDENCE:
+${topTasks.map((t: any, i: number) => `${i + 1}. ${t.task} (${Math.round(t.alignment_score * 100)}% match)
+   Evidence: ${t.why_qualified || 'Strong background'}
+   Experience: ${t.specific_experience || 'Related project work'}`).join('\n')}
 
-For MEDIUM (250-270 words): 2-3 body paragraphs
-- Para 1: Primary relevant experience with metrics
-- Para 2: Additional skills/projects that show fit
-- Para 3 (optional): Your understanding of their challenges and how you can help
+COMPETITIVE ADVANTAGES:
+${competitiveAdvantages.slice(0, 3).map((adv: any) => `- ${adv.advantage || adv}: ${adv.evidence || ''}`).join('\n')}
 
-For LONG (350 words): 3-4 SUBSTANTIAL body paragraphs - THIS MUST BE DETAILED
-- Para 1 (80-100 words): Most relevant achievement with detailed context and story
-- Para 2 (80-90 words): Supporting experiences and technical skills with examples
-- Para 3 (70-80 words): Personal projects, learning journey, or specific skills that show passion
-- Para 4 (optional, 50-70 words): Your vision for contributing to their mission and growth
-- IMPORTANT: Each paragraph should be meaty and detailed to reach 350 total words
+POSITIONING:
+${positioning.elevator_pitch || 'Motivated student with strong technical foundation'}
 
-CLOSING:
-- Express genuine excitement about the possibility of contributing
-- Mention specific aspects of the role or company culture that appeal to you
-- Show eagerness to discuss further
-- End with warmth and confidence
+NARRATIVE STRUCTURE (Evidence-Based):
 
-VOICE & STYLE:
-- Write like you're writing to a respected colleague, not a stranger
-- Vary sentence length naturally - mix short punchy statements with flowing thoughts
-- Use active voice ("I built..." not "I was responsible for...")
-- Eliminate filler words and obvious statements
-- Every sentence should add specific value or insight
-- Show personality while staying professional
-- Use "I'm" instead of "I am", "I've" instead of "I have" for natural flow
+INTRO (2-3 sentences):
+- Open with ONE of the top competitive advantages
+${include_university ? `- Mention enrollment status: "${letterContext.student.degree} student"` : '- Establish your professional identity'}
+- Reference 2-3 matched skills that caught your attention in the job posting
 
-GENUINE INTEREST MARKERS:
-- Reference specific company projects, products, or values
-- Show you understand their challenges or market position
-- Express authentic curiosity about their work
-- Connect your personal interests or passions to their mission
-- Demonstrate you're not mass-applying - this letter is FOR THEM
+BODY PARAGRAPH 1 - TASK-SPECIFIC EVIDENCE (4-5 sentences):
+- Pick the TOP 2-3 aligned tasks (highest scores from list above)
+- For EACH task, provide the specific experience/evidence listed
+- Connect matched skills/tools to these tasks
+- Use concrete metrics from projects if available
+- Show you understand what the role actually involves
 
-AVOID:
-- Generic openings ("I am writing to apply...")
-- Clichés ("team player", "excellent communication skills", "fast-paced environment")
-- Vague statements without backup
-- Passive voice and corporate speak
-- Repeating your resume
-- Fake enthusiasm or exaggeration
+BODY PARAGRAPH 2 - COMPETITIVE ADVANTAGES (3-4 sentences):
+- Lead with 1-2 competitive advantages from the list above
+- Back each advantage with specific matched tools or projects
+${include_hours ? `- Naturally weave in availability: "${letterContext.student.availability}"` : ''}
+- State start date: "${letterContext.student.start_date}"
+- Mention duration preference: "${letterContext.student.duration}"
+
+CLOSING (2 sentences):
+- Reference the company/role specifically (not generic)
+- Clear call to action + reaffirm excitement about the specific tasks you'd handle
+
+TONE FOR STUDENTS:
+- Confident but not arrogant (you're capable AND eager to learn)
+- Specific about skills (avoid "I'm a fast learner" - SHOW it)
+- Natural mention of student status (it's an advantage, not a limitation)
+- Professional yet personable (German formal business tone)
+- Action-oriented (what you WILL contribute, not what you hope to)
+
+🚨 CRITICAL WRITING STYLE - ACHIEVEMENT-FOCUSED:
+- LIMIT company name mentions: Use company name ONLY once in intro and once in closing (max 2 times total)
+- AVOID repetitive phrases like "at [Company]" or "[Company]'s team" - these sound robotic
+- FOCUS ON "I" STATEMENTS: What I achieved, what I built, what I learned, how I grew
+- EMPHASIZE USER'S CONTRIBUTIONS: Lead with your impact, skills, and experiences
+- EXAMPLE OF BAD: "I'm excited to join [Company] and contribute to [Company]'s mission"
+- EXAMPLE OF GOOD: "I've developed strong analytical skills through data-driven projects and am ready to apply these in a dynamic business intelligence environment"
+- Make it about YOUR journey, YOUR growth, YOUR value - not just why the company is great
+- The reader should learn about YOU, not be reminded of their own company name
+
+${targetLanguage === 'DE' ? `
+GERMAN LANGUAGE REQUIREMENTS:
+- Use "Sie" form (formal)
+- Opening: "Sehr geehrte Damen und Herren" or "Sehr geehrte/r [Name]"
+${include_university && include_semester ? `- Natural integration: "Als ${letterContext.student.degree}-Student im ${letterContext.student.year}. Semester..."` : include_university ? `- Natural integration: "Als ${letterContext.student.degree}-Student..."` : '- Professional introduction without student details'}
+${include_hours ? `- Availability phrase: "Ich stehe Ihnen ab ${letterContext.student.start_date} mit ${letterContext.student.availability} zur Verfügung"` : `- Availability phrase: "Ich stehe Ihnen ab ${letterContext.student.start_date} zur Verfügung"`}
+- Closing: "Mit freundlichen Grüßen"
+- Use strong German business verbs: entwickeln, optimieren, implementieren, analysieren
+` : `
+ENGLISH LANGUAGE REQUIREMENTS:
+- Opening: "Dear Hiring Team" or "Dear [Name]"
+${include_university && include_semester ? `- Natural integration: "As a ${letterContext.student.year}-year ${letterContext.student.degree} student..."` : include_university ? `- Natural integration: "As a ${letterContext.student.degree} student..."` : '- Professional introduction without student details'}
+${include_hours ? `- Availability phrase: "I'm available starting ${letterContext.student.start_date} for ${letterContext.student.duration} at ${letterContext.student.availability}"` : `- Availability phrase: "I'm available starting ${letterContext.student.start_date} for ${letterContext.student.duration}"`}
+- Closing: "Best regards" or "Kind regards"
+- Use action verbs: developed, implemented, optimized, analyzed
+`}
 
 ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instructions}\n` : ''}
 
-⚠️ FINAL REMINDER:
-Before submitting, COUNT THE WORDS in your output (intro + all body_paragraphs + closing).
-It MUST be ${wordCounts[length]} words. If it's short, ADD MORE DETAIL to your paragraphs.
-If it's "long" (350 words) and you only have 200 words, you need to add 2-3 MORE FULL PARAGRAPHS with rich detail.
+⚠️ FINAL REMINDERS:
+1. WORD COUNT: Must be ${wordCounts[length]} words (intro + body_paragraphs + closing)
+2. USE THE STRATEGY DATA ABOVE: Reference specific matched skills, tools, and task evidence
+3. BE SPECIFIC: Use the evidence provided for each task, don't make up generic claims
+4. SHOW UNDERSTANDING: Demonstrate you know what the role involves by referencing actual tasks
+5. USER'S NAME: ${letterContext.student.name}
 
-Output JSON only:
+🎯 MANDATORY: Your letter MUST reference at least 3 items from the strategy data above (matched skills/tools/tasks).
+
+⚠️ CRITICAL: Output ONLY valid JSON with this EXACT structure:
 {
-  "intro": "genuine opening that hooks with specific company knowledge and authentic enthusiasm",
-  "body_paragraphs": ["array of 2-4 paragraphs depending on length, each telling a specific story with real examples and outcomes"],
-  "closing": "warm closing expressing genuine excitement and confidence about contributing",
+  "subject": "Application for [position] - creative variation in ${targetLanguage === 'DE' ? 'German' : 'English'} (avoid 'RE:' prefix)",
+  "salutation": "personalized greeting in ${targetLanguage === 'DE' ? 'German' : 'English'} (vary: ${targetLanguage === 'DE' ? 'Sehr geehrte Damen und Herren / Sehr geehrte/r [Name]' : 'Dear Hiring Team / Dear Hiring Manager / Dear [Company] Team'})",
+  "intro": "engaging opener + ${include_university ? 'enrollment status + ' : ''}value preview (FULL PARAGRAPH, NOT JUST LABELS)",
+  "body_paragraphs": [
+    "FULL PARAGRAPH 1: project showcase with metrics and direct job relevance (5-6 sentences for long, 3-4 for medium)",
+    "FULL PARAGRAPH 2: skills/coursework fit + availability + eagerness to contribute (4-5 sentences for long, 3-4 for medium)"${length === 'long' ? ',\n    "FULL PARAGRAPH 3: competitive advantages and how you stand out (3-4 sentences)"' : ''}
+  ],
+  "closing": "enthusiasm for opportunity + call to action (FULL PARAGRAPH, NOT JUST LABELS)",
   "sign_off": "${targetLanguage === 'DE' ? 'Mit freundlichen Grüßen' : 'Best regards'}",
-  "used_keywords": ["naturally woven keywords that appeared organically in your storytelling"]
-}`;
+  "projects_highlighted": ["specific project names"],
+  "coursework_referenced": ["relevant courses"],
+  "used_keywords": ["naturally integrated keywords"]
+}
+
+⚠️ IMPORTANT: Each field must contain COMPLETE TEXT, not field labels. Write full paragraphs, not placeholder text!`;
     
     try {
       // Adjust max_tokens based on length to ensure enough capacity
       const maxTokensMap = {
         short: 800,   // 180-200 words + JSON overhead
         medium: 1100,  // 250-270 words + JSON overhead
-        long: 1600,   // 350 words + JSON overhead (words * ~1.3 tokens/word + 300 overhead)
-        balanced: 1100
+        long: 2400,   // 350 words * ~1.5 tokens/word + generous JSON overhead
+        balanced: 1100,
+        '250words': 1100
       };
 
       const aiResponse = await llmService.createJsonCompletion({
@@ -348,56 +578,177 @@ Output JSON only:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(letterContext) }
         ],
-        model: 'gpt-4o', // Higher quality model for prose
-        temperature: 0.7, // More creative for authentic, heartfelt writing
+        model: 'gpt-4o', // Use GPT-4o for high-quality cover letter generation
+        temperature: 0.8, // Slightly higher for more natural writing
         max_tokens: maxTokensMap[length] || 1100
       });
+
+      const rawContent = aiResponse.choices?.[0]?.message?.content || '{}';
+      console.log('🎓 RAW GPT RESPONSE (first 200 chars):', rawContent.substring(0, 200));
+
+      let letterData;
+      try {
+        letterData = JSON.parse(rawContent);
+      } catch (parseError) {
+        console.error('❌ COVER LETTER: Failed to parse GPT response as JSON:', parseError);
+        console.error('❌ Raw response:', rawContent);
+        throw new Error('GPT returned invalid JSON. Please try again.');
+      }
+
+      // Validate required fields
+      const requiredFields = ['subject', 'salutation', 'intro', 'body_paragraphs', 'closing', 'sign_off'];
+      const missingFields = requiredFields.filter(field => !letterData[field]);
+
+      if (missingFields.length > 0) {
+        console.error('❌ COVER LETTER: Missing required fields:', missingFields);
+        console.error('❌ Received data:', letterData);
+        throw new Error(`GPT response missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Validate body_paragraphs is an array
+      if (!Array.isArray(letterData.body_paragraphs) || letterData.body_paragraphs.length === 0) {
+        console.error('❌ COVER LETTER: body_paragraphs is not a valid array:', letterData.body_paragraphs);
+        throw new Error('GPT response has invalid body_paragraphs structure');
+      }
+
+      console.log('✅ COVER LETTER: JSON structure validated');
       
-      const letterData = JSON.parse(aiResponse.choices?.[0]?.message?.content || '{}');
-      
-      const coverLetter: CoverLetter = {
-        id: `letter_${Date.now()}`,
+      const coverLetter: StudentCoverLetter = {
+        id: `student_letter_${Date.now()}`,
         job_id,
-        user_profile_id,
+        user_profile_id: user_profile_id || 'student_profile',
         tone,
         length,
         language: targetLanguage,
         content: {
+          subject: letterData.subject || `Application for ${job.title}`,
+          salutation: letterData.salutation || 'Dear Hiring Team',
           intro: letterData.intro || '',
           body_paragraphs: letterData.body_paragraphs || [],
           closing: letterData.closing || '',
           sign_off: letterData.sign_off || 'Best regards'
         },
+        student_specifics: {
+          enrollment_mentioned: true,
+          availability_mentioned: true,
+          projects_highlighted: letterData.projects_highlighted || [],
+          coursework_referenced: letterData.coursework_referenced || []
+        },
         used_keywords: letterData.used_keywords || [],
+        german_keywords: targetLanguage === 'DE' ? germanKeywords : undefined,
         created_at: new Date().toISOString()
       };
       
       // Cache the letter
-      letterCache.set(cacheKey, {
+      studentLetterCache.set(cacheKey, {
         letter: coverLetter,
         timestamp: Date.now()
       });
       
-      console.log(`🎯 COVER LETTER: Generated ${tone} ${length} letter (${targetLanguage}) with ${coverLetter.used_keywords.length} keywords`);
-      
+      // Calculate actual word count
+      const fullText = `${coverLetter.content.intro} ${coverLetter.content.body_paragraphs.join(' ')} ${coverLetter.content.closing}`;
+      const wordCount = fullText.split(' ').filter(w => w.length > 0).length;
+
+      console.log(`🎓 STUDENT COVER LETTER: Generated ${tone} ${length} letter (${targetLanguage}) - ${wordCount} words`);
+
+      // Save cover letter to variant with versioning
+      if (existingVariant?.id) {
+        const newGenerationCount = (existingVariant.cover_letter_generation_count || 0) + 1;
+
+        // Load existing versions or create new array
+        let versions = [];
+        if (existingVariant.cover_letter_content) {
+          const savedData = JSON.parse(existingVariant.cover_letter_content);
+          if (savedData.versions && Array.isArray(savedData.versions)) {
+            versions = savedData.versions;
+          } else {
+            // Convert legacy format to versioned
+            versions = [{
+              version: 1,
+              generated_at: existingVariant.cover_letter_generated_at || new Date().toISOString(),
+              tone: savedData.tone,
+              length: savedData.length,
+              cover_letter: savedData
+            }];
+          }
+        }
+
+        // Append new version
+        const newVersion = {
+          version: newGenerationCount,
+          generated_at: new Date().toISOString(),
+          tone,
+          length,
+          cover_letter: coverLetter
+        };
+        versions.push(newVersion);
+
+        // Save versioned data
+        const versionedData = {
+          versions: versions,
+          current_version: newGenerationCount
+        };
+
+        await supabase
+          .from('resume_variants')
+          .update({
+            cover_letter_content: JSON.stringify(versionedData),
+            cover_letter_generated_at: new Date().toISOString(),
+            cover_letter_generation_count: newGenerationCount
+          })
+          .eq('id', existingVariant.id);
+
+        console.log(`💾 COVER LETTER: Saved version ${newGenerationCount}/2 (total ${versions.length} versions)`);
+
+        return NextResponse.json({
+          success: true,
+          cover_letter: coverLetter,
+          cached: false,
+          versions: versions,
+          current_version: newGenerationCount,
+          metadata: {
+            word_count: wordCount,
+            language: targetLanguage,
+            werkstudent_optimized: true,
+            projects_included: coverLetter.student_specifics.projects_highlighted.length,
+            courses_mentioned: coverLetter.student_specifics.coursework_referenced.length,
+            generation_count: newGenerationCount,
+            generation_limit: 2,
+            total_versions: versions.length
+          }
+        });
+      }
+
+      // If no variant exists yet (shouldn't happen, but handle it)
       return NextResponse.json({
         success: true,
         cover_letter: coverLetter,
         cached: false,
-        preview: {
-          word_count: (coverLetter.content.intro + ' ' + 
-                      coverLetter.content.body_paragraphs.join(' ') + ' ' +
-                      coverLetter.content.closing).split(' ').length,
+        versions: [{
+          version: 1,
+          generated_at: new Date().toISOString(),
+          tone,
+          length,
+          cover_letter: coverLetter
+        }],
+        current_version: 1,
+        metadata: {
+          word_count: wordCount,
           language: targetLanguage,
-          tone_applied: tone
+          werkstudent_optimized: true,
+          projects_included: coverLetter.student_specifics.projects_highlighted.length,
+          courses_mentioned: coverLetter.student_specifics.coursework_referenced.length,
+          generation_count: 1,
+          generation_limit: 2,
+          total_versions: 1
         }
       });
       
     } catch (aiError) {
-      console.error('🎯 COVER LETTER: AI generation failed:', aiError);
+      console.error('🎓 STUDENT COVER LETTER: AI generation failed:', aiError);
       return NextResponse.json(
         { 
-          error: 'Cover letter generation failed',
+          error: 'Student cover letter generation failed',
           details: aiError instanceof Error ? aiError.message : 'AI service error'
         },
         { status: 500 }
@@ -405,10 +756,10 @@ Output JSON only:
     }
     
   } catch (error) {
-    console.error('🎯 COVER LETTER: Request failed:', error);
+    console.error('🎓 STUDENT COVER LETTER: Request failed:', error);
     return NextResponse.json(
       { 
-        error: 'Cover letter generation failed',
+        error: 'Student cover letter generation failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
@@ -416,42 +767,9 @@ Output JSON only:
   }
 }
 
-/**
- * GET /api/jobs/cover-letter
- * Retrieve cached cover letters
- */
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const job_id = searchParams.get('job_id');
-  const user_profile_id = searchParams.get('user_profile_id');
-  
-  if (!job_id || !user_profile_id) {
-    return NextResponse.json(
-      { error: 'job_id and user_profile_id are required' },
-      { status: 400 }
-    );
-  }
-  
-  // Find cached letters for this job/profile
-  const userLetters = Array.from(letterCache.entries())
-    .filter(([key]) => key.startsWith(`${job_id}_${user_profile_id}`))
-    .map(([key, value]) => ({
-      cache_key: key,
-      age_seconds: Math.round((Date.now() - value.timestamp) / 1000),
-      tone: value.letter.tone,
-      length: value.letter.length,
-      language: value.letter.language,
-      preview: value.letter.content.intro.slice(0, 100) + '...'
-    }));
-  
-  return NextResponse.json({
-    success: true,
-    cached_letters: userLetters,
-    available_tones: ['confident', 'warm', 'direct'],
-    available_lengths: ['short', 'medium', 'long'],
-    cache_stats: {
-      total_letters: letterCache.size,
-      user_specific: userLetters.length
-    }
-  });
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed. Use POST to generate student cover letters.' },
+    { status: 405 }
+  );
 }

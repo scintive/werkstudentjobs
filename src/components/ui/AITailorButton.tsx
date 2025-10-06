@@ -16,10 +16,10 @@ export function AITailorButton({ jobId, className = '' }: AITailorButtonProps) {
     <button
       onClick={() => router.push(`/jobs/${jobId}/tailor`)}
       title="Tailor resume + cover letter for this job"
-      className={`btn btn-success ${className}`}
+      className={`h-7 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3 flex items-center gap-1.5 text-sm font-medium transition-colors ${className}`}
     >
-      <Sparkles className="w-5 h-5 flex-shrink-0" />
-      <span className="whitespace-nowrap">AI Tailor Apply</span>
+      <Sparkles className="w-3 h-3" />
+      <span className="whitespace-nowrap">Tailor Profile</span>
     </button>
   )
 }

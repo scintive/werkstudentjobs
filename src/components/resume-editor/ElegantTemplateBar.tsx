@@ -16,6 +16,7 @@ import {
   CheckCircle,
   ExternalLink
 } from 'lucide-react'
+import { ShareButtons } from '../share/ShareButtons'
 
 interface Template {
   id: string
@@ -59,11 +60,15 @@ const templates: Template[] = [
 export function ElegantTemplateBar({
   activeTemplate,
   onChange,
-  onExport
+  onExport,
+  resumeId,
+  variantId
 }: {
   activeTemplate: string
   onChange: (template: string) => void
   onExport?: () => void
+  resumeId?: string
+  variantId?: string
 }) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [isExporting, setIsExporting] = React.useState(false)
@@ -106,76 +111,13 @@ export function ElegantTemplateBar({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          {/* Copy Link */}
-          <button
-            onClick={handleCopyLink}
-            className="h-10 px-4 flex items-center gap-2.5 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-150 border border-transparent hover:border-gray-200"
-          >
-            {copied ? (
-              <>
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-600">Copied!</span>
-              </>
-            ) : (
-              <>
-                <Link2 className="w-4 h-4" />
-                <span className="text-sm font-medium">Copy Link</span>
-              </>
-            )}
-          </button>
-
-          {/* Share Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowShareMenu(!showShareMenu)}
-              className="h-10 px-4 flex items-center gap-2.5 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-150 border border-transparent hover:border-gray-200"
-            >
-              <Share2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Share</span>
-            </button>
-
-            <AnimatePresence>
-              {showShareMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowShareMenu(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50"
-                  >
-                    <div className="p-2">
-                      <button
-                        onClick={() => handleShare('email')}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Mail className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm text-gray-900">Email Resume</span>
-                      </button>
-                      <button
-                        onClick={() => handleShare('linkedin')}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm text-gray-900">Share to LinkedIn</span>
-                      </button>
-                      <button
-                        onClick={handleCopyLink}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Copy className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm text-gray-900">Copy Link</span>
-                      </button>
-                    </div>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Share Buttons Component */}
+          <ShareButtons
+            shareType="resume"
+            resumeId={resumeId}
+            variantId={variantId}
+            template={activeTemplate}
+          />
 
           <div className="h-6 w-px bg-gray-300 mx-1" />
 

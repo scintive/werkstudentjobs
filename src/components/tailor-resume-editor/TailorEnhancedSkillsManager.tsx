@@ -254,6 +254,17 @@ export function TailorEnhancedSkillsManager({
         // Always include languages in expanded categories
         autoExpanded['languages'] = true
         setExpandedCategories(autoExpanded)
+
+        // Auto-generate suggestions for relevant categories when in AI mode
+        if (jobData && aiMode) {
+          const categoriesToSuggest = Object.keys(enhancedData.organized_categories)
+            .filter(key => !key.toLowerCase().includes('language'))
+            .slice(0, 3)
+
+          categoriesToSuggest.forEach((categoryKey, index) => {
+            setTimeout(() => generateAISuggestions(categoryKey), 1000 * (index + 1))
+          })
+        }
       } else if (Object.keys(skills).length > 0 && !skipAutoReorganization && !organizedData) {
         console.log('🧠 Auto-reorganization triggered (skills changed, no organized data, not skipping)')
         await organizeExistingSkills()

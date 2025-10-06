@@ -335,8 +335,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
   const [locationSearch, setLocationSearch] = React.useState<string>('')
   const [distanceRadius, setDistanceRadius] = React.useState<number>(100)
   const [selectedJobType, setSelectedJobType] = React.useState<string>('all')
+  const [tailoredFilter, setTailoredFilter] = React.useState<'all' | 'only' | 'hide'>('all')
   const [sortBy, setSortBy] = React.useState<string>('match_score')
   const [savedJobs, setSavedJobs] = React.useState<Set<string>>(new Set())
+  const [appliedJobs, setAppliedJobs] = React.useState<Set<string>>(new Set())
+  const [tailoredJobs, setTailoredJobs] = React.useState<Map<string, { created_at: string, match_score?: number }>>(new Map())
   const [selectedJob, setSelectedJob] = React.useState<JobWithCompany | null>(null)
   const [expandedSkillSections, setExpandedSkillSections] = React.useState<{
     technical: boolean;
@@ -399,7 +402,64 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
   // Fetch jobs on mount
   React.useEffect(() => {
     fetchJobs()
+    fetchTailoredJobs()
+    fetchAppliedJobs()
   }, [])
+
+  const fetchTailoredJobs = async () => {
+    try {
+      const response = await fetch('/api/jobs/tailored-status', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✨ Fetched tailored jobs:', data)
+
+        // Create a map of job_id -> metadata
+        const tailoredMap = new Map()
+        data.tailoredJobs?.forEach((item: any) => {
+          tailoredMap.set(item.job_id, {
+            created_at: item.created_at,
+            match_score: item.match_score
+          })
+        })
+
+        setTailoredJobs(tailoredMap)
+      }
+    } catch (error) {
+      console.error('Error fetching tailored jobs:', error)
+    }
+  }
+
+  const fetchAppliedJobs = async () => {
+    try {
+      const response = await fetch('/api/jobs/applied-status', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📋 Fetched applied jobs:', data)
+
+        // Create a set of applied job IDs
+        const appliedSet = new Set<string>()
+        data.appliedJobs?.forEach((item: any) => {
+          appliedSet.add(item.job_id)
+        })
+
+        setAppliedJobs(appliedSet)
+      }
+    } catch (error) {
+      console.error('Error fetching applied jobs:', error)
+    }
+  }
 
   const fetchJobs = async () => {
     setLoading(true)
@@ -529,6 +589,63 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
     })
   }
 
+  const toggleAppliedStatus = async (jobId: string) => {
+    const isCurrentlyApplied = appliedJobs.has(jobId)
+    const newStatus = !isCurrentlyApplied
+
+    // Optimistically update UI
+    setAppliedJobs(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId)
+      } else {
+        newSet.add(jobId)
+      }
+      return newSet
+    })
+
+    // Update in database
+    try {
+      const response = await fetch('/api/jobs/update-applied-status', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          job_id: jobId,
+          applied: newStatus
+        })
+      })
+
+      if (!response.ok) {
+        console.error('Failed to update applied status')
+        // Revert on error
+        setAppliedJobs(prev => {
+          const newSet = new Set(prev)
+          if (isCurrentlyApplied) {
+            newSet.add(jobId)
+          } else {
+            newSet.delete(jobId)
+          }
+          return newSet
+        })
+      }
+    } catch (error) {
+      console.error('Error updating applied status:', error)
+      // Revert on error
+      setAppliedJobs(prev => {
+        const newSet = new Set(prev)
+        if (isCurrentlyApplied) {
+          newSet.add(jobId)
+        } else {
+          newSet.delete(jobId)
+        }
+        return newSet
+      })
+    }
+  }
+
   // Filter and sort jobs (using geo-enhanced jobs)
   const filteredJobs = React.useMemo(() => {
     let filtered = [...enhancedJobs]
@@ -555,7 +672,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         }
         // Search in job description
         if (job.description?.toLowerCase().includes(query)) return true
-        
+
         return false
       })
     }
@@ -564,7 +681,14 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
     if (selectedTab === 'saved') {
       filtered = filtered.filter(job => savedJobs.has(job.id))
     } else if (selectedTab === 'applied') {
-      filtered = filtered.filter(job => job.user_applied)
+      filtered = filtered.filter(job => appliedJobs.has(job.id))
+    }
+
+    // Tailored jobs filter (3-state: all, only, hide)
+    if (tailoredFilter === 'only') {
+      filtered = filtered.filter(job => tailoredJobs.has(job.id))
+    } else if (tailoredFilter === 'hide') {
+      filtered = filtered.filter(job => !tailoredJobs.has(job.id))
     }
 
     // Work mode filter - handle multiple possible field names
@@ -621,8 +745,31 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
       })
     }
 
-    // Note: Location filtering is now handled by geo-enhanced matching with real distances
-    // Only handle remote filter explicitly since it's work-mode based
+    // Location + Distance filtering - use geo distance when available, text matching as fallback
+    if (locationSearch.trim()) {
+      const searchTerm = locationSearch.toLowerCase().trim()
+
+      filtered = filtered.filter(job => {
+        // Always include remote jobs
+        if (job.work_mode === 'remote') return true
+
+        // If geo distance is available, use distance-based filtering
+        if ('distanceKm' in job && typeof job.distanceKm === 'number') {
+          return job.distanceKm <= distanceRadius
+        }
+
+        // Fallback: text-based location matching (for jobs without geo data)
+        const city = (job.city || job.location_city || '').toLowerCase()
+        const country = (job.country || job.location_country || '').toLowerCase()
+        const fullLocation = (job.location_full || '').toLowerCase()
+
+        return city.includes(searchTerm) ||
+               country.includes(searchTerm) ||
+               fullLocation.includes(searchTerm)
+      })
+    }
+
+    // Remote location filter (legacy)
     if (selectedLocation === 'Remote') {
       filtered = filtered.filter(job => job.is_remote || job.work_mode === 'remote');
     }
@@ -663,7 +810,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
     })
 
     return filtered
-  }, [enhancedJobs, searchQuery, selectedTab, selectedWorkMode, selectedLocation, locationSearch, selectedJobType, sortBy, savedJobs])
+  }, [enhancedJobs, searchQuery, selectedTab, selectedWorkMode, selectedLocation, locationSearch, distanceRadius, selectedJobType, tailoredFilter, sortBy, savedJobs, appliedJobs, tailoredJobs])
 
   // Get unique locations for filter
   const locations = React.useMemo(() => {
@@ -781,10 +928,12 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
             {/* Language Filter */}
             <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-              <SelectTrigger className="h-9 w-[150px] bg-white border-gray-200 text-sm">
-                <div className="flex items-center gap-2">
-                  <Globe2 className="w-4 h-4 text-gray-500" />
-                  <SelectValue placeholder="Any language" />
+              <SelectTrigger className="h-9 w-[160px] bg-white border-gray-200 text-sm">
+                <div className="flex items-center gap-2 w-full overflow-hidden">
+                  <Globe2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  <span className="truncate">
+                    <SelectValue placeholder="Language" />
+                  </span>
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -794,6 +943,48 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                 <SelectItem value="BOTH">Both required</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Tailored Jobs Filter (3-state: all, only, hide) */}
+            <Button
+              variant={tailoredFilter !== 'all' ? "default" : "outline"}
+              size="sm"
+              className={cn(
+                "h-9 px-3 gap-2 text-sm font-medium transition-all whitespace-nowrap",
+                tailoredFilter === 'only' && "bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600 shadow-sm",
+                tailoredFilter === 'hide' && "bg-gradient-to-r from-gray-500 to-slate-500 text-white hover:from-gray-600 hover:to-slate-600 shadow-sm"
+              )}
+              onClick={() => {
+                setTailoredFilter(prev => {
+                  if (prev === 'all') return 'only'
+                  if (prev === 'only') return 'hide'
+                  return 'all'
+                })
+              }}
+              title={
+                tailoredFilter === 'all' ? 'Show all jobs (click to show only tailored)' :
+                tailoredFilter === 'only' ? 'Showing only tailored jobs (click to hide tailored)' :
+                'Hiding tailored jobs (click to show all)'
+              }
+            >
+              {tailoredFilter === 'all' && (
+                <>
+                  <Zap className="w-4 h-4" />
+                  All Jobs
+                </>
+              )}
+              {tailoredFilter === 'only' && (
+                <>
+                  <Zap className="w-4 h-4" />
+                  Only Tailored
+                </>
+              )}
+              {tailoredFilter === 'hide' && (
+                <>
+                  <X className="w-4 h-4" />
+                  Tailored Hidden
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
@@ -837,6 +1028,12 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
             <div className="text-xs text-gray-600 mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span>{filteredJobs.length} jobs</span>
+                {tailoredJobs.size > 0 && (
+                  <div className="flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-full shadow-sm" title={`${tailoredJobs.size} jobs with tailored resumes`}>
+                    <Zap className="w-2.5 h-2.5" />
+                    <span className="text-xs font-bold">{tailoredJobs.size} Tailored</span>
+                  </div>
+                )}
                 {showPlaceholderNotice && (
                   <div className="flex items-center gap-0.5 text-blue-600" title="Estimated scores shown - upload resume for real AI matching">
                     <Target className="w-2.5 h-2.5" />
@@ -892,6 +1089,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     setSelectedLocation('all')
                     setLocationSearch('')
                     setSelectedJobType('all')
+                    setTailoredFilter('all')
                   }}>
                     Clear Filters
                   </Button>
@@ -907,13 +1105,17 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ delay: index * 0.02 }}
                   >
-                    <motion.div 
+                    <motion.div
                       data-testid="job-card"
                       className={cn(
-                        "p-1.5 border-b border-gray-100 cursor-pointer transition-all duration-200 group",
-                        selectedJob?.id === job.id 
-                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500 shadow-sm" 
-                          : "hover:bg-gray-50 hover:shadow-sm hover:border-l-2 hover:border-l-gray-300"
+                        "p-1.5 border-b cursor-pointer transition-all duration-200 group relative",
+                        tailoredJobs.has(job.id)
+                          ? selectedJob?.id === job.id
+                            ? "bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 border-l-4 border-l-emerald-500 shadow-md border-emerald-100"
+                            : "bg-gradient-to-r from-emerald-50/50 to-green-50/30 border-l-3 border-l-emerald-400 hover:shadow-md hover:border-l-emerald-500 border-emerald-100"
+                          : selectedJob?.id === job.id
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500 shadow-sm border-gray-100"
+                            : "hover:bg-gray-50 hover:shadow-sm hover:border-l-2 hover:border-l-gray-300 border-gray-100"
                       )}
                       whileHover={{ x: 2 }}
                       whileTap={{ scale: 0.98 }}
@@ -980,8 +1182,10 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                             })()}
                           </div>
                           
-                          <p className="text-xs text-gray-600 mb-0.5 truncate">{job.company.name}</p>
-                          
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <p className="text-xs text-gray-600 truncate">{job.company.name}</p>
+                          </div>
+
                           {/* Ultra Compact Meta with Distance */}
                           <div className="flex items-center gap-1 text-xs text-gray-500 mb-0.5">
                             {(job.city || job.location_city) && (
@@ -1007,6 +1211,12 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                           {/* Employment Type, Language Badges, and Eligibility */}
                           <div className="flex items-center gap-0.5 flex-wrap">
+                            {appliedJobs.has(job.id) && (
+                              <Badge className="bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 text-xs h-3.5 px-1 font-medium gap-0.5">
+                                <Check className="w-2.5 h-2.5" />
+                                Applied
+                              </Badge>
+                            )}
                             {job.is_werkstudent && (
                               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs h-3.5 px-1 font-medium">
                                 Werkstudent
@@ -1071,7 +1281,19 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                           {/* Bottom Row */}
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
+                              {tailoredJobs.has(job.id) && (
+                                <motion.div
+                                  className="flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md"
+                                  initial={{ scale: 0, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                  title="You've tailored your resume for this job"
+                                >
+                                  <Zap className="w-2.5 h-2.5" />
+                                  <span className="text-xs font-medium">Tailored</span>
+                                </motion.div>
+                              )}
                               <Button
                                 size="sm"
                                 variant={savedJobs.has(job.id) ? "default" : "ghost"}
@@ -1167,6 +1389,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                       </div>
                     )}
 
+
                     {/* Compact Badges */}
                     <div className="flex flex-wrap gap-1">
                       {(selectedJob.match_score || selectedJob.match_score === 0) && (
@@ -1247,7 +1470,18 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                   {/* Action Buttons - Compact */}
                   <div className="ml-3 flex gap-1 flex-shrink-0">
-                    <AITailorButton jobId={selectedJob.id} />
+                    {tailoredJobs.has(selectedJob.id) ? (
+                      <Button
+                        size="sm"
+                        className="h-7 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3"
+                        onClick={() => router.push(`/jobs/${selectedJob.id}/tailor`)}
+                      >
+                        <Zap className="w-3 h-3 mr-1.5" />
+                        View Application
+                      </Button>
+                    ) : (
+                      <AITailorButton jobId={selectedJob.id} />
+                    )}
 
                     <Button
                       variant={savedJobs.has(selectedJob.id) ? "default" : "outline"}
@@ -1633,13 +1867,34 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                 {/* Apply Button - Bottom of Card */}
                 {(selectedJob.application_url || selectedJob.linkedin_url) && (
-                  <div className="px-3 pb-3 pt-0">
+                  <div className="px-3 pb-3 pt-0 space-y-2">
                     <Button
                       className="w-full gap-2 h-11 text-base font-medium"
                       onClick={() => window.open(selectedJob.application_url || selectedJob.linkedin_url!, '_blank')}
                     >
                       Apply on Company Website
                       <ExternalLink className="w-4 h-4" />
+                    </Button>
+
+                    <Button
+                      variant={appliedJobs.has(selectedJob.id) ? "default" : "outline"}
+                      className={cn(
+                        "w-full gap-2 h-9 text-sm font-medium",
+                        appliedJobs.has(selectedJob.id) && "bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600"
+                      )}
+                      onClick={() => toggleAppliedStatus(selectedJob.id)}
+                    >
+                      {appliedJobs.has(selectedJob.id) ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Application Submitted
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4" />
+                          Mark as Applied
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}

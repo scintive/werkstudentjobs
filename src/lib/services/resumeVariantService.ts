@@ -182,6 +182,36 @@ class ResumeVariantService {
   }
 
   /**
+   * Update match score for a resume variant
+   */
+  async updateMatchScore(
+    variantId: string,
+    matchScore: number
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('resume_variants')
+        .update({
+          match_score: matchScore,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', variantId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to update match score:', error);
+        return false;
+      }
+
+      console.log(`✅ Updated match score for variant ${variantId}: ${matchScore}%`);
+      return true;
+    } catch (error) {
+      console.error('Error updating match score:', error);
+      return false;
+    }
+  }
+
+  /**
    * Save suggestions for a resume variant
    */
   async saveSuggestions(

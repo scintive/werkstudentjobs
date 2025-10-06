@@ -78,6 +78,7 @@ export function useUnifiedSuggestions({
         .from('resume_suggestions')
         .select('*')
         .eq('variant_id', variantId)
+        .is('accepted', null)  // Only load suggestions that haven't been accepted or declined
         .order('section', { ascending: true })
         .order('confidence', { ascending: false })
       

@@ -10,6 +10,7 @@ type Props = {
   jobData: any;
   strategy?: any;
   onTailorSkills?: () => void;
+  onMatchScoreCalculated?: (score: number) => void;
 };
 
 function norm(s: string): string {
@@ -221,7 +222,7 @@ function quickLearnLinks(task: string): { label: string; url: string }[] {
   return links.slice(0, 3);
 }
 
-export default function StrategyOnePager({ userProfile, jobData, strategy, onTailorSkills }: Props) {
+export default function StrategyOnePager({ userProfile, jobData, strategy, onTailorSkills, onMatchScoreCalculated }: Props) {
   // Source tasks from strategy when available, else job responsibilities
   const rawTasks: string[] = (strategy?.job_task_analysis?.map((t: any) => t.task) || jobData?.responsibilities_original || [])
     .filter((t: any) => !!t && typeof t === 'string');
@@ -420,6 +421,13 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
       ? aiCompatAvg
       : Number.isFinite(cardPctAvg) ? cardPctAvg : 0;
   const isEstimated = !(Number.isFinite(serverScore) && serverScore > 0);
+
+  // Call the callback when match score is calculated
+  React.useEffect(() => {
+    if (onMatchScoreCalculated && matchScore > 0) {
+      onMatchScoreCalculated(matchScore);
+    }
+  }, [matchScore, onMatchScoreCalculated]);
 
   return (
     <div className="card card-elevated" style={{ padding: '2rem' }}>

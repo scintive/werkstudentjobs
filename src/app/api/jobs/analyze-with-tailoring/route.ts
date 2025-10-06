@@ -8,7 +8,9 @@ import { getConfig } from '@/lib/config/app';
 import crypto from 'crypto';
 
 // Cache for strategies with tailoring - keyed by fingerprint
-const strategyTailoringCache = new Map<string, { data: any; timestamp: number; fingerprint: string }>();
+// CACHE_VERSION: Increment this when logic changes to invalidate old cache entries
+const CACHE_VERSION = 2; // v2: Fixed title/summary deduplication
+const strategyTailoringCache = new Map<string, { data: any; timestamp: number; fingerprint: string; version: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (increased from 30 min for better performance)
 
 // Valid sections for normalization
@@ -739,11 +741,12 @@ export async function POST(request: NextRequest) {
     
     logContext.variant_id = variant.id;
     
-    // 6a. CHECK IF VARIANT HAS EXISTING SUGGESTIONS
+    // 6a. CHECK IF VARIANT HAS EXISTING SUGGESTIONS (only pending ones, not accepted/declined)
     const { data: existingSuggestions, error: suggestionsError } = await db
       .from('resume_suggestions')
       .select('*')
       .eq('variant_id', variant.id)
+      .is('accepted', null) // Only load pending suggestions
       .order('created_at', { ascending: true });
     
     const hasPersistedPlan = Array.isArray((variant as any)?.tailored_data?.skillsCategoryPlan?.categories) &&
@@ -776,9 +779,10 @@ export async function POST(request: NextRequest) {
     const currentFingerprint = generateFingerprint(jobData, baseResume);
     if (!force_refresh) {
       const cached = strategyTailoringCache.get(cacheKey);
-      if (cached && 
-          (Date.now() - cached.timestamp) < CACHE_TTL && 
-          cached.fingerprint === currentFingerprint) {
+      if (cached &&
+          (Date.now() - cached.timestamp) < CACHE_TTL &&
+          cached.fingerprint === currentFingerprint &&
+          cached.version === CACHE_VERSION) {
         return NextResponse.json({
           success: true,
           ...cached.data,
@@ -852,16 +856,61 @@ Rules:
 • PRESERVE ALL EXISTING CONTENT: Never delete responsibilities, experiences, or projects. Only enhance/tailor the language
 • Keep ALL bullets from each role - tailor the wording to match job requirements but maintain all original responsibilities
 • If a role currently has ZERO bullets/achievements, you MUST ADD 2–3 concise, impact-first bullets for that role (no fabrication; derive from resume + JD). Anchor them as experience[ROLE_INDEX].achievements[NEXT_INDEX]
-• Professional Title: Create a tailored title that bridges the candidate's experience with the target role (e.g., "Operations Specialist → Partnership & Performance Support" for a partnership role) - NOT just copying the job title
-• Professional Summary: ALWAYS include and tailor the summary to highlight relevant experience for the specific job
-• Skills: Build a job-specific category system. Re-cluster related skills into sharp categories, create/rename buckets where needed, spotlight the most hire-me-now capabilities, and retire/merge anything that weakens alignment (always justify)
-• Skills Category Plan: Return a structured plan that lists each category (display + canonical key), why it matters, and every skill with a status of keep/add/promote/retire so downstream systems can render the transformation deterministically
 • Atomic only (one bullet/tag/title tweak per suggestion)
 • Taste: outcome-first phrasing, strong verbs, remove filler, tense consistency; bullets ideally ≤22 words
 • Evidence-linked: each suggestion must include resume evidence and the JD phrase/keyword it improves
 • Coverage: summary, title, skills (ALL categories), ALL experience roles (preserve ALL bullets from each), projects, education, languages, certifications
 • Deterministic: same inputs => same outputs
-• Return ONLY a valid JSON object matching the schema below. No prose.
+
+PROFESSIONAL TITLE GUIDELINES - CRITICAL:
+Create a POWERFUL, strategic title (8-15 words max) that:
+• BRIDGES candidate's current expertise → target role (e.g., "Product Designer → AI-Driven UX Strategist", "Full-Stack Developer specializing in Enterprise SaaS Solutions")
+• HIGHLIGHTS 1-2 core differentiators from resume that match job requirements
+• SHOWS seniority level appropriately (match their actual experience level - don't inflate or understate)
+• USES power words: "Specializing in", "with expertise in", "focused on", "driving", "leading"
+• NEVER just copy the job title - make it about THEIR unique positioning for THIS role
+• Make it specific and differentiated, not generic
+
+PROFESSIONAL SUMMARY GUIDELINES - CRITICAL:
+Create a COMPELLING, strategic summary (130-170 words, 6-8 sentences) following this EXACT structure:
+1. POWER OPENER: Years of experience + primary expertise + 1 standout achievement/metric
+2. CORE COMPETENCIES (2-3 sentences): Specific capabilities that DIRECTLY match job requirements - include technical skills, methodologies, domains
+3. UNIQUE VALUE: What makes them UNIQUELY qualified for THIS specific role
+4. ACHIEVEMENTS (2-3): QUANTIFIED accomplishments with metrics (%, numbers, time saved, users impacted) using POWER VERBS (Led, Drove, Achieved, Built, Scaled)
+5. TECHNICAL STACK: List 5-7 most relevant tools/technologies for THIS job
+6. CAREER DIRECTION: Forward-looking statement showing ambition aligned with target role
+
+Summary must:
+• Use ONLY facts from resume - ZERO fabrication
+• Include SPECIFIC numbers and metrics from their actual experience
+• Weave in 8-12 JOB KEYWORDS naturally
+• Use ACTIVE voice and vary sentence structure
+• Make it PERSONAL and SPECIFIC to their journey, not a generic template
+• Read confidently and end with forward momentum
+
+SKILLS CATEGORY PLAN GUIDELINES - CRITICAL:
+Build a job-specific category system (3-5 categories only):
+• Create SHARP, JOB-SPECIFIC category names that match the target role's domain - NOT generic like "Technical Skills"
+• PRIMARY RULE: Map the user's EXISTING resume skills to new job-aligned categories
+  - Take their current skills and reorganize them under strategic category names
+  - Reword skills slightly if needed to match job terminology (e.g., "React" → "React.js", "Customer Support" → "Client Success Management")
+  - Only suggest NEW skills if there's a critical gap the job explicitly requires
+• Each category MUST contain 5-10 skills:
+  - Start with ALL relevant skills from their resume
+  - Group related skills together strategically
+  - Add 1-3 job-required skills ONLY if they're missing and critical
+  - Every skill must show clear job alignment
+• Each category must have:
+  - Compelling display_name that signals value to hiring manager
+  - canonical_key in format: "category_name" or "compound_concept___subconcept"
+  - job_alignment explaining how this category matches JD requirements
+  - priority (1-5, lower = more important)
+  - rationale for why this category matters
+  - skills array with 5-10 skills, each having: name, status (keep/add/promote/retire), rationale, source (resume/job/hybrid), proficiency, confidence
+• Re-cluster their existing skills into strategic groups that highlight job fit
+• This plan MUST be complete and comprehensive - it's the PRIMARY skills display in the UI
+
+Return ONLY a valid JSON object matching the schema below. No prose.
 
 OUTPUT FORMAT (JSON):
 {
@@ -875,8 +924,8 @@ OUTPUT FORMAT (JSON):
   },
   "tailored_resume": {
     "personalInfo": { "KEEP EXACTLY AS IN ORIGINAL - DO NOT MODIFY" },
-    "professionalTitle": "Tailored title bridging current role to target position (NOT just the job title)",
-    "professionalSummary": "Comprehensive 5-6 sentence summary (120-150 words) that: (1) Opens with user's proven experience and core expertise, (2) Highlights 2-3 specific achievements or skills that directly match this job, (3) Demonstrates how their background uniquely positions them for this role, (4) Shows career growth and ambition, (5) Lists 3-4 relevant skills/tools for the target role, (6) Mentions notable projects or specialized training. Make it personal and specific to the user's actual experience with quantified achievements.",
+    "professionalTitle": "Strategic title bridging current expertise to target role (8-15 words, follow guidelines)",
+    "professionalSummary": "Compelling 130-170 word summary with 6-8 sentences following the structure: power opener with metrics, core competencies matching job, unique value proposition, 2-3 quantified achievements, technical stack (5-7 tools), career direction",
     "enableProfessionalSummary": true,
     "skills": { 
       "technical": ["skill1", "skill2"], 
@@ -920,10 +969,15 @@ OUTPUT FORMAT (JSON):
         "canonical_key": "customer_success___command",
         "job_alignment": "Owns customer lifecycle metrics called out in the JD",
         "priority": 1,
+        "rationale": "Critical for role success",
         "skills": [
-          { "name": "Customer Journey Mapping", "status": "add", "rationale": "JD highlights lifecycle design", "source": "job" },
-          { "name": "Salesforce", "status": "keep", "rationale": "Already in resume and core to role", "source": "resume" },
-          { "name": "Legacy ERP", "status": "retire", "rationale": "Not referenced and distracts from SaaS focus", "source": "resume" }
+          { "name": "Customer Journey Mapping", "status": "add", "rationale": "JD highlights lifecycle design", "source": "job", "confidence": 90 },
+          { "name": "Salesforce CRM", "status": "keep", "rationale": "Core tool mentioned in JD", "source": "resume", "confidence": 95 },
+          { "name": "HubSpot", "status": "keep", "rationale": "Resume shows experience, JD needs CRM expertise", "source": "resume", "confidence": 85 },
+          { "name": "Customer Health Scoring", "status": "add", "rationale": "Key metric tracking for JD", "source": "job", "confidence": 88 },
+          { "name": "Onboarding Process Design", "status": "promote", "rationale": "Resume mentions, JD emphasizes", "source": "hybrid", "confidence": 92 },
+          { "name": "Client Retention Strategies", "status": "keep", "rationale": "Aligns with JD success goals", "source": "resume", "confidence": 87 },
+          { "name": "Support Ticket Management", "status": "keep", "rationale": "Operational excellence per JD", "source": "resume", "confidence": 83 }
         ]
       }
     ]
@@ -1090,7 +1144,7 @@ OUTPUT FORMAT (JSON):
                     display_name: { type: 'string' },
                     canonical_key: { type: 'string' },
                     job_alignment: { type: 'string' },
-                    priority: { type: ['number','null'] },
+                    priority: { type: 'number' },
                     rationale: { type: 'string' },
                     skills: {
                       type: 'array',
@@ -1211,7 +1265,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           user: userPrompt,
           schema,
           temperature: 0.2,
-          maxTokens: 3000,
+          maxTokens: 5000,
           retries: 2,
         });
       } catch (schemaErr: any) {
@@ -1248,9 +1302,22 @@ Return your response as a valid JSON object only. Do not include any additional 
         hasStrategy: !!analysisData.strategy,
         hasTailoredResume: !!analysisData.tailored_resume,
         atomicSuggestionsCount: analysisData.atomic_suggestions?.length || 0,
-        skillsSuggestionsCount: analysisData.skills_suggestions?.length || 0
+        skillsSuggestionsCount: analysisData.skills_suggestions?.length || 0,
+        hasSkillsCategoryPlan: !!analysisData.skills_category_plan,
+        skillsCategoryPlanCategories: analysisData.skills_category_plan?.categories?.length || 0
       });
-      
+
+      // CRITICAL: Check if skills_category_plan is missing from cached response
+      // This indicates an incomplete/old cached response that needs regeneration
+      if (!analysisData.skills_category_plan ||
+          !Array.isArray(analysisData.skills_category_plan?.categories) ||
+          analysisData.skills_category_plan.categories.length === 0) {
+        console.warn('⚠️ CRITICAL: skills_category_plan missing from GPT response (likely stale cache)');
+        console.warn('⚠️ This prevents job-specific skill categorization and AI suggestions');
+        console.warn('⚠️ User should clear browser cache or regenerate analysis for this job');
+        console.warn(`⚠️ Job: ${trimmedJob.title}, Variant: ${variant.id}`);
+      }
+
       // If model returned no suggestions, immediately re-try with a cache-busting, stricter prompt (no synthetic fallbacks)
       if (!Array.isArray(analysisData.atomic_suggestions) || analysisData.atomic_suggestions.length === 0) {
         console.warn('⚠️ Zero atomic suggestions from first pass. Retrying with stricter requirements...')
@@ -1268,22 +1335,27 @@ Return your response as a valid JSON object only. Do not include any additional 
                 additionalProperties: false,
                 properties: {
                   section: { enum: ['summary','experience','skills','languages','education','projects','certifications','custom','title'] },
-                  suggestion_type: { enum: ['text','bullet','addition','modification','skill_addition','skill_removal','skill_reorder','skill_replacement'] },
+                  suggestion_type: { enum: ['text','bullet','skill_addition','skill_removal','reorder','language_addition'] },
+                  target_id: { type: ['string','null'] },
                   target_path: { type: ['string','null'] },
-                  before: { type: ['string','null'] },
-                  after: { type: ['string','null'] },
+                  before: { type: 'string' },
+                  after: { type: 'string' },
+                  original_content: { type: 'string' },
+                  suggested_content: { type: 'string' },
                   rationale: { type: 'string' },
+                  ats_relevance: { type: ['string','null'] },
+                  keywords: { type: 'array', items: { type: 'string' } },
                   confidence: { type: 'number' },
                   impact: { enum: ['high','medium','low'] }
                 },
-                required: ['section','suggestion_type','target_path','before','after','rationale','confidence','impact']
+                required: ['section','suggestion_type','target_id','target_path','before','after','original_content','suggested_content','rationale','ats_relevance','keywords','confidence','impact']
               }
             }
           },
           required: ['atomic_suggestions']
         };
 
-        const atomicOnlyPrompt = `Return ONLY an object with key "atomic_suggestions" containing 20–30 high-quality suggestions.\n\nRules:\n• MUST INCLUDE 1-2 title suggestions (section: "title", target_path: "professionalTitle")\n• MUST INCLUDE 2-3 summary suggestions (section: "summary", target_path: "professionalSummary")\n• COVER ALL experience roles (2–3 bullet additions/rewrites each)\n• Anchor bullets with target_path when possible (experience[ROLE_INDEX].achievements[BULLET_INDEX])\n• Include skills adds/removals mapped to existing categories (no new categories)\n• For additions, set before to empty or null; for removals, set after to empty or null\n• Set confidence 75–95 and impact high/medium appropriately\n• No prose. No extra keys.\n\nJOB DATA:\n${JSON.stringify(analysisContext.job, null, 2)}\n\nRESUME DATA:\n${JSON.stringify(analysisContext.resume, null, 2)}\n\nCACHE_BUST:${Date.now()}`;
+        const atomicOnlyPrompt = `Return ONLY an object with key "atomic_suggestions" containing 20–30 high-quality suggestions.\n\nRules:\n• MUST INCLUDE EXACTLY 1 title suggestion (section: "title", target_path: "professionalTitle", target_id: null) - make it powerful and job-specific\n• MUST INCLUDE EXACTLY 1 summary suggestion (section: "summary", target_path: "professionalSummary", target_id: null) - make it compelling with metrics and achievements\n• COVER ALL experience roles (2–3 bullet additions/rewrites each)\n• Anchor bullets with target_path when possible (experience[ROLE_INDEX].achievements[BULLET_INDEX])\n• Include skills adds/removals mapped to existing categories (no new categories)\n• REQUIRED FIELDS for each suggestion:\n  - target_id: string or null (use null for top-level fields like title/summary)\n  - original_content: current text (use empty string "" if adding new content)\n  - suggested_content: new text\n  - ats_relevance: explain ATS keyword match (or null)\n  - keywords: array of relevant keywords from job description (empty array [] if none)\n• For additions: before = "", after = suggested text\n• For modifications: before = original, after = suggested text\n• For removals: before = original, after = ""\n• Set confidence 75–95 and impact high/medium appropriately\n• No prose. No extra keys.\n\nJOB DATA:\n${JSON.stringify(analysisContext.job, null, 2)}\n\nRESUME DATA:\n${JSON.stringify(analysisContext.resume, null, 2)}\n\nCACHE_BUST:${Date.now()}`;
 
         try {
           const retryStructured = await llmService.createJsonResponse<{ atomic_suggestions: any[] }>({
@@ -1412,19 +1484,35 @@ Return your response as a valid JSON object only. Do not include any additional 
         console.log('⚡ Using fast skills plan fallback (no GPT)');
         const existingCategories = Object.keys(baseResume.skills || {}).filter(cat => cat !== 'languages');
         analysisData.skills_category_plan = {
-          categories: existingCategories.map((cat, idx) => ({
-            canonical_key: cat.toLowerCase().replace(/\s+/g, '_'),
-            display_name: cat,
-            skills: [],
-            priority: idx + 1,
-            reasoning: "Preserved from original resume"
-          })),
+          categories: existingCategories.map((cat, idx) => {
+            const categorySkills = baseResume.skills[cat] || [];
+            return {
+              canonical_key: cat.toLowerCase().replace(/\s+/g, '_'),
+              display_name: cat,
+              skills: Array.isArray(categorySkills)
+                ? categorySkills.map((skill: string | any) => ({
+                    name: typeof skill === 'string' ? skill : skill.skill || skill.name || '',
+                    status: 'keep',
+                    rationale: 'Existing skill from resume',
+                    source: 'resume',
+                    proficiency: null,
+                    confidence: null
+                  }))
+                : [],
+              priority: idx + 1,
+              job_alignment: `Supporting ${cat} requirements`,
+              rationale: "Preserved from original resume"
+            };
+          }),
+          strategy: `Leverage existing ${existingCategories.join(', ')} skills`,
+          guiding_principles: ["Maintain core competencies", "Highlight relevant experience"],
           profile_assessment: {
             career_focus: trimmedJob.title || "Professional",
             skill_level: "Intermediate",
             recommendations: "Review job-specific skills"
           }
         };
+        console.log(`📊 Fallback created ${existingCategories.length} categories with ${existingCategories.reduce((sum, cat) => sum + (baseResume.skills[cat]?.length || 0), 0)} total skills`);
       }
 
       const planProcessingResult = applySkillsCategoryPlan({
@@ -1757,13 +1845,19 @@ Return your response as a valid JSON object only. Do not include any additional 
         })
       }
 
-      // Add title and summary suggestions if they differ from base
+      // Add title and summary suggestions if they differ from base AND they don't already exist in atomic_suggestions
       analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
 
       const baseProfessionalTitle = baseResumeData.professional_title || ''
       const tailoredProfessionalTitle = analysisData.tailored_resume?.professionalTitle || ''
-      // Only generate title suggestion if LLM provided one and it's different
-      if (tailoredProfessionalTitle && tailoredProfessionalTitle !== baseProfessionalTitle) {
+
+      // Check if title suggestion already exists
+      const hasTitleSuggestion = analysisData.atomic_suggestions.some(s =>
+        s.section === 'title' || s.target_path === 'professionalTitle'
+      )
+
+      // Only generate title suggestion if LLM provided one, it's different, and doesn't already exist
+      if (tailoredProfessionalTitle && tailoredProfessionalTitle !== baseProfessionalTitle && !hasTitleSuggestion) {
         analysisData.atomic_suggestions.push({
           section: 'title',
           suggestion_type: 'text',
@@ -1783,8 +1877,17 @@ Return your response as a valid JSON object only. Do not include any additional 
 
       const baseProfessionalSummary = baseResumeData.professional_summary || ''
       const tailoredProfessionalSummary = analysisData.tailored_resume?.professionalSummary || ''
-      // Only generate summary suggestion if LLM provided one and it's different
-      if (tailoredProfessionalSummary && tailoredProfessionalSummary !== baseProfessionalSummary) {
+
+      // Check if summary suggestion already exists
+      const hasSummarySuggestion = analysisData.atomic_suggestions.some(s =>
+        s.section === 'summary' || s.target_path === 'professionalSummary'
+      )
+
+      // Only generate summary suggestion if LLM provided one, it's different, not identical to title, and doesn't already exist
+      if (tailoredProfessionalSummary &&
+          tailoredProfessionalSummary !== baseProfessionalSummary &&
+          tailoredProfessionalSummary !== tailoredProfessionalTitle &&
+          !hasSummarySuggestion) {
         analysisData.atomic_suggestions.push({
           section: 'summary',
           suggestion_type: 'text',
@@ -2122,7 +2225,7 @@ Return your response as a valid JSON object only. Do not include any additional 
             keywords: s.keywords || s.ats_keywords || [],
             confidence: Math.min(100, Math.max(0, s.confidence || 50)),
             impact: ['high', 'medium', 'low'].includes(s.impact) ? s.impact : 'medium',
-            accepted: false, // Default to not accepted
+            accepted: null, // Default to pending (null = not yet reviewed)
             applied_at: null
           }));
         
@@ -2233,15 +2336,39 @@ Return your response as a valid JSON object only. Do not include any additional 
       
       // 10. UPDATE VARIANT WITH TAILORED DATA
       logContext.stage = 'update_variant';
-      
-      // CRITICAL: Preserve personal info and custom sections exactly; do not overwrite tailored skills
-      const tailoredDataWithOriginalInfo = {
-        ...(analysisData.tailored_resume || analysisContext.resume),
-        personalInfo: baseResume.personal_info, // Force original personal info
-        customSections: baseResume.custom_sections || [] // Force original custom sections
-      };
-      if (analysisData.skills_category_plan) {
-        tailoredDataWithOriginalInfo.skillsCategoryPlan = analysisData.skills_category_plan;
+
+      // CRITICAL: Preserve user's accepted changes!
+      // If variant already has tailored_data (from accepted suggestions), keep it
+      // Only update if this is the first analysis (new variant)
+      const existingTailoredData = (variant as any)?.tailored_data || null
+      const hasUserChanges = existingTailoredData && (
+        existingTailoredData.professionalTitle !== analysisContext.resume.professionalTitle ||
+        existingTailoredData.professionalSummary !== analysisContext.resume.professionalSummary ||
+        JSON.stringify(existingTailoredData.skills) !== JSON.stringify(analysisContext.resume.skills)
+      )
+
+      let tailoredDataWithOriginalInfo
+      if (hasUserChanges) {
+        // User has accepted suggestions - preserve their changes!
+        console.log('✅ Preserving user-accepted changes in variant')
+        tailoredDataWithOriginalInfo = {
+          ...existingTailoredData,
+          // Only update the skills category plan (analysis data)
+          skillsCategoryPlan: analysisData.skills_category_plan || existingTailoredData.skillsCategoryPlan
+        }
+      } else {
+        // New variant or no changes - use BASE resume
+        console.log('📝 Using base resume for new variant')
+        tailoredDataWithOriginalInfo = {
+          ...analysisContext.resume, // Always use BASE resume
+          personalInfo: baseResume.personal_info, // Force original personal info (includes website/portfolio)
+          photoUrl: baseResume.photo_url || null, // Force original photo URL
+          customSections: baseResume.custom_sections || [] // Force original custom sections
+        }
+        // Only add the skills category plan (not title/summary suggestions)
+        if (analysisData.skills_category_plan) {
+          tailoredDataWithOriginalInfo.skillsCategoryPlan = analysisData.skills_category_plan
+        }
       }
 
       const { error: variantUpdateError } = await db
@@ -2271,11 +2398,12 @@ Return your response as a valid JSON object only. Do not include any additional 
         fingerprint: currentFingerprint
       };
       
-      // Cache the result with fingerprint
+      // Cache the result with fingerprint and version
       strategyTailoringCache.set(cacheKey, {
         data: response,
         timestamp: Date.now(),
-        fingerprint: currentFingerprint
+        fingerprint: currentFingerprint,
+        version: CACHE_VERSION
       });
       
       return NextResponse.json({

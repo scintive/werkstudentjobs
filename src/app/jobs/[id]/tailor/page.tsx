@@ -18,6 +18,7 @@ import type { JobStrategy, CoverLetter, ResumePatch } from '@/lib/types/jobStrat
 import type { JobWithCompany } from '@/lib/supabase/types';
 import type { StudentProfile, StudentJobStrategy } from '@/lib/types/studentProfile';
 import { ResumeDataService } from '@/lib/services/resumeDataService';
+import { resumeVariantService } from '@/lib/services/resumeVariantService';
 import { useSupabaseResumeContext, SupabaseResumeProvider, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext';
 import { EditModeProvider } from '@/lib/contexts/EditModeContext';
 import { getConfig, APP_CONFIG } from '@/lib/config/app';
@@ -31,6 +32,8 @@ import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveS
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
 import { PerfectStudio } from '@/components/resume-editor/PerfectStudio';
 import { RequireAuth } from '@/components/auth/RequireAuth';
+import { AIAnalysisLoader } from '@/components/loading/AIAnalysisLoader';
+import { ShareButtons } from '@/components/share/ShareButtons';
 
 const canonicalizePlanKey = (value?: string | null) => {
   if (!value) return '';
@@ -235,6 +238,9 @@ function TailorApplicationPage() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [patches, setPatches] = useState<any[]>([]);
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null);
+  const [coverLetterMetadata, setCoverLetterMetadata] = useState<any>(null); // Store generation metadata
+  const [coverLetterVersions, setCoverLetterVersions] = useState<any[]>([]); // Store all versions
+  const [currentCoverLetterVersion, setCurrentCoverLetterVersion] = useState<number>(1); // Current version being viewed
   const [previewMode, setPreviewMode] = useState(false);
   const [variantId, setVariantId] = useState<string | null>(null); // Store variant ID from pre-analysis
   const [preAnalysisComplete, setPreAnalysisComplete] = useState(false); // Track if pre-analysis is done
@@ -291,6 +297,13 @@ function TailorApplicationPage() {
       runUpfrontAnalysis();
     }
   }, [job, resumeData, resumeId]);
+
+  // Load existing cover letter when switching to cover-letter tab
+  useEffect(() => {
+    if (activeTab === 'cover-letter' && variantId && !coverLetter && !loading.letter) {
+      loadExistingCoverLetter();
+    }
+  }, [activeTab, variantId]);
   
   const loadJobData = async () => {
     try {
@@ -333,7 +346,18 @@ function TailorApplicationPage() {
       } as JobWithCompany);
     }
   };
-  
+
+  // Handler to save match score to database
+  const handleMatchScoreCalculated = async (score: number) => {
+    if (!variantId || !score) return;
+
+    try {
+      await resumeVariantService.updateMatchScore(variantId, score);
+    } catch (error) {
+      console.error('Failed to save match score:', error);
+    }
+  };
+
   const loadStrategy = async () => {
     if (!job || !resumeData) return;
     
@@ -475,6 +499,59 @@ function TailorApplicationPage() {
     }
   };
 
+  const loadExistingCoverLetter = async () => {
+    if (!variantId) return;
+
+    setLoading(prev => ({ ...prev, letter: true }));
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        console.warn('🔒 Cover letter load blocked: user not signed in');
+        setLoading(prev => ({ ...prev, letter: false }));
+        return;
+      }
+
+      // Use unified cover letter endpoint
+      const endpoint = '/api/jobs/cover-letter';
+
+      console.log(`📋 Loading existing cover letter for job ${jobId}`);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          job_id: jobId,
+          user_profile_id: 'latest',
+          tone: 'confident', // Default values just to satisfy API
+          length: 'medium',
+          strategy_context: studentStrategy || strategy,
+          include_university: includeUniversity,
+          include_semester: includeSemester,
+          include_hours: includeHours,
+          load_only: true // Only load existing, don't generate
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.cover_letter) {
+        setCoverLetter(data.cover_letter);
+        setCoverLetterMetadata(data.metadata || null);
+        setCoverLetterVersions(data.versions || []);
+        setCurrentCoverLetterVersion(data.current_version || 1);
+      }
+    } catch (error) {
+      console.error('Failed to load cover letter:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, letter: false }));
+    }
+  };
+
   const generateCoverLetter = async (tone: string, length: string, customInstructions?: string) => {
     setLoading(prev => ({ ...prev, letter: true }));
 
@@ -496,30 +573,19 @@ function TailorApplicationPage() {
         setLoading(prev => ({ ...prev, letter: false }));
         return;
       }
-      
+
       const profileData = await profileResponse.json();
       if (!profileData.success || !profileData.profile) {
         console.error('No profile found for cover letter generation');
         setLoading(prev => ({ ...prev, letter: false }));
         return;
       }
-      
-      // Determine if we should use student cover letter API using freshly fetched profile
-      const isWerkstudent = job?.is_werkstudent || job?.title?.toLowerCase().includes('werkstudent');
-      const fetchedProfile = profileData.profile;
-      const isEnrolled = fetchedProfile?.enrollment_status === 'enrolled';
-      let expectedGradIsFuture = false;
-      if (fetchedProfile?.expected_graduation) {
-        const dt = new Date(fetchedProfile.expected_graduation);
-        if (!isNaN(dt.getTime())) expectedGradIsFuture = dt > new Date();
-      }
-      const isStudentProfile = !!(isEnrolled || expectedGradIsFuture);
-      const endpoint = (isWerkstudent || isStudentProfile) ? '/api/jobs/cover-letter-student' : '/api/jobs/cover-letter';
 
-      // Always use 'latest' - the API handles this correctly now
+      // Use unified cover letter endpoint
+      const endpoint = '/api/jobs/cover-letter';
       const userProfileId = 'latest';
 
-      console.log(`🎯 Using ${endpoint} for cover letter generation with user_profile_id: ${userProfileId}`);
+      console.log(`🎯 Generating cover letter for job ${jobId}`);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -536,7 +602,8 @@ function TailorApplicationPage() {
           custom_instructions: customInstructions || '',
           include_university: includeUniversity,
           include_semester: includeSemester,
-          include_hours: includeHours
+          include_hours: includeHours,
+          force_regenerate: true // Always regenerate when explicitly calling generate
         })
       });
 
@@ -555,9 +622,11 @@ function TailorApplicationPage() {
 
       if (data.success) {
         setCoverLetter(data.cover_letter);
-        console.log('🎯 Cover letter generated successfully');
+        setCoverLetterMetadata(data.metadata || null);
+        setCoverLetterVersions(data.versions || []);
+        setCurrentCoverLetterVersion(data.current_version || 1);
       } else {
-        console.error('🎯 Cover letter generation failed:', data);
+        console.error('Cover letter generation failed:', data);
         alert(`Cover letter generation failed: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
@@ -733,41 +802,37 @@ function TailorApplicationPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Compact Navigation Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-6 py-3">
-          {/* Single Row Layout */}
-          <div className="flex items-center justify-between gap-6">
-            {/* Left: Back + Title */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Link href="/jobs" className="btn-icon btn-ghost btn-sm flex-shrink-0">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-heading-4 truncate mb-1">AI Tailor Studio</h1>
-                <p className="text-body font-medium text-gray-800 truncate mb-1">
-                  {job?.title}
-                </p>
-                <div className="flex items-center gap-3 text-caption text-gray-600">
-                  {job?.companies?.name && (
-                    <span className="font-medium text-blue-600">{job.companies.name}</span>
-                  )}
-                  {job?.location_city && (
-                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                      {job.location_city}
-                    </span>
-                  )}
-                  {job?.work_mode && (
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-xs font-medium">
-                      {job.work_mode}
-                    </span>
-                  )}
-                  {job?.is_werkstudent && (
-                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs font-medium">
-                      Werkstudent
-                    </span>
-                  )}
-                  {job?.posted_at && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+      <div className="bg-white sticky top-0 z-50 shadow-sm">
+        {/* Title Section */}
+        <div className="px-10 pt-6 pb-5 border-b border-gray-100">
+          <div className="flex items-center gap-5 min-w-0">
+            <Link href="/jobs" className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight truncate mb-2">
+                {job?.title}
+              </h1>
+              <div className="flex items-center gap-2.5 text-sm text-gray-600">
+                {job?.companies?.name && (
+                  <span className="font-medium text-gray-700">{job.companies.name}</span>
+                )}
+                {job?.city && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span>{job.city}</span>
+                  </>
+                )}
+                {job?.work_mode && job.work_mode !== 'Unknown' && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="capitalize">{job.work_mode}</span>
+                  </>
+                )}
+                {job?.posted_at && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-gray-500">
                       {(() => {
                         const posted = new Date(job.posted_at);
                         const now = new Date();
@@ -783,38 +848,39 @@ function TailorApplicationPage() {
                         return `${Math.floor(diffDays / 30)} months ago`;
                       })()}
                     </span>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Center: Tabs */}
-            <div className="flex items-center gap-2">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
+        {/* Tabs Section */}
+        <div className="px-10 bg-gray-50/50">
+          <div className="flex items-center gap-1 -mb-px">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
 
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium',
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-transparent text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    {tab.id === 'strategy' && (strategy || studentStrategy) && !isActive && (
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={cn(
+                    'relative flex items-center gap-2 px-6 py-3 transition-all duration-200 text-sm font-medium border-b-2',
+                    isActive
+                      ? 'text-gray-900 border-blue-600 bg-white'
+                      : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300'
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  {tab.id === 'strategy' && (strategy || studentStrategy) && !isActive && (
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -840,6 +906,7 @@ function TailorApplicationPage() {
                   userProfile={userProfile}
                   loading={loading.strategy}
                   onRetryStrategy={loadStrategy}
+                  handleMatchScoreCalculated={handleMatchScoreCalculated}
                 />
               )}
               
@@ -867,6 +934,10 @@ function TailorApplicationPage() {
                   job={job}
                   strategy={strategy}
                   coverLetter={coverLetter}
+                  coverLetterMetadata={coverLetterMetadata}
+                  coverLetterVersions={coverLetterVersions}
+                  currentVersion={currentCoverLetterVersion}
+                  onVersionChange={setCurrentCoverLetterVersion}
                   onGenerate={generateCoverLetter}
                   onCoverLetterChange={setCoverLetter}
                   loading={loading.letter}
@@ -878,6 +949,7 @@ function TailorApplicationPage() {
                   setIncludeSemester={setIncludeSemester}
                   includeHours={includeHours}
                   setIncludeHours={setIncludeHours}
+                  variantId={variantId}
                 />
               )}
             </motion.div>
@@ -889,13 +961,14 @@ function TailorApplicationPage() {
 }
 
 // Enhanced Strategy Tab with stunning visuals
-function StrategyTab({ 
-  job, 
-  strategy, 
+function StrategyTab({
+  job,
+  strategy,
   studentStrategy,
   userProfile,
-  loading, 
-  onRetryStrategy 
+  loading,
+  onRetryStrategy,
+  handleMatchScoreCalculated
 }: {
   job: JobWithCompany;
   strategy: JobStrategy | null;
@@ -904,6 +977,7 @@ function StrategyTab({
   userProfile: any;
   loading: boolean;
   onRetryStrategy: () => void;
+  handleMatchScoreCalculated: (score: number) => void;
 }) {
   // Render only the compact one‑pager (suppresses ATS/keywords/interview blocks)
   if (!loading) {
@@ -914,6 +988,7 @@ function StrategyTab({
           jobData={job}
           strategy={studentStrategy || strategy}
           onTailorSkills={() => {}}
+          onMatchScoreCalculated={handleMatchScoreCalculated}
         />
       </motion.div>
     );
@@ -923,36 +998,7 @@ function StrategyTab({
   //  render it here to avoid ATS/keywords/interview blocks.)
 
   if (loading) {
-    return (
-      <motion.div 
-        className="flex items-center justify-center py-20"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="text-center max-w-md">
-          <motion.div 
-            className="relative mb-8"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-          >
-            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-xl">
-              <Brain className="w-10 h-10 text-white" />
-            </div>
-            <motion.div 
-              className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-full blur-xl"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </motion.div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">AI Brain Analyzing</h3>
-          <p className="text-gray-600 leading-relaxed">
-            Our AI is deep-diving into job requirements, analyzing your profile, 
-            and crafting the perfect positioning strategy...
-          </p>
-        </div>
-      </motion.div>
-    );
+    return <AIAnalysisLoader type="strategy" />;
   }
   
   if (!strategy && !studentStrategy) {
@@ -1028,6 +1074,7 @@ function StrategyTab({
           jobData={job}
           strategy={studentStrategy || strategy}
           onTailorSkills={() => setActiveTab('resume')}
+          onMatchScoreCalculated={handleMatchScoreCalculated}
         />
       </motion.div>
 
@@ -1654,13 +1701,7 @@ function ResumeStudioTab({
 
   // Gate editor until pre-analysis is done and we have data
   if (preparing || !tailoredResumeData) {
-    return (
-      <div className="flex items-center justify-center min-h-[600px]">
-        <div className="text-center">
-          <p className="text-gray-600">Preparing AI-tailored editor...</p>
-        </div>
-      </div>
-    );
+    return <AIAnalysisLoader type="resume" />;
   }
 
   // Simply render the unified editor
@@ -1674,13 +1715,14 @@ function ResumeStudioTab({
           mode="tailor"
           variantId={localVariantId}
         >
-          <PerfectStudio 
+          <PerfectStudio
             mode="tailor"
             jobData={job}
             jobId={job?.id}
             baseResumeId={resumeId}
             variantId={localVariantId}
             userProfile={userProfile}
+            strategy={studentStrategy || strategy}
           />
         </SupabaseResumeProvider>
       ) : (
@@ -1798,6 +1840,10 @@ function CoverLetterStudioTab({
   job,
   strategy,
   coverLetter,
+  coverLetterMetadata,
+  coverLetterVersions,
+  currentVersion,
+  onVersionChange,
   onGenerate,
   onCoverLetterChange,
   loading,
@@ -1808,11 +1854,16 @@ function CoverLetterStudioTab({
   includeSemester,
   setIncludeSemester,
   includeHours,
-  setIncludeHours
+  setIncludeHours,
+  variantId
 }: {
   job: JobWithCompany;
   strategy: JobStrategy | null;
   coverLetter: CoverLetter | null;
+  coverLetterMetadata: any;
+  coverLetterVersions: any[];
+  currentVersion: number;
+  onVersionChange: (version: number) => void;
   onGenerate: (tone: string, length: string, customInstructions?: string) => void;
   onCoverLetterChange: (letter: CoverLetter | null) => void;
   loading: boolean;
@@ -1824,12 +1875,13 @@ function CoverLetterStudioTab({
   setIncludeSemester: (value: boolean) => void;
   includeHours: boolean;
   setIncludeHours: (value: boolean) => void;
+  variantId: string | null;
 }) {
   const [selectedTone, setSelectedTone] = useState<'confident' | 'warm' | 'direct'>('confident');
   const [selectedLength, setSelectedLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [editableContent, setEditableContent] = useState(coverLetter);
   const [customInstructions, setCustomInstructions] = useState('');
-  const [regenerationCount, setRegenerationCount] = useState(0);
+  const [regenerationCount, setRegenerationCount] = useState(coverLetterMetadata?.generation_count || 0);
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const MAX_REGENERATIONS = 2;
@@ -1844,7 +1896,104 @@ function CoverLetterStudioTab({
       setEditableContent(coverLetter);
     }
   }, [coverLetter]);
-  
+
+  // Sync regeneration count when metadata changes (from variant loading or generation)
+  useEffect(() => {
+    if (coverLetterMetadata?.generation_count !== undefined) {
+      setRegenerationCount(coverLetterMetadata.generation_count);
+      console.log('🎯 Updated regeneration count from metadata:', coverLetterMetadata.generation_count);
+    }
+  }, [coverLetterMetadata]);
+
+  // Handle version switching
+  const handleVersionSwitch = (version: number) => {
+    const selectedVersion = coverLetterVersions.find(v => v.version === version);
+    if (selectedVersion) {
+      onVersionChange(version);
+      setEditableContent(selectedVersion.cover_letter);
+      onCoverLetterChange(selectedVersion.cover_letter);
+      console.log('🔄 Switched to version', version);
+    }
+  };
+
+  // Debounced auto-save for cover letter edits
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+
+  const debouncedAutoSave = (updatedLetter: CoverLetter) => {
+    setSaveStatus('unsaved');
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        // Save to database via API
+        const { data: session } = await supabase.auth.getSession();
+        const token = session.session?.access_token;
+        if (!token) {
+          console.warn('🔒 Auto-save blocked: user not signed in');
+          setSaveStatus('saved');
+          return;
+        }
+
+        // Find the current version in the versions array
+        const currentVersionObj = coverLetterVersions.find(v => v.version === currentVersion);
+        if (!currentVersionObj) {
+          console.warn('⚠️ Current version not found in versions array');
+          setSaveStatus('saved');
+          return;
+        }
+
+        // Update the current version with edited content
+        const updatedVersions = coverLetterVersions.map(v =>
+          v.version === currentVersion
+            ? { ...v, cover_letter: updatedLetter }
+            : v
+        );
+
+        // Save to Supabase
+        const { data: variants } = await supabase
+          .from('resume_variants')
+          .select('id')
+          .eq('job_id', job.id)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+
+        if (variants && variants[0]) {
+          const versionedData = {
+            versions: updatedVersions,
+            current_version: currentVersion
+          };
+
+          await supabase
+            .from('resume_variants')
+            .update({
+              cover_letter_content: JSON.stringify(versionedData)
+            })
+            .eq('id', variants[0].id);
+
+          console.log('💾 Auto-saved cover letter edits');
+          setSaveStatus('saved');
+        }
+      } catch (error) {
+        console.error('❌ Auto-save failed:', error);
+        setSaveStatus('saved'); // Reset status even on error
+      }
+    }, 2000); // 2 second debounce
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const toneDescriptions = {
     confident: 'Authority and proven results',
     warm: 'Enthusiasm and personal connection',
@@ -1872,7 +2021,7 @@ function CoverLetterStudioTab({
     }
 
     onGenerate(selectedTone, selectedLength, customInstructions);
-    setRegenerationCount(prev => prev + 1);
+    // Don't increment here - metadata from API will update it via useEffect
     setCustomInstructions(''); // Clear after use
   };
 
@@ -1888,7 +2037,9 @@ function CoverLetterStudioTab({
     };
 
     setEditableContent(updatedContent);
-    // Auto-save to parent component (debounced by EnhancedRichText)
+    // Trigger debounced auto-save
+    debouncedAutoSave(updatedContent);
+    // Also update parent state immediately for UI
     onCoverLetterChange(updatedContent);
   };
 
@@ -1907,7 +2058,9 @@ function CoverLetterStudioTab({
     };
 
     setEditableContent(updatedContent);
-    // Auto-save to parent component (debounced by EnhancedRichText)
+    // Trigger debounced auto-save
+    debouncedAutoSave(updatedContent);
+    // Also update parent state immediately for UI
     onCoverLetterChange(updatedContent);
   };
 
@@ -2126,6 +2279,55 @@ function CoverLetterStudioTab({
                   </div>
                 </div>
 
+                {/* Version Selector */}
+                {coverLetterVersions.length > 1 && (
+                  <div className="pt-3 border-t border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5" />
+                        Version History
+                      </label>
+                      <span className="text-xs text-gray-500">
+                        {coverLetterVersions.length} versions
+                      </span>
+                    </div>
+                    <select
+                      value={currentVersion}
+                      onChange={(e) => handleVersionSwitch(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      {coverLetterVersions
+                        .slice()
+                        .sort((a, b) => b.version - a.version)
+                        .map((v) => (
+                          <option key={v.version} value={v.version}>
+                            Version {v.version} - {v.tone || 'confident'} / {v.length || 'medium'} ({new Date(v.generated_at).toLocaleDateString()})
+                          </option>
+                        ))}
+                    </select>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      {saveStatus === 'saved' && (
+                        <span className="text-green-600 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Saved
+                        </span>
+                      )}
+                      {saveStatus === 'saving' && (
+                        <span className="text-blue-600 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Saving...
+                        </span>
+                      )}
+                      {saveStatus === 'unsaved' && (
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Unsaved changes
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Custom Instructions Field */}
                 <div className="pt-3 border-t border-gray-200 space-y-2">
                   <label className="text-xs font-medium text-gray-600">
@@ -2195,7 +2397,7 @@ function CoverLetterStudioTab({
                   {/* Right: Actions */}
                   {coverLetter && (
                     <div className="flex items-center gap-3">
-                      {/* Copy Link Button */}
+                      {/* Copy Text Button */}
                       <button
                         onClick={copyToClipboard}
                         className="h-9 px-3 flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-150 border border-transparent hover:border-gray-200"
@@ -2212,6 +2414,15 @@ function CoverLetterStudioTab({
                           </>
                         )}
                       </button>
+
+                      <div className="h-6 w-px bg-gray-300" />
+
+                      {/* Share Buttons */}
+                      <ShareButtons
+                        shareType="cover_letter"
+                        variantId={variantId || undefined}
+                        template={selectedTemplate}
+                      />
 
                       <div className="h-6 w-px bg-gray-300" />
 
@@ -2245,7 +2456,7 @@ function CoverLetterStudioTab({
 
               {/* Content */}
               <div className="p-8 min-h-[600px] max-h-[800px] overflow-y-auto">
-                {coverLetter && editableContent ? (
+                {coverLetter && editableContent && editableContent.content ? (
                   <div className="w-full">
                     {/* Letter Header */}
                     <div className="mb-8">

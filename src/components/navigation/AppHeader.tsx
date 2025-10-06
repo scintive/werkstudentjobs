@@ -47,10 +47,7 @@ export default function AppHeader() {
 
   const navigationItems: NavigationItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Resume Editor', href: '/?edit=1', icon: FileText },
     { label: 'Jobs', href: '/jobs', icon: Briefcase },
-    { label: 'Tailor Resume', href: '/jobs?tailor=1', icon: Sparkles },
-    { label: 'Cover Letters', href: '/cover-letters', icon: PenTool },
   ]
 
   React.useEffect(() => {
@@ -168,15 +165,15 @@ export default function AppHeader() {
           <div className="flex items-center gap-3">
             {email ? (
               <>
-                {/* Quick Actions */}
+                {/* Edit Resume Button */}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="hidden sm:flex"
-                  onClick={() => router.push('/?upload=new')}
+                  onClick={() => router.push('/?edit=1')}
                 >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
+                  <FileText className="w-4 h-4 mr-2" />
+                  Edit Resume
                 </Button>
 
                 {/* User Dropdown */}
