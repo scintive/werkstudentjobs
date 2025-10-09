@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -1471,14 +1472,15 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                   {/* Action Buttons - Compact */}
                   <div className="ml-3 flex gap-1 flex-shrink-0">
                     {tailoredJobs.has(selectedJob.id) ? (
-                      <Button
-                        size="sm"
-                        className="h-7 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3"
-                        onClick={() => router.push(`/jobs/${selectedJob.id}/tailor`)}
-                      >
-                        <Zap className="w-3 h-3 mr-1.5" />
-                        View Application
-                      </Button>
+                      <Link href={`/jobs/${selectedJob.id}/tailor`} prefetch={true}>
+                        <Button
+                          size="sm"
+                          className="h-7 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3"
+                        >
+                          <Zap className="w-3 h-3 mr-1.5" />
+                          View Application
+                        </Button>
+                      </Link>
                     ) : (
                       <AITailorButton jobId={selectedJob.id} />
                     )}

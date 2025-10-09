@@ -1,5 +1,6 @@
 'use client'
 
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -37,13 +38,6 @@ const statusColors = {
 export function RecentResumes({ resumes }: RecentResumesProps) {
   const router = useRouter()
 
-  const handleResumeClick = (jobId: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    console.log('🔍 Clicking resume, navigating to:', `/jobs/${jobId}/tailor?tab=strategy`)
-    router.push(`/jobs/${jobId}/tailor?tab=strategy`)
-  }
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -56,9 +50,10 @@ export function RecentResumes({ resumes }: RecentResumesProps) {
       <CardContent className="space-y-4">
         {resumes.length > 0 ? (
           resumes.map((resume) => (
-            <div
+            <Link
               key={resume.id}
-              onClick={(e) => handleResumeClick(resume.job_id, e)}
+              href={`/jobs/${resume.job_id}/tailor?tab=strategy`}
+              prefetch={true}
               className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-border transition-colors group cursor-pointer"
             >
               <div className="flex items-start gap-4">
@@ -113,19 +108,20 @@ export function RecentResumes({ resumes }: RecentResumesProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
+            </Link>
           ))
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
             <p className="text-sm">No tailored resumes yet</p>
-            <Button
-              size="sm"
-              className="mt-3"
-              onClick={() => router.push('/jobs')}
-            >
-              Browse Jobs to Tailor
-            </Button>
+            <Link href="/jobs" prefetch={true}>
+              <Button
+                size="sm"
+                className="mt-3"
+              >
+                Browse Jobs to Tailor
+              </Button>
+            </Link>
           </div>
         )}
       </CardContent>

@@ -173,15 +173,16 @@ export default function AppHeader() {
             {email ? (
               <>
                 {/* Edit Resume Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hidden sm:flex"
-                  onClick={() => router.push('/edit-resume')}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Edit Resume
-                </Button>
+                <Link href="/edit-resume" prefetch={true}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden sm:flex"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Edit Resume
+                  </Button>
+                </Link>
 
                 {/* User Dropdown */}
                 <DropdownMenu>
@@ -230,21 +231,23 @@ export default function AppHeader() {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push('/login')}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => router.push('/register')}
-                  style={{ background: 'var(--primary)' }}
-                  className="hover:opacity-90 text-white"
-                >
-                  Sign Up
-                </Button>
+                <Link href="/login" prefetch={true}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/register" prefetch={true}>
+                  <Button
+                    size="sm"
+                    style={{ background: 'var(--primary)' }}
+                    className="hover:opacity-90 text-white"
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
               </div>
             )}
           </div>
