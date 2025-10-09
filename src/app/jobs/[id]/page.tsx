@@ -32,7 +32,7 @@ async function getJob(id: string): Promise<JobWithCompany | null> {
 
 function extractSalaryFromBenefits(benefits: string[] | null): string | null {
   if (!benefits || !Array.isArray(benefits)) return null;
-  
+
   for (const benefit of benefits) {
     if (typeof benefit === 'string') {
       // Look for salary patterns like "€520 per month", "$2000/month", etc.
@@ -113,7 +113,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
-  const extractedSalary = extractSalaryFromBenefits(job.benefits_original);
+  const extractedSalary = extractSalaryFromBenefits(job.benefits);
 
   return (
     <div className="min-h-screen bg-white">
@@ -247,7 +247,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             )}
 
             {/* Responsibilities */}
-            {job.responsibilities_original && (Array.isArray(job.responsibilities_original) ? job.responsibilities_original.length > 0 : true) && (
+            {job.responsibilities && (Array.isArray(job.responsibilities) ? job.responsibilities.length > 0 : true) && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
                   <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-3">
@@ -259,14 +259,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   <p className="text-sm text-gray-600">What you'll be working on</p>
                 </div>
                 <div className="p-6">
-                  {renderJobContent(job.responsibilities_original, Target)}
+                  {renderJobContent(job.responsibilities, Target)}
                 </div>
               </div>
             )}
 
 
             {/* Nice to Have */}
-            {job.nice_to_have_original && (Array.isArray(job.nice_to_have_original) ? job.nice_to_have_original.length > 0 : true) && (
+            {job.nice_to_have && (Array.isArray(job.nice_to_have) ? job.nice_to_have.length > 0 : true) && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="p-6 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-100">
                   <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-3">
@@ -278,13 +278,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   <p className="text-sm text-gray-600">Bonus qualifications that would be great</p>
                 </div>
                 <div className="p-6">
-                  {renderJobContent(job.nice_to_have_original, Star)}
+                  {renderJobContent(job.nice_to_have, Star)}
                 </div>
               </div>
             )}
 
             {/* Benefits */}
-            {job.benefits_original && (Array.isArray(job.benefits_original) ? job.benefits_original.length > 0 : true) && (
+            {job.benefits && (Array.isArray(job.benefits) ? job.benefits.length > 0 : true) && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-100">
                   <h2 className="text-xl font-semibold text-gray-900 mb-1 flex items-center gap-3">
@@ -296,18 +296,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   <p className="text-sm text-gray-600">What we offer you</p>
                 </div>
                 <div className="p-6">
-                  {renderJobContent(job.benefits_original, Gift)}
+                  {renderJobContent(job.benefits, Gift)}
                 </div>
               </div>
             )}
 
             {/* Who We Are Looking For */}
-            {job.who_we_are_looking_for_original && (() => {
+            {job.who_we_are_looking_for && (() => {
               try {
                 // Try to parse as JSON first (legacy format)
-                const whoWeAreLookingFor = JSON.parse(job.who_we_are_looking_for_original);
+                const whoWeAreLookingFor = JSON.parse(job.who_we_are_looking_for);
                 const content = Array.isArray(whoWeAreLookingFor) && whoWeAreLookingFor.length > 0 ? whoWeAreLookingFor : null;
-                
+
                 if (content) {
                   return (
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -328,7 +328,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 }
               } catch (e) {
                 // If JSON parsing fails, treat as markdown string (new format)
-                if (typeof job.who_we_are_looking_for_original === 'string' && job.who_we_are_looking_for_original.trim()) {
+                if (typeof job.who_we_are_looking_for === 'string' && job.who_we_are_looking_for.trim()) {
                   return (
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                       <div className="p-6 bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-gray-100">
@@ -341,7 +341,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                         <p className="text-sm text-gray-600">The ideal candidate profile</p>
                       </div>
                       <div className="p-6">
-                        {renderJobContent(job.who_we_are_looking_for_original, CheckCircle)}
+                        {renderJobContent(job.who_we_are_looking_for, CheckCircle)}
                       </div>
                     </div>
                   );
@@ -424,9 +424,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             />
             
             {/* Skills Analysis Panel */}
-            {job.skills_original && Array.isArray(job.skills_original) && job.skills_original.length > 0 && (
-              <SkillsAnalysisPanel 
-                jobSkills={job.skills_original}
+            {job.skills && Array.isArray(job.skills) && job.skills.length > 0 && (
+              <SkillsAnalysisPanel
+                jobSkills={job.skills}
                 jobTitle={job.title}
               />
             )}

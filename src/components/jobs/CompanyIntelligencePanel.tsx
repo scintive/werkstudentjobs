@@ -3,13 +3,15 @@
 import * as React from 'react';
 import {
   Building2, Globe, Users, MapPin, Calendar, Star,
-  ExternalLink, Briefcase, Award, ChevronDown, ChevronUp, CheckCircle
+  ExternalLink, Briefcase, Award, ChevronDown, ChevronUp, CheckCircle,
+  Heart, Home, Trophy, Sparkles, Mail, Phone
 } from 'lucide-react';
 
 interface CompanyIntelligencePanelProps {
   company: {
     name: string;
     description?: string | null;
+    logo_url?: string | null;
     website_url?: string | null;
     headquarters_location?: string | null;
     founded_year?: number | null;
@@ -23,11 +25,13 @@ interface CompanyIntelligencePanelProps {
     recent_news?: string[] | null;
     competitors?: string[] | null;
     company_values?: string[] | null;
+    culture_highlights?: string[] | null;
+    remote_work_policy?: string | null;
+    diversity_initiatives?: string[] | null;
+    awards_recognition?: string[] | null;
     glassdoor_rating?: number | null;
     funding_status?: string | null;
     careers_page_url?: string | null;
-    awards_recognition?: string[] | null;
-    culture_highlights?: string[] | null;
     size_category?: string | null;
   };
   jobSpecificInsights?: {
@@ -57,7 +61,10 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
   const [expandedSections, setExpandedSections] = React.useState({
     locations: false,
     services: false,
-    values: false
+    values: false,
+    culture: false,
+    diversity: false,
+    awards: false
   });
   
   if (!company) {
@@ -77,32 +84,28 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
   // Check if description is long enough to need truncation
   const isDescriptionLong = company.description && company.description.length > 150;
   
-  // Helper function to format employee count intelligently
+  // Helper function to format employee count - just the number
   const formatEmployeeCount = (): string => {
     if (company.employee_count) {
-      const count = company.employee_count;
-      if (count < 50) return `${count.toLocaleString()} employees • Startup`;
-      if (count < 200) return `${count.toLocaleString()} employees • Small company`;
-      if (count < 1000) return `${count.toLocaleString()} employees • Mid-size company`;
-      if (count < 10000) return `${count.toLocaleString()} employees • Large company`;
-      return `${count.toLocaleString()} employees • Enterprise`;
+      return company.employee_count.toLocaleString();
     }
-    
-    // Fallback to size category with better descriptions
+
+    // Fallback to size category ranges if no exact count
     const categoryMap: { [key: string]: string } = {
-      'startup': 'Early-stage startup',
-      'small': 'Small company (50-200 employees)',
-      'medium': 'Mid-size company (200-1000 employees)', 
-      'large': 'Large company (1000+ employees)',
-      'enterprise': 'Enterprise (10,000+ employees)'
+      'startup': '1-50',
+      'small': '50-200',
+      'medium': '200-1K',
+      'large': '1K-10K',
+      'enterprise': '10K+'
     };
-    
-    return company.size_category ? categoryMap[company.size_category] || 'Growing team' : 'Growing team';
+
+    return company.size_category ? categoryMap[company.size_category] || '—' : '—';
   };
   
-  // Only show metrics with actual data
+  // Separate metrics into regular (2-col) and full-width
   const metrics = [];
-  
+  let industryMetric = null;
+
   if (company.founded_year) {
     metrics.push({
       icon: Calendar,
@@ -110,7 +113,7 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
       value: company.founded_year.toString()
     });
   }
-  
+
   if (company.employee_count || company.size_category) {
     metrics.push({
       icon: Users,
@@ -118,20 +121,21 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
       value: formatEmployeeCount()
     });
   }
-  
+
+  // Industry gets full width treatment
   if (company.industry_sector || company.industry) {
     const industryValue = company.industry_sector || company.industry;
-    if (industryValue && 
-        industryValue !== 'N/A' && 
-        industryValue !== 'Unknown' && 
+    if (industryValue &&
+        industryValue !== 'N/A' &&
+        industryValue !== 'Unknown' &&
         industryValue !== 'null' &&
         industryValue.toString().trim() &&
         industryValue.toString().trim() !== 'null') {
-      metrics.push({
+      industryMetric = {
         icon: Building2,
         label: 'Industry',
         value: industryValue
-      });
+      };
     }
   }
 
@@ -210,39 +214,44 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
 
   return (
     <div className="space-y-4">
-      {/* Compact Company Intelligence Card */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        {/* Header Section - Compact */}
-        <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-100">
-          <div className="flex items-start gap-3 mb-2">
+      {/* Sleek & Compact Company Card */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        {/* Header - Compact */}
+        <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/50 to-blue-50/30">
+          <div className="flex items-start gap-3">
+            {company.logo_url && (
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-white border border-slate-200 shadow-sm p-1.5 flex items-center justify-center">
+                <img
+                  src={company.logo_url}
+                  alt={`${company.name} logo`}
+                  className="w-full h-full object-contain"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-semibold text-gray-900 truncate">{company.name}</h2>
+              <h2 className="text-lg font-bold text-slate-900 truncate">{company.name}</h2>
               {company.description && (
-                <div className="mt-1">
-                  <p className={`text-xs text-gray-600 leading-relaxed ${
-                    !isDescriptionExpanded && isDescriptionLong ? 'line-clamp-3' : ''
-                  }`}>
-                    {company.description}
-                  </p>
-                  {isDescriptionLong && (
-                    <button
-                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      className="inline-flex items-center gap-0.5 text-xs text-blue-600 hover:text-blue-700 mt-1 font-medium transition-colors"
-                    >
-                      {isDescriptionExpanded ? (
-                        <>
-                          <ChevronUp className="w-3 h-3" />
-                          Show less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3 h-3" />
-                          Show more
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
+                <p className={`text-xs text-slate-600 leading-relaxed mt-1 break-words ${
+                  !isDescriptionExpanded && isDescriptionLong ? 'max-h-[2.5rem] overflow-hidden' : ''
+                }`}
+                   style={!isDescriptionExpanded && isDescriptionLong ? {
+                     display: '-webkit-box',
+                     WebkitLineClamp: 2,
+                     WebkitBoxOrient: 'vertical',
+                     overflow: 'hidden',
+                     wordBreak: 'break-word'
+                   } : {}}>
+                  {company.description}
+                </p>
+              )}
+              {isDescriptionLong && (
+                <button
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-1"
+                >
+                  {isDescriptionExpanded ? '↑ Less' : '↓ More'}
+                </button>
               )}
             </div>
             {fixedWebsiteUrl && (
@@ -250,177 +259,282 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
                 href={fixedWebsiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors flex-shrink-0 whitespace-nowrap"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all"
               >
-                <Globe className="w-3 h-3" />
+                <Globe className="w-3.5 h-3.5" />
                 Visit
-                {isVerifying && <span className="ml-1 w-3 h-3 border-2 border-white/60 border-t-white rounded-full animate-spin" />}
-                {isVerified && !isVerifying && <CheckCircle className="w-3 h-3 ml-1 text-white" title="Verified" />}
+                {isVerified && !isVerifying && <CheckCircle className="w-3 h-3" />}
               </a>
             )}
           </div>
-          
-          {/* Compact Metrics Grid */}
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            {metrics.map((metric, index) => (
-              <div key={index} className="bg-white/60 rounded p-2 border border-gray-200/50">
-                <div className="flex items-center gap-1.5">
-                  <metric.icon className="w-3 h-3 text-blue-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-xs text-gray-500">{metric.label}</div>
-                    <div className="text-xs font-medium text-gray-900 break-words">{metric.value}</div>
+
+          {/* Compact Metrics */}
+          {(metrics.length > 0 || industryMetric) && (
+            <div className="space-y-2 mt-3">
+              {/* 2-Column Grid for Founded, Team Size, Rating */}
+              {metrics.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {metrics.map((metric, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-white/70 rounded-lg p-2 border border-slate-200/50">
+                      <metric.icon className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">{metric.label}</div>
+                        <div className="text-xs font-semibold text-slate-900 truncate">{metric.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Full-Width Industry */}
+              {industryMetric && (
+                <div className="flex items-center gap-2 bg-white/70 rounded-lg p-2 border border-slate-200/50">
+                  <industryMetric.icon className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">{industryMetric.label}</div>
+                    <div className="text-xs font-semibold text-slate-900 truncate">{industryMetric.value}</div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Content Sections - Ultra Compact */}
+        {/* Content - Ultra Compact */}
         <div className="p-4 space-y-3">
-          
-          {/* Office Locations - Inline Tags */}
+
+          {/* Locations - Compact Pills */}
           {company.office_locations && company.office_locations.length > 0 && (
             <div>
-              <div className="flex items-center gap-1.5 mb-2">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                <h4 className="text-sm font-medium text-gray-900">Locations</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Locations</h4>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {(expandedSections.locations ? company.office_locations : company.office_locations.slice(0, 6)).map((location, index) => (
-                  <span 
-                    key={index}
-                    className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100"
-                  >
+                  <span key={index} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-200/60">
                     {location}
                   </span>
                 ))}
                 {company.office_locations.length > 6 && (
                   <button
                     onClick={() => setExpandedSections(prev => ({ ...prev, locations: !prev.locations }))}
-                    className="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded border border-blue-200 transition-colors"
+                    className="px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-medium"
                   >
-                    {expandedSections.locations ? (
-                      <>
-                        <ChevronUp className="w-2.5 h-2.5" />
-                        Show less
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-2.5 h-2.5" />
-                        +{company.office_locations.length - 6} more
-                      </>
-                    )}
+                    {expandedSections.locations ? '− Less' : `+${company.office_locations.length - 6}`}
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Products & Services - Inline Tags */}
+          {/* Services - Compact Pills */}
           {company.key_products_services && company.key_products_services.length > 0 && (
             <div>
-              <div className="flex items-center gap-1.5 mb-2">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
-                <h4 className="text-sm font-medium text-gray-900">Services</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Services</h4>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {(expandedSections.services ? company.key_products_services : company.key_products_services.slice(0, 4)).map((product, index) => (
-                  <span 
-                    key={index}
-                    className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded border border-emerald-100"
-                  >
+                  <span key={index} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded border border-emerald-200/60">
                     {product}
                   </span>
                 ))}
                 {company.key_products_services.length > 4 && (
                   <button
                     onClick={() => setExpandedSections(prev => ({ ...prev, services: !prev.services }))}
-                    className="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors"
+                    className="px-2 py-0.5 text-xs text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 font-medium"
                   >
-                    {expandedSections.services ? (
-                      <>
-                        <ChevronUp className="w-2.5 h-2.5" />
-                        Show less
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-2.5 h-2.5" />
-                        +{company.key_products_services.length - 4} more
-                      </>
-                    )}
+                    {expandedSections.services ? '− Less' : `+${company.key_products_services.length - 4}`}
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Business Model - Full Text */}
-          {company.business_model && 
-           company.business_model !== 'N/A' && 
-           company.business_model !== 'Unknown' && 
-           company.business_model !== 'null' &&
-           company.business_model.toString().trim() &&
-           company.business_model.toString().trim() !== 'null' && (
+          {/* Business Model */}
+          {company.business_model && company.business_model !== 'N/A' && company.business_model !== 'Unknown' &&
+           company.business_model !== 'null' && company.business_model.toString().trim() && company.business_model.toString().trim() !== 'null' && (
             <div>
-              <div className="flex items-center gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <Award className="w-3.5 h-3.5 text-purple-600" />
-                <h4 className="text-sm font-medium text-gray-900">Business Model</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Business Model</h4>
               </div>
-              <p className="text-xs text-slate-600 bg-purple-50 p-2 rounded border border-purple-100 leading-relaxed">
+              <p className="text-xs text-slate-600 bg-purple-50/60 px-2.5 py-1.5 rounded border border-purple-200/50 leading-relaxed">
                 {company.business_model}
               </p>
             </div>
           )}
 
-          {/* Company Values - Compact */}
+          {/* Values - Bullet List */}
           {company.company_values && company.company_values.length > 0 && (
             <div>
-              <div className="flex items-center gap-1.5 mb-2">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <Star className="w-3.5 h-3.5 text-yellow-600" />
-                <h4 className="text-sm font-medium text-gray-900">Values</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Values</h4>
               </div>
-              <div className="space-y-1">
-                {(expandedSections.values ? company.company_values : company.company_values.slice(0, 4)).map((value, index) => (
-                  <div key={index} className="flex items-start gap-2 text-xs text-slate-600">
-                    <div className="w-1 h-1 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></div>
+              <div className="space-y-0.5">
+                {(expandedSections.values ? company.company_values : company.company_values.slice(0, 3)).map((value, index) => (
+                  <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <span className="text-yellow-500 mt-0.5">•</span>
                     <span className="leading-relaxed">{value}</span>
                   </div>
                 ))}
-                {company.company_values.length > 4 && (
+                {company.company_values.length > 3 && (
                   <button
                     onClick={() => setExpandedSections(prev => ({ ...prev, values: !prev.values }))}
-                    className="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 rounded border border-yellow-200 transition-colors mt-1"
+                    className="text-xs text-yellow-600 hover:text-yellow-700 font-medium mt-0.5"
                   >
-                    {expandedSections.values ? (
-                      <>
-                        <ChevronUp className="w-2.5 h-2.5" />
-                        Show less
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-2.5 h-2.5" />
-                        +{company.company_values.length - 4} more values
-                      </>
-                    )}
+                    {expandedSections.values ? '↑ Less' : `↓ +${company.company_values.length - 3} more`}
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Hiring Manager - Compact */}
-          {jobSpecificInsights?.hiring_manager && (
-            <div className="pt-2 border-t border-gray-100">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Users className="w-3.5 h-3.5 text-orange-600" />
-                <h4 className="text-sm font-medium text-gray-900">Hiring Manager</h4>
+          {/* Culture - Bullet List */}
+          {company.culture_highlights && company.culture_highlights.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Heart className="w-3.5 h-3.5 text-pink-600" />
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Culture</h4>
               </div>
-              <div className="bg-orange-50 p-2 rounded border border-orange-200">
-                <p className="text-xs text-gray-900 font-medium">{jobSpecificInsights.hiring_manager}</p>
+              <div className="space-y-0.5">
+                {(expandedSections.culture ? company.culture_highlights : company.culture_highlights.slice(0, 3)).map((highlight, index) => (
+                  <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <span className="text-pink-500 mt-0.5">•</span>
+                    <span className="leading-relaxed">{highlight}</span>
+                  </div>
+                ))}
+                {company.culture_highlights.length > 3 && (
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, culture: !prev.culture }))}
+                    className="text-xs text-pink-600 hover:text-pink-700 font-medium mt-0.5"
+                  >
+                    {expandedSections.culture ? '↑ Less' : `↓ +${company.culture_highlights.length - 3} more`}
+                  </button>
+                )}
               </div>
             </div>
           )}
+
+          {/* Remote Work */}
+          {company.remote_work_policy && company.remote_work_policy !== 'N/A' && company.remote_work_policy !== 'Unknown' &&
+           company.remote_work_policy !== 'null' && company.remote_work_policy.toString().trim() && company.remote_work_policy.toString().trim() !== 'null' && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Home className="w-3.5 h-3.5 text-indigo-600" />
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Remote Work</h4>
+              </div>
+              <p className="text-xs text-slate-600 bg-indigo-50/60 px-2.5 py-1.5 rounded border border-indigo-200/50 leading-relaxed">
+                {company.remote_work_policy}
+              </p>
+            </div>
+          )}
+
+          {/* Diversity - Bullet List */}
+          {company.diversity_initiatives && company.diversity_initiatives.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Diversity</h4>
+              </div>
+              <div className="space-y-0.5">
+                {(expandedSections.diversity ? company.diversity_initiatives : company.diversity_initiatives.slice(0, 3)).map((initiative, index) => (
+                  <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <span className="text-violet-500 mt-0.5">•</span>
+                    <span className="leading-relaxed">{initiative}</span>
+                  </div>
+                ))}
+                {company.diversity_initiatives.length > 3 && (
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, diversity: !prev.diversity }))}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-0.5"
+                  >
+                    {expandedSections.diversity ? '↑ Less' : `↓ +${company.diversity_initiatives.length - 3} more`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Awards - Bullet List */}
+          {company.awards_recognition && company.awards_recognition.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Awards</h4>
+              </div>
+              <div className="space-y-0.5">
+                {(expandedSections.awards ? company.awards_recognition : company.awards_recognition.slice(0, 3)).map((award, index) => (
+                  <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <span className="text-amber-500 mt-0.5">•</span>
+                    <span className="leading-relaxed">{award}</span>
+                  </div>
+                ))}
+                {company.awards_recognition.length > 3 && (
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, awards: !prev.awards }))}
+                    className="text-xs text-amber-600 hover:text-amber-700 font-medium mt-0.5"
+                  >
+                    {expandedSections.awards ? '↑ Less' : `↓ +${company.awards_recognition.length - 3} more`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Hiring Manager */}
+          {jobSpecificInsights?.hiring_manager && (() => {
+            const managerText = jobSpecificInsights.hiring_manager;
+            // Parse for email and phone patterns
+            const emailMatch = managerText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+            const phoneMatch = managerText.match(/(\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+            const email = emailMatch ? emailMatch[0] : null;
+            const phone = phoneMatch ? phoneMatch[0] : null;
+            // Extract name (text before email/phone or full text)
+            let name = managerText;
+            if (email || phone) {
+              name = managerText.split(/[\(,]|@|[\+\d]/)[0].trim();
+            }
+
+            return (
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Users className="w-3.5 h-3.5 text-orange-600" />
+                  <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Hiring Manager</h4>
+                </div>
+                <div className="bg-orange-50/60 px-2.5 py-1.5 rounded border border-orange-200/50">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-900 font-semibold">{name}</p>
+                    {(email || phone) && (
+                      <div className="flex items-center gap-1.5">
+                        {email && (
+                          <a
+                            href={`mailto:${email}`}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+                            title={`Email: ${email}`}
+                          >
+                            <Mail className="w-3 h-3" />
+                          </a>
+                        )}
+                        {phone && (
+                          <a
+                            href={`tel:${phone.replace(/\s/g, '')}`}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+                            title={`Phone: ${phone}`}
+                          >
+                            <Phone className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           
         </div>
       </div>

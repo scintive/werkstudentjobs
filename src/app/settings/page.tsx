@@ -27,7 +27,11 @@ export default function SettingsPage() {
     phone: '',
     location: '',
     linkedin: '',
-    website: ''
+    website: '',
+    hoursAvailable: undefined as number | undefined,
+    currentSemester: undefined as number | undefined,
+    universityName: '',
+    startPreference: ''
   })
 
   useEffect(() => {
@@ -58,6 +62,13 @@ export default function SettingsPage() {
         .order('updated_at', { ascending: false })
         .limit(1)
 
+      // Load onboarding fields from user_profiles
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('hours_available, current_semester, university_name, start_preference')
+        .eq('user_id', sessionData.session.user.id)
+        .single()
+
       if (resumeData && resumeData[0]?.personal_info) {
         const info = resumeData[0].personal_info
         setFormData({
@@ -66,8 +77,21 @@ export default function SettingsPage() {
           phone: info.phone || '',
           location: info.location || '',
           linkedin: info.linkedin || '',
-          website: info.website || ''
+          website: info.website || '',
+          hoursAvailable: profileData?.hours_available,
+          currentSemester: profileData?.current_semester,
+          universityName: profileData?.university_name || '',
+          startPreference: profileData?.start_preference || ''
         })
+      } else if (profileData) {
+        // If no resume_data but profile exists, populate onboarding fields
+        setFormData(prev => ({
+          ...prev,
+          hoursAvailable: profileData.hours_available,
+          currentSemester: profileData.current_semester,
+          universityName: profileData.university_name || '',
+          startPreference: profileData.start_preference || ''
+        }))
       }
     } catch (err) {
       console.error('Error loading user data:', err)
@@ -102,7 +126,20 @@ export default function SettingsPage() {
 
       if (updateError) throw updateError
 
-      setSuccess('Personal information updated successfully!')
+      // Update onboarding fields in user_profiles
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          hours_available: formData.hoursAvailable,
+          current_semester: formData.currentSemester,
+          university_name: formData.universityName,
+          start_preference: formData.startPreference
+        })
+        .eq('user_id', userId)
+
+      if (profileError) throw profileError
+
+      setSuccess('Settings updated successfully!')
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       console.error('Error saving:', err)
@@ -162,6 +199,65 @@ export default function SettingsPage() {
             <AlertDescription className="text-green-800">{success}</AlertDescription>
           </Alert>
         )}
+
+        {/* Student Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Student Information</CardTitle>
+            <CardDescription>
+              Update your student profile and availability
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="universityName">University Name</Label>
+                <Input
+                  id="universityName"
+                  value={formData.universityName}
+                  onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
+                  placeholder="Technical University of Munich"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currentSemester">Current Semester</Label>
+                <Input
+                  id="currentSemester"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={formData.currentSemester || ''}
+                  onChange={(e) => setFormData({ ...formData, currentSemester: e.target.value ? parseInt(e.target.value) : undefined })}
+                  placeholder="3"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hoursAvailable">Hours Available per Week</Label>
+                <Input
+                  id="hoursAvailable"
+                  type="number"
+                  min="1"
+                  max="40"
+                  value={formData.hoursAvailable || ''}
+                  onChange={(e) => setFormData({ ...formData, hoursAvailable: e.target.value ? parseInt(e.target.value) : undefined })}
+                  placeholder="20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="startPreference">Start Preference</Label>
+                <Input
+                  id="startPreference"
+                  value={formData.startPreference}
+                  onChange={(e) => setFormData({ ...formData, startPreference: e.target.value })}
+                  placeholder="Immediately / Next Month / etc."
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Personal Information */}
         <Card className="mb-6">

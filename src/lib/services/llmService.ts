@@ -26,28 +26,16 @@ const JobExtractionSchema = {
     location_country: { type: ["string", "null"] },
     hiring_manager: { type: ["string", "null"] },
     tasks_responsibilities: {
-      type: "object",
-      properties: {
-        original: { type: ["array", "null"], items: { type: "string" } },
-        english: { type: ["array", "null"], items: { type: "string" } }
-      },
-      required: ["original", "english"]
+      type: "array",
+      items: { type: "string" }
     },
     nice_to_have: {
-      type: "object", 
-      properties: {
-        original: { type: ["array", "null"], items: { type: "string" } },
-        english: { type: ["array", "null"], items: { type: "string" } }
-      },
-      required: ["original", "english"]
+      type: "array",
+      items: { type: "string" }
     },
     benefits: {
-      type: "object",
-      properties: {
-        original: { type: ["array", "null"], items: { type: "string" } },
-        english: { type: ["array", "null"], items: { type: "string" } }
-      },
-      required: ["original", "english"]
+      type: "array",
+      items: { type: "string" }
     },
     named_skills_tools: { type: "array", items: { type: "string" } },
     important_statements: { type: "array", items: { type: "string" } }
@@ -567,10 +555,22 @@ Extract information directly from the provided job posting text only. Do NOT mak
 JOB DATA:
 ${JSON.stringify(jobData, null, 2)}
 
+🚨 CRITICAL SKILL EXTRACTION REQUIREMENT:
+You MUST extract 15-30+ skills from the "named_skills_tools" field. This is NOT optional.
+- Extract ALL tools, software, platforms, methodologies explicitly mentioned
+- Extract competencies from action verbs (e.g., "Durchführung von Analysen" → "Data Analysis")
+- Extract educational fields as skills (e.g., "Wirtschaftsingenieurwesen" → "Industrial Engineering")
+- Extract ALL soft skills mentioned in requirements (e.g., "strukturierte Arbeitsweise" → "Structured Work Approach")
+- Extract language requirements (e.g., "sehr gute Deutschkenntnisse" → "German Language Proficiency")
+- If a tool category is mentioned (e.g., "MS Power Platform"), also extract specific tools (e.g., "Power Apps", "Power Automate")
+- If a methodology is mentioned (e.g., "Lean"), also extract related skills (e.g., "Lean Methods", "Lean Manufacturing")
+
+DO NOT BE CONSERVATIVE. Extract MORE skills, not fewer.
+
 REQUIRED JSON OUTPUT:
 {
   "job_description_link": string | null,
-  "portal_link": string | null, 
+  "portal_link": string | null,
   "date_posted": string | null,
   "company_name": string | null, // Extract the ACTUAL HIRING COMPANY NAME from the job posting
   "german_required": "DE" | "EN" | "both" | "unknown", // Use "EN" if job is in English with no German language requirements mentioned
@@ -578,56 +578,203 @@ REQUIRED JSON OUTPUT:
   "work_mode": "Remote" | "Onsite" | "Hybrid" | "Unknown",
   "location_city": string | null, // ONLY city name (e.g., "Berlin", "Munich", "Hamburg") - NO addresses, postal codes, or districts
   "location_country": string | null, // ONLY country name (e.g., "Germany", "Austria", "Switzerland")
-  "tasks_responsibilities": string[], // Clean array of individual responsibilities/tasks
-  "nice_to_have": string[], // Clean array of nice-to-have requirements
-  "benefits": string[], // Clean array of individual benefits
-  "named_skills_tools": string[], // IMPORTANT: Extract ACTUAL skills from job responsibilities, not just platform names
-  "important_statements": string[],
-  "who_we_are_looking_for": string[], // Clean array of candidate requirements
-  "application_requirements": string[] // Clean array of what candidates should submit (CV, portfolio, etc.)
+  "hiring_manager": string | null,
+  "tasks_responsibilities": string[], // Job responsibilities/duties - ALWAYS IN ENGLISH (translate if needed) - Extract as individual bullet points
+  "nice_to_have": string[], // ONLY items explicitly marked as optional/preferred/nice-to-have/advantageous - ALWAYS IN ENGLISH - Extract as individual bullet points
+  "benefits": string[], // Perks and benefits - ALWAYS IN ENGLISH (translate if needed) - Extract as individual bullet points
+  "who_we_are_looking_for": string[], // Required qualifications, education, experience - ALWAYS IN ENGLISH - Extract as individual bullet points, NOT as a paragraph
+  "application_requirements": string[], // What to send in the application (e.g., CV, cover letter, portfolio, transcripts) - ALWAYS IN ENGLISH - Extract as individual bullet points
+  "named_skills_tools": string[], // IMPORTANT: Extract ACTUAL skills from job responsibilities, not just platform names - IN ENGLISH
+  "important_statements": string[] // Key requirements or statements - IN ENGLISH
 }
 
-SKILLS EXTRACTION EXAMPLES:
-✅ Good: ["Content Marketing", "Google Analytics", "SEO", "Social Media Strategy", "Project Management", "Customer Relationship Management"]
-❌ Bad: ["LinkedIn", "Facebook", "Instagram"] (unless the job is specifically about managing these platforms)
+SKILLS EXTRACTION RULES - EXTRACT COMPREHENSIVELY FOR ALL INDUSTRIES:
+Extract EVERY skill, tool, technology, platform, competency, certification, software, and methodology mentioned in the job description. Be thorough and exhaustive across ALL industries.
 
-CLEAN ARRAY FORMATTING EXAMPLES (ALWAYS IN ENGLISH):
+⚠️ IMPORTANT EXAMPLES OF EXHAUSTIVE EXTRACTION:
 
-If German input: "Unterstützung des Teams bei der Datenanalyse"
-Output: ["Support the team with data analysis"]
+EXAMPLE 1 - Marketing Job:
+Job mentioning: "manage social media, create content in Canva, analyze data in Google Analytics, coordinate with design team, write blog posts, organize events, communicate with clients, maintain CRM database, assist with email campaigns in Mailchimp, track KPIs"
 
-If German input: "Erstellung von Präsentationen und Berichten"
-Output: ["Creation of presentations and reports"]
+❌ BAD (Only 5 skills): Social Media Management, Canva, Google Analytics, Email Marketing, CRM
+✅ GOOD (20+ skills): Social Media Management, Content Creation, Canva, Graphic Design, Data Analysis, Google Analytics, Team Coordination, Cross-functional Collaboration, Copywriting, Blog Writing, Event Planning, Event Management, Client Communication, Stakeholder Management, CRM Systems, Database Management, Email Marketing, Mailchimp, Marketing Analytics, KPI Tracking, Project Coordination, Marketing Campaigns, Performance Tracking
 
-tasks_responsibilities: [
-  "Develop and execute comprehensive digital marketing strategies",
-  "Lead cross-functional teams in product development initiatives", 
-  "Analyze performance metrics using Google Analytics and SEMrush",
-  "Support client service teams in customer management"  // <- Translated from German
-]
+EXAMPLE 2 - Engineering/Technical Job:
+Job mentioning: "Lean-Methoden, Smart Factory, Analysen durchführen, digitale Werkzeuge, MS 365, MS Power Platform, Programmiersprachen, strukturierte Arbeitsweise, Prozesse in der Produktion, IT-Systemen, Wirtschaftsingenieurwesen, eigenständige Teilprojekte, interdisziplinären Umfeld"
 
-benefits: [
-  "Competitive salary with performance bonuses",
-  "Comprehensive health insurance including dental and vision",
-  "Flexible working hours and remote work options",
-  "Professional development budget and training opportunities"
-]
+❌ BAD (Only 6 skills): Lean Methods, Digital Tools, MS 365, MS Power Platform, Digitalization, IT Systems
+✅ GOOD (22+ skills): Lean Methods, Lean Manufacturing, Smart Factory, Industry 4.0, Data Analysis, Digital Tools, MS 365, MS Office, MS Power Platform, Power Automate, Power Apps, Programming, Programming Languages, Structured Work Approach, Production Processes, Production Management, IT Systems, Process Optimization, Industrial Engineering, Project Management, Interdisciplinary Collaboration, Cross-functional Teamwork, Process Analysis, Digitalization, IT/OT Integration, German Language Proficiency
 
-application_requirements: [
-  "CV or Resume",
-  "Cover Letter",
-  "Portfolio",
-  "Social Media Profiles", 
-  "Work Samples",
-  "LinkedIn Profile",
-  "GitHub Profile"
-]
+⚠️ TWO-STEP EXTRACTION PROCESS:
+STEP 1: Read the ENTIRE job description and extract ALL mentioned skills, tools, competencies
+STEP 2: Review your extraction - Ask yourself: "Did I miss ANY skills, tools, software, methodologies, or competencies mentioned ANYWHERE in the description? Check responsibilities, requirements, nice-to-have, benefits, company info"
 
-APPLICATION REQUIREMENTS EXTRACTION:
-- Look for phrases like "Please submit", "Send us", "Include", "We'd love to see"
-- Extract specific items candidates should provide
-- Common examples: CV, portfolio, work samples, social profiles
-- Only include if explicitly mentioned in the job posting
+COMPREHENSIVE SKILL CATEGORIES (Extract from ALL of these):
+
+**TECHNOLOGY & SOFTWARE:**
+1. Programming Languages: Python, JavaScript, TypeScript, Java, C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, R, MATLAB, etc.
+2. Web Frameworks: React, Angular, Vue, Next.js, Django, Flask, Express, Spring, Laravel, etc.
+3. Mobile Development: iOS Development, Android Development, Flutter, React Native, SwiftUI, etc.
+4. AI/ML: TensorFlow, PyTorch, ChatGPT, Claude, GPT-4, Machine Learning, Deep Learning, NLP, Computer Vision, Stable Diffusion, etc.
+5. Data Science: Data Analysis, Data Visualization, Statistical Analysis, Predictive Modeling, R, Python, Jupyter, etc.
+6. Databases: PostgreSQL, MySQL, MongoDB, Redis, Oracle, SQL Server, Supabase, Firebase, etc.
+7. Cloud & DevOps: AWS, Azure, GCP, Docker, Kubernetes, CI/CD, Jenkins, GitHub Actions, Terraform, etc.
+8. Design Tools: Figma, Adobe Creative Suite, Photoshop, Illustrator, InDesign, Sketch, Canva, AutoCAD, etc.
+9. Business Tools: Excel, Power BI, Tableau, SAP, Salesforce, HubSpot, Google Analytics, etc.
+10. Collaboration: Jira, Confluence, Slack, Notion, Asana, Trello, Microsoft Teams, etc.
+
+**FINANCE & ACCOUNTING:**
+11. Financial Analysis, Financial Modeling, Valuation, DCF, Financial Reporting, GAAP, IFRS
+12. Accounting Software: SAP, Oracle Financials, QuickBooks, Xero, DATEV
+13. Investment: Portfolio Management, Asset Management, Risk Management, Trading, Bloomberg Terminal
+14. Banking: Credit Analysis, Loan Processing, KYC, AML, Compliance
+15. Tax: Tax Preparation, Tax Planning, Tax Law, VAT
+16. Corporate Finance: M&A, Due Diligence, FP&A, Budgeting, Forecasting
+17. Excel Skills: Financial Modeling, Pivot Tables, VLOOKUP, Macros, VBA
+
+**HEALTHCARE & MEDICINE:**
+18. Clinical Skills: Patient Care, Vital Signs, Medical Terminology, Diagnosis, Treatment Planning
+19. Medical Software: Epic, Cerner, MEDISTAR, Practice Management Systems
+20. Healthcare Administration: Medical Billing, Coding (ICD-10, CPT), Claims Processing, HIPAA
+21. Laboratory: Lab Techniques, Quality Control, Sample Analysis, Lab Equipment Operation
+22. Pharmacy: Medication Management, Prescription Processing, Drug Interactions
+23. Research: Clinical Research, Data Collection, Protocol Development, IRB Compliance
+
+**LEGAL:**
+24. Legal Research, Contract Law, Contract Drafting, Legal Writing, Due Diligence
+25. Compliance: Regulatory Compliance, GDPR, Data Protection, Corporate Governance
+26. Intellectual Property: Patent Law, Trademark Law, Copyright
+27. Litigation: Case Management, Discovery, Depositions
+28. Legal Software: Westlaw, LexisNexis, Document Management Systems
+
+**ENGINEERING & MANUFACTURING:**
+29. CAD Software: AutoCAD, SolidWorks, CATIA, Inventor, Fusion 360, Creo
+30. Manufacturing: Lean Manufacturing, Six Sigma, Kaizen, 5S, Quality Control
+31. Production: Production Planning, Process Optimization, Supply Chain Management
+32. Engineering: Mechanical Engineering, Electrical Engineering, Civil Engineering, Chemical Engineering
+33. Testing: Quality Assurance, Testing Protocols, Failure Analysis, Test Equipment
+34. Automotive: Vehicle Systems, Engine Development, Automotive Testing, ADAS
+
+**ARCHITECTURE & CONSTRUCTION:**
+35. CAD: AutoCAD, Revit, SketchUp, ArchiCAD, Rhino
+36. BIM: Building Information Modeling, BIM Coordination, Clash Detection
+37. Construction: Project Management, Site Management, Building Codes, Construction Law
+38. Planning: Urban Planning, Site Planning, Zoning, Permits
+39. Sustainability: LEED, Green Building, Energy Efficiency, Sustainable Design
+
+**MARKETING & SALES:**
+40. Digital Marketing: SEO, SEM, PPC, Google Ads, Facebook Ads, Content Marketing
+41. Social Media: Social Media Management, Instagram, TikTok, LinkedIn, YouTube, Community Management
+42. Email Marketing: Mailchimp, Campaign Monitor, Newsletter Design, A/B Testing
+43. Sales: B2B Sales, B2C Sales, Lead Generation, CRM, Salesforce, Pipeline Management
+44. Content: Content Creation, Copywriting, Storytelling, Video Production, Photography
+45. Analytics: Google Analytics, Marketing Analytics, Conversion Rate Optimization, KPI Tracking
+
+**RETAIL & E-COMMERCE:**
+46. Retail Operations: Inventory Management, Merchandising, Visual Merchandising, POS Systems
+47. E-Commerce: Shopify, WooCommerce, Magento, Amazon Seller, eBay
+48. Customer Service: Customer Support, Complaint Resolution, CRM
+49. Supply Chain: Logistics, Procurement, Vendor Management, Order Fulfillment
+
+**HOSPITALITY & EVENTS:**
+50. Event Planning: Event Management, Conference Planning, Wedding Planning, Venue Selection
+51. Catering: Menu Planning, Food Service, Banquet Operations
+52. Hotel Management: Front Desk, Reservations, Guest Services, Hotel Software (Opera, Fidelio)
+53. Tourism: Tour Planning, Travel Coordination, Destination Management
+
+**HR & ADMINISTRATION:**
+54. Recruiting: Talent Acquisition, Interviewing, Candidate Sourcing, ATS Systems
+55. HR Management: Employee Relations, Performance Management, HRIS, Payroll
+56. Training: Training & Development, Onboarding, Learning Management Systems
+57. Office Management: Administrative Support, Scheduling, Office Coordination
+
+**LOGISTICS & SUPPLY CHAIN:**
+58. Warehouse Management: WMS, Inventory Control, Order Picking, Packing
+59. Transportation: Route Planning, Fleet Management, Freight Forwarding
+60. Procurement: Sourcing, Vendor Negotiation, Purchase Orders, Supplier Management
+
+**MEDIA & COMMUNICATIONS:**
+61. Journalism: Writing, Editing, Reporting, Interviewing
+62. PR: Public Relations, Press Releases, Media Relations, Crisis Communication
+63. Broadcasting: Video Production, Audio Production, Editing (Premiere, Final Cut Pro)
+64. Graphic Design: Layout Design, Typography, Branding, Print Design
+
+**EDUCATION & RESEARCH:**
+65. Teaching: Curriculum Development, Lesson Planning, Classroom Management, Assessment
+66. Research: Research Design, Literature Review, Data Analysis, Academic Writing, Grant Writing
+67. Tutoring: Subject Matter Expertise, Test Preparation, Mentoring
+
+**LANGUAGE & TRANSLATION:**
+68. Languages: German, English, French, Spanish, Italian, Chinese, Arabic, etc.
+69. Translation: Translation, Interpretation, Localization, Proofreading
+70. Language Proficiency: Native, Fluent, Advanced, Intermediate, Basic
+
+**SOFT SKILLS & COMPETENCIES:**
+71. Communication: Presentation Skills, Public Speaking, Technical Writing, Report Writing
+72. Leadership: Team Leadership, People Management, Mentoring, Decision Making
+73. Problem Solving: Analytical Thinking, Critical Thinking, Creative Problem Solving
+74. Organization: Time Management, Prioritization, Multi-tasking, Attention to Detail
+75. Collaboration: Teamwork, Cross-functional Collaboration, Stakeholder Management
+76. Adaptability: Flexibility, Learning Agility, Change Management
+
+EXTRACTION RULES:
+✅ **ALWAYS Extract**:
+- Every tool, software, platform, or technology explicitly mentioned
+- All programming languages and frameworks
+- All methodologies and processes (Agile, Scrum, Lean, Six Sigma, etc.)
+- All certifications and licenses
+- All industry-specific software and tools
+- All technical skills and domain expertise
+- All soft skills explicitly mentioned
+- All languages and language requirements
+- Tools mentioned in ANY format (acronyms, full names, etc.)
+
+❌ **DON'T Extract as Skills** (unless the job is specifically about them):
+- Generic social media platforms for posting only (LinkedIn, Facebook, Instagram)
+- Basic office tools unless specifically required
+- Company names unless they're also skills (e.g., "SAP" is both)
+
+🚨 CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+1. Read the ENTIRE job description from start to finish - EVERY sentence matters
+2. Extract skills from ALL sections: responsibilities, requirements, nice-to-have, benefits, company description, qualifications
+3. Include BOTH technical AND soft skills - do not focus only on technical
+4. Preserve exact names as written (including version numbers if mentioned)
+5. Extract skills from ANY industry - tech, finance, healthcare, legal, retail, manufacturing, hospitality, etc.
+6. Be EXHAUSTIVE - aim for 15-30+ skills per job, NOT just 4-5
+7. Extract the underlying COMPETENCIES, not just tool names (e.g., if they say "maintain website", extract both "Website Maintenance" AND any tools mentioned)
+8. Better to include more than miss important skills - when in doubt, INCLUDE IT
+9. **HIRING MANAGER EXTRACTION:** Look for hiring manager names in phrases like "Contact: [Name]", "Your contact: [Name]", "Ansprechpartner: [Name]", "Your hiring manager: [Name]", or email signatures
+10. After extraction, VERIFY: Review the description again and ask "Did I miss anything?"
+
+⚠️ FINAL VERIFICATION CHECKPOINT:
+Before returning your response, count your extracted skills. If you have less than 12 skills, you MISSED SOMETHING. Go back and extract more thoroughly.
+
+CRITICAL RULES FOR "nice_to_have":
+- ONLY include items explicitly marked with keywords: "preferred", "nice to have", "advantageous", "plus", "bonus", "desirable", "would be nice", "optional"
+- Everything else goes in "tasks_responsibilities"
+- When in doubt, put it in "tasks_responsibilities"
+
+LANGUAGE RULES:
+- If job is in German: translate ALL text to English
+- If job is in English: keep as-is
+- Use professional terminology
+- Preserve technical terms and proper nouns
+
+🎯 FINAL MANDATORY SKILL EXTRACTION CHECKLIST:
+Before submitting your response, ensure you extracted skills from ALL of these sources:
+1. ✅ Explicit tools/software mentioned (MS 365, SAP, Python, etc.)
+2. ✅ Action verbs → competencies (e.g., "Durchführung von Analysen" → "Data Analysis", "Programmierung" → "Programming")
+3. ✅ Study fields/qualifications mentioned (e.g., "Wirtschaftsingenieurwesen" → "Industrial Engineering")
+4. ✅ Methodologies mentioned (e.g., "Lean-Methoden" → "Lean Methods", "Agile" → "Agile Methodology")
+5. ✅ Domain expertise (e.g., "Smart Factory" → "Smart Factory", "Produktion" → "Production Management")
+6. ✅ Soft skills in requirements (e.g., "strukturierte Arbeitsweise" → "Structured Work Approach")
+7. ✅ Language requirements (e.g., "sehr gute Deutschkenntnisse" → "German Language Proficiency")
+8. ✅ Certifications or specific knowledge areas mentioned
+
+🔍 SKILL COUNT VERIFICATION:
+- Most jobs should yield 15-30+ skills
+- If you have less than 12 skills, you are NOT being exhaustive enough
+- Review the description ONE MORE TIME and extract what you missed
 
 Focus on skills that would be valuable for vector database matching with user profiles.`;
 
@@ -636,8 +783,8 @@ Focus on skills that would be valuable for vector database matching with user pr
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.2, // Lower temperature for more consistent extraction
-      max_tokens: 1500, // Reduced from 2500 to save costs
+      temperature: 0.7, // Higher temperature for exhaustive extraction (0.7 for more creativity)
+      max_tokens: 2500, // Increased to accommodate 15-30+ skills per job
       model: 'gpt-4o-mini' // Use cost-effective model
     });
 
@@ -1652,17 +1799,25 @@ Rules:
   private async generateCompanyResearchFromKnowledge(companyName: string, jobData: any): Promise<any> {
     const researchPrompt = `Based on your training knowledge, provide comprehensive research about "${companyName}" in JSON format.
 
-    Include:
+    Include MAXIMUM DETAIL:
     - official_website: string | null
-    - founded_year: number | null  
+    - logo_url: string | null (LinkedIn or official website logo)
+    - founded_year: number | null
     - headquarters_location: string | null
     - employee_count: string | null
     - industry_sector: string | null
     - business_model: string | null
-    - glassdoor_rating: string | null
+    - key_products_services: string[] | null
+    - leadership_team: string[] | null (format: "Title: Name")
     - company_values: string[] | null
+    - culture_highlights: string[] | null
+    - remote_work_policy: string | null
+    - diversity_initiatives: string[] | null
+    - awards_recognition: string[] | null
+    - glassdoor_rating: string | null
+    - competitors: string[] | null
+    - office_locations: string[] | null
     - recent_news: string[] | null
-    - hiring_manager: string | null (for roles like "${jobData.title}")
     - research_confidence: "high" | "medium" | "low"
 
     Only include information you're confident about. Use null for uncertain data.`;
@@ -1693,31 +1848,52 @@ Rules:
       const searchData = await this.performTavilySearchWithAnswer(companyName);
       console.log(`🔍 Tavily Search returned ${searchData.results.length} results for ${companyName}`);
       
-      // OPTIMIZATION: Try to use Tavily's answer first to avoid expensive scraping
-      if (searchData.answer && searchData.answer.length > 100) {
-        console.log(`⚡ Using Tavily's answer directly for ${companyName} - avoiding expensive scraping`);
-        try {
-          const parsedFromAnswer = await this.parseScrapedContentWithGPT([searchData.answer], companyName, jobData);
-          console.log(`🔍 GPT parsing from Tavily answer completed for ${companyName} (COST OPTIMIZED)`);
-          
-          return {
-            research: parsedFromAnswer,
-            actualWebSearchUsed: true,
-            cost: '$0.002', // Much cheaper - no scraping needed
-            method: 'tavily_answer_only'
-          };
-        } catch (answerParseError) {
-          console.log(`🔍 Tavily answer parsing failed, falling back to scraping for ${companyName}`);
-        }
-      }
+      // SKIP TAVILY ANSWER OPTIMIZATION: It doesn't contain rich company data
+      // We need to scrape actual web pages to get company values, culture, diversity, awards, etc.
+      console.log(`🔍 Skipping Tavily answer - need rich data from actual web pages`);
       
       if (searchData.results.length === 0) {
         throw new Error('No search results found');
       }
       
-      // 2. Fallback: OPTIMIZATION - Scrape only 1 URL instead of 3 to reduce costs  
-      const scrapedContent = await this.scrapeWebsiteContent(searchData.results.slice(0, 1), companyName);
-      console.log(`🔍 Scraped content from ${scrapedContent.length} websites for ${companyName} (optimized: 1 URL instead of 3)`);
+      // 2. SMART SCRAPING: Prioritize LinkedIn company pages and About/Team/Values pages
+      // LinkedIn has the richest structured data, then company About/Team/Values pages
+      const urlsToScrape: string[] = [];
+
+      // Add LinkedIn company pages first (highest priority)
+      for (const result of searchData.results) {
+        if (result.url.includes('linkedin.com/company')) {
+          urlsToScrape.push(result.url);
+        }
+      }
+
+      // Then add company website About/Team/Values pages
+      for (const result of searchData.results) {
+        if (!result.url.includes('linkedin.com')) {
+          const baseUrl = result.url.split('/').slice(0, 3).join('/');
+          // Add About Us, Team, Values, Careers pages
+          urlsToScrape.push(
+            `${baseUrl}/about`,
+            `${baseUrl}/about-us`,
+            `${baseUrl}/ueber-uns`,
+            `${baseUrl}/team`,
+            `${baseUrl}/werte`,
+            `${baseUrl}/values`,
+            `${baseUrl}/careers`,
+            `${baseUrl}/karriere`,
+            result.url
+          );
+        }
+      }
+
+      // Remove duplicates and limit to top 5 URLs
+      const uniqueUrls = [...new Set(urlsToScrape)].slice(0, 5);
+
+      const scrapedContent = await this.scrapeWebsiteContent(
+        uniqueUrls.map(url => ({ url, title: '' })),
+        companyName
+      );
+      console.log(`🔍 Scraped content from ${scrapedContent.length} websites for ${companyName} (tried ${uniqueUrls.length} URLs)`);
       
       if (!scrapedContent.length) {
         throw new Error('No content could be scraped');
@@ -1745,10 +1921,10 @@ Rules:
    */
   private async performTavilySearchWithAnswer(companyName: string): Promise<{results: any[], answer: string | null}> {
     const API_KEY = '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';
-    
-    // OPTIMIZATION: More targeted search query to get better results with fewer credits
-    const searchQuery = `${companyName} company information headquarters employees`;
-    
+
+    // SMART SEARCH: Prioritize LinkedIn company pages + search for specific data points
+    const searchQuery = `${companyName} employees founded year locations headquarters site:linkedin.com/company OR ${companyName}`;
+
     console.log(`🔍 Searching Tavily for: ${searchQuery}`);
     
     try {
@@ -1993,49 +2169,88 @@ Rules:
    */
   private async parseScrapedContentWithGPT(scrapedContent: any[], companyName: string, jobData: any): Promise<any> {
     console.log(`🤖 GPT parsing scraped content for ${companyName}`);
-    
+    console.log(`🤖 DEBUG - scrapedContent type:`, typeof scrapedContent[0]);
+    console.log(`🤖 DEBUG - scrapedContent first item:`, typeof scrapedContent[0] === 'string' ? scrapedContent[0].substring(0, 200) : JSON.stringify(scrapedContent[0], null, 2).substring(0, 200));
+
     // Combine all scraped content
+    // Handle both string content (from Tavily answer) and object content (from scraping)
     const combinedContent = scrapedContent
-      .map(item => `=== ${item.domain} ===\n${item.content}`)
+      .map(item => {
+        if (typeof item === 'string') {
+          return item; // Tavily answer is already a string
+        }
+        return `=== ${item.domain} ===\n${item.content}`; // Scraped content
+      })
       .join('\n\n');
+
+    console.log(`🤖 DEBUG - Combined content length:`, combinedContent.length);
+    console.log(`🤖 DEBUG - Combined content preview:`, combinedContent.substring(0, 300));
     
-    const systemPrompt = `You are a company research analyst specializing in LinkedIn company data extraction. Extract structured company information from the provided web content, prioritizing LinkedIn company pages which contain the most accurate employee counts and company data.`;
-    
-    const userPrompt = `Extract comprehensive company information for "${companyName}" from the following web content:
+    const systemPrompt = `You are a company research analyst specializing in LinkedIn and company website data extraction.
+
+CRITICAL INSTRUCTIONS:
+1. The content may be in German (DE) or English (EN) - extract data from BOTH languages
+2. LinkedIn pages have the most accurate employee counts and company info - prioritize them
+3. German company pages often have "Über uns", "Team", "Werte" sections with rich data
+4. Extract ALL available information - be thorough and detailed
+5. Translate German content to English for standardized output`;
+
+    const userPrompt = `Extract MAXIMUM DETAIL for "${companyName}" from the web content below.
+
+SPECIAL FOCUS FOR GERMAN CONTENT:
+- "Über uns" / "About us" = description, mission, history
+- "Team" / "Werte" / "Values" = company values, culture, leadership
+- "Karriere" / "Careers" = work culture, benefits, remote policy
+- Look for diversity statements, awards, employee testimonials
 
 ${combinedContent}
 
-**PRIORITY: LinkedIn Company Pages** - If you find LinkedIn company data, prioritize it for accuracy, especially for:
-- Employee count: Look for "X employees", "See all X employees", company size ranges
-- Locations: Extract city names only (e.g., "Berlin", "Paris", "Munich") not full addresses
-- Industry and description from LinkedIn About section
+**CRITICAL PRIORITY - MUST EXTRACT THESE BASIC FACTS:**
 
-**CRITICAL - Employee Count Search Patterns (MUST EXTRACT IF PRESENT):**
-- LinkedIn: "X employees", "See all X employees", "1-10 employees", "11-50 employees", "51-200 employees", "201-500 employees", etc.
-- LinkedIn: Any number followed by "employees" anywhere in the text
-- Company pages: "We are X people", "team of X", "X-person team", "over 100 people", "company size", "staff of X"
-- Look for ANY NUMBER that could represent team size - even if not explicitly labeled as employees
+1. **FOUNDED YEAR** (HIGHEST PRIORITY):
+   - Look for: "Founded in YYYY", "Since YYYY", "Established YYYY", "Gründung YYYY", "gegründet YYYY"
+   - Search ENTIRE content for any 4-digit year between 1800-2025
+   - Check: company history, timeline, about section, footer
 
-Return the information in this exact JSON format:
+2. **EMPLOYEE COUNT** (HIGHEST PRIORITY):
+   - LinkedIn: "X employees", "See all X employees", "1-10 employees", "51-200 employees", "201-500 employees"
+   - German: "X Mitarbeiter", "X Beschäftigte", "Mitarbeiteranzahl"
+   - Company pages: "We are X people", "team of X", "over X employees", "mehr als X Mitarbeiter"
+   - Accept: exact numbers, ranges, "500+", "1000+", etc.
+
+3. **HEADQUARTERS & LOCATIONS** (HIGHEST PRIORITY):
+   - Headquarters: "Hauptsitz", "Headquartered in", "Sitz in", "based in"
+   - Multiple locations: "Standorte:", "Locations:", "offices in", "Niederlassungen"
+   - Extract ALL city names mentioned
+
+**LinkedIn Company Pages** - PRIORITIZE for accuracy
+
+Return the information in this exact JSON format with MAXIMUM DETAIL:
 {
   "company_name": "${companyName}",
   "website": "official website URL or null",
-  "headquarters": "city only (e.g., 'Paris', 'Berlin') or null", 
+  "logo_url": "company logo URL (from LinkedIn or website) or null",
+  "headquarters": "city only (e.g., 'Paris', 'Berlin') or null",
   "founded": year as number or null,
   "employee_count": "exact number from LinkedIn or range (e.g., '53', '51-200', '500+') or null",
   "industry": "industry sector or null",
   "description": "concise company description (max 300 chars) or null",
   "business_model": "how the company makes money or null",
   "products_services": ["array of main products/services"] or null,
-  "leadership_team": ["CEO: Name", "CTO: Name"] or null,
-  "recent_news": ["recent developments"] or null,
+  "leadership_team": ["CEO: Name", "CTO: Name", "Department Head: Name"] or null,
+  "company_values": ["core company values"] or null,
+  "culture_highlights": ["work culture and environment highlights"] or null,
+  "remote_work_policy": "description of remote work policy or null",
+  "diversity_initiatives": ["diversity and inclusion programs"] or null,
+  "awards_recognition": ["awards, certifications, industry recognition"] or null,
+  "recent_news": ["recent developments, funding, products"] or null,
   "competitors": ["main competitors"] or null,
   "glassdoor_rating": "rating as string or null",
   "office_locations": ["city names only (e.g., 'Berlin', 'Paris', 'Munich')"] or null,
   "additional_insights": ["key insights for job seekers"] or null
 }
 
-Only include information that is explicitly mentioned in the content. Use null for any field where information is not available.`;
+Extract ALL information available. Be aggressive - infer company values and culture from any mentions of team, mission, work environment, or employee benefits. Use null ONLY if truly no information exists.`;
 
     try {
       const response = await this.createJsonCompletion({
@@ -2044,17 +2259,24 @@ Only include information that is explicitly mentioned in the content. Use null f
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: 2000, // Increased for rich data extraction
         model: 'gpt-4o-mini' // Use cheaper model for parsing
       });
       
       console.log(`🤖 GPT parsing successful for ${companyName}`);
-      
+
       // Extract and parse the JSON content from the response
       const content = response.choices?.[0]?.message?.content || '{}';
       try {
         const parsedResult = JSON.parse(content);
         console.log(`🔍 GPT parsing completed for ${companyName}`);
+        console.log(`🔍 DEBUG - GPT extracted data:`, JSON.stringify({
+          industry: parsedResult.industry,
+          website: parsedResult.website,
+          employee_count: parsedResult.employee_count,
+          headquarters: parsedResult.headquarters,
+          description: parsedResult.description ? parsedResult.description.substring(0, 100) : null
+        }));
         return parsedResult;
       } catch (parseError) {
         console.warn(`🔍 JSON parsing failed for ${companyName}, attempting repair:`, parseError);

@@ -353,23 +353,14 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
                         extractedJob.german_required === 'DE' ? 'DE' as const :
                         extractedJob.german_required === 'EN' ? 'EN' as const : 'UNKNOWN' as const,
       
-      // Skills and Content Arrays (Pipeline fields with GPT-extracted data)
-      skills_original: Array.isArray(extractedJob.named_skills_tools) ? extractedJob.named_skills_tools : [],
-      tools_original: Array.isArray(extractedJob.named_skills_tools) ? extractToolsFromSkills(extractedJob.named_skills_tools) : [],
-      responsibilities_original: Array.isArray(extractedJob.tasks_responsibilities) ? extractedJob.tasks_responsibilities : null,
-      nice_to_have_original: Array.isArray(extractedJob.nice_to_have) ? extractedJob.nice_to_have : null,
-      benefits_original: Array.isArray(extractedJob.benefits) ? extractedJob.benefits : null,
-      who_we_are_looking_for_original: Array.isArray(extractedJob.who_we_are_looking_for) ? extractedJob.who_we_are_looking_for : null,
-      application_requirements_original: Array.isArray(extractedJob.application_requirements) ? extractedJob.application_requirements : null,
-      
-      // Canonical fields (will be populated by matching service)
-      skills_canonical: null,
-      tools_canonical: null,
-      responsibilities_canonical: null,
-      nice_to_have_canonical: null,
-      benefits_canonical: null,
-      skills_canonical_flat: null,
-      tools_canonical_flat: null,
+      // Simplified English-only fields
+      skills: Array.isArray(extractedJob.named_skills_tools) ? extractedJob.named_skills_tools : [],
+      tools: Array.isArray(extractedJob.named_skills_tools) ? extractToolsFromSkills(extractedJob.named_skills_tools) : [],
+      responsibilities: Array.isArray(extractedJob.tasks_responsibilities) ? extractedJob.tasks_responsibilities : null,
+      nice_to_have: Array.isArray(extractedJob.nice_to_have) ? extractedJob.nice_to_have : null,
+      benefits: Array.isArray(extractedJob.benefits) ? extractedJob.benefits : null,
+      who_we_are_looking_for: Array.isArray(extractedJob.who_we_are_looking_for) ? extractedJob.who_we_are_looking_for : null,
+      application_requirements: Array.isArray(extractedJob.application_requirements) ? extractedJob.application_requirements : null,
       
       // Store research data in description for now (until schema is updated)
       // hiring_manager: extractedJob.hiring_manager, // TODO: Add to schema

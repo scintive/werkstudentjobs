@@ -38,16 +38,16 @@ export class JobStrategyService {
    */
   createCompactJobData(job: any): CompactJobData {
     const allRequirements = [
-      ...(job.skills_original || []),
-      ...(job.tools_original || []),
-      ...(job.responsibilities_original || [])
+      ...(job.skills || []),
+      ...(job.tools || []),
+      ...(job.responsibilities || [])
     ];
 
     return {
       title: job.title,
       company: job.companies?.name || job.company_name || 'Unknown',
       must_haves: allRequirements.slice(0, 8),
-      nice_to_haves: (job.nice_to_have_original || []).slice(0, 6),
+      nice_to_haves: (job.nice_to_have || []).slice(0, 6),
       work_mode: job.work_mode || 'Unknown',
       language_required: job.language_required || job.german_required || 'Unknown',
       location: job.location_city || 'Unknown'

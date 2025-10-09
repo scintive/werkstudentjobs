@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { supabase } from '@/lib/supabase/client';
 import { llmService } from '@/lib/services/llmService';
 import { fastMatchingService } from '@/lib/services/fastMatchingService';
@@ -26,9 +26,36 @@ function generateProfileHash(profile: any): string {
 /**
  * POST /api/jobs/strategy-student
  * Generate Werkstudent-focused Job Strategy
+ * SECURITY FIX: Auth-only, no cookie-based sessions
  */
 export async function POST(request: NextRequest) {
   try {
+    const authSupabase = createServerSupabase(request);
+
+    // SECURITY FIX: Verify authentication
+    let authUserId: string | null = null;
+    let authToken: string | null = null;
+    try {
+      const { data: authRes } = await authSupabase.auth.getUser();
+      if (authRes?.user) {
+        authUserId = authRes.user.id;
+        // Get session token for internal API calls
+        const { data: sessionData } = await authSupabase.auth.getSession();
+        authToken = sessionData?.session?.access_token || null;
+      }
+    } catch (e) {
+      console.log('🎓 STUDENT STRATEGY: auth.getUser() failed:', e);
+    }
+
+    if (!authUserId) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
+      );
+    }
+
+    console.log(`🎓 STUDENT STRATEGY: Authenticated user: ${authUserId}`);
+
     const { job_id, user_profile_id, student_profile } = await request.json();
     
     if (!job_id || (!user_profile_id && !student_profile)) {
@@ -64,7 +91,7 @@ export async function POST(request: NextRequest) {
         try {
           const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/api/profile/latest`, {
             headers: {
-              'Cookie': `user_session=${(await cookies()).get('user_session')?.value}; user_email=${(await cookies()).get('user_email')?.value}`
+              'Authorization': authToken ? `Bearer ${authToken}` : ''
             }
           });
           
@@ -125,34 +152,43 @@ export async function POST(request: NextRequest) {
           }
         } catch (fetchError) {
           console.error('🎓 STUDENT STRATEGY: Failed to fetch from /api/profile/latest:', fetchError);
-          
-          // Fallback to direct Supabase query
-          const cookieStore = await cookies();
-          const sessionId = cookieStore.get('user_session')?.value;
-          const userEmail = cookieStore.get('user_email')?.value;
 
-          if (!sessionId && !userEmail) {
-            return NextResponse.json(
-              { error: 'Not authenticated' },
-              { status: 401 }
-            );
-          }
+          // Fallback to direct Supabase query using auth user_id
+          const { data: profiles, error: profErr } = await supabase
+            .from('resume_data')
+            .select('*')
+            .eq('user_id', authUserId)
+            .order('updated_at', { ascending: false })
+            .limit(1);
 
-          let query = supabase.from('user_profiles').select('*');
-          if (sessionId) {
-            query = query.eq('session_id', sessionId);
-          } else if (userEmail) {
-            query = query.eq('email', userEmail);
-          }
-
-          const { data: profiles, error: profErr } = await query.order('updated_at', { ascending: false }).limit(1);
           if (profErr || !profiles || profiles.length === 0) {
             return NextResponse.json(
-              { error: 'User profile not found' },
+              { error: 'Resume data not found for authenticated user' },
               { status: 404 }
             );
           }
-          profileData = profiles[0];
+
+          // Convert resume_data to profile format
+          const resumeRecord = profiles[0];
+          profileData = {
+            name: resumeRecord.personal_info?.name,
+            email: resumeRecord.personal_info?.email,
+            phone: resumeRecord.personal_info?.phone,
+            location: resumeRecord.personal_info?.location,
+            current_job_title: resumeRecord.professional_title,
+            profile_summary: resumeRecord.professional_summary,
+            skills: resumeRecord.skills?.technical || resumeRecord.skills || [],
+            tools: resumeRecord.skills?.tools || [],
+            preferred_languages: resumeRecord.skills?.languages || [],
+            education: resumeRecord.education || [],
+            degree_program: resumeRecord.education?.[0]?.field_of_study || resumeRecord.education?.[0]?.degree,
+            current_year: resumeRecord.education?.[0]?.current_year,
+            expected_graduation: resumeRecord.education?.[0]?.graduation_date,
+            academic_projects: resumeRecord.projects || [],
+            projects: resumeRecord.projects || [],
+            certifications: resumeRecord.certifications || [],
+            custom_sections: resumeRecord.custom_sections || []
+          };
         }
       } else {
         const { data: dbProfile, error: profileError } = await supabase
@@ -174,21 +210,16 @@ export async function POST(request: NextRequest) {
     const profileHash = generateProfileHash(profileData);
     const cacheKey = `student_v3_${job_id}_${profileHash}`; // v3 to force cache refresh with real data
 
-    // Get user session/email for DB cache lookup
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('user_session')?.value;
-    const userEmail = cookieStore.get('user_email')?.value;
-
-    // Check Supabase cache first (7-day TTL)
+    // Check Supabase cache first (7-day TTL) using auth user_id
     console.log('🎓 STUDENT STRATEGY: Checking Supabase cache...');
 
-    const { data: cachedStrategy, error: cacheError } = await supabase
+    const { data: cachedStrategy, error: cacheError} = await supabase
       .from('job_analysis_cache')
       .select('*')
       .eq('job_id', job_id)
       .eq('analysis_type', 'student_strategy')
       .eq('profile_hash', profileHash)
-      .or(sessionId ? `user_session_id.eq.${sessionId}` : `user_email.eq.${userEmail}`)
+      .eq('user_id', authUserId)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
@@ -221,12 +252,12 @@ export async function POST(request: NextRequest) {
         company: jobData.company_name || jobData.companies?.name || 'Unknown',
         description: jobData.description,
         // ACTUAL JOB RESPONSIBILITIES - These are the real tasks!
-        responsibilities: (jobData.responsibilities_original || []),
-        required_skills: (jobData.skills_original || []),
-        tools_technologies: (jobData.tools_original || []),
-        nice_to_have: (jobData.nice_to_have_original || []),
-        who_we_are_looking_for: (jobData.who_we_are_looking_for_original || []),
-        benefits: (jobData.benefits_original || []),
+        responsibilities: (jobData.responsibilities || []),
+        required_skills: (jobData.skills || []),
+        tools_technologies: (jobData.tools || []),
+        nice_to_have: (jobData.nice_to_have || []),
+        who_we_are_looking_for: (jobData.who_we_are_looking_for || []),
+        benefits: (jobData.benefits || []),
         work_mode: jobData.work_mode,
         location: jobData.location_city || jobData.city,
         language: jobData.language_required || jobData.german_required,
@@ -589,14 +620,13 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
         german_keywords: strategyData.german_keywords || germanKeywords
       };
       
-      // Save to Supabase for persistent caching (7 days)
+      // Save to Supabase for persistent caching (7 days) using auth user_id
       try {
         await supabase
           .from('job_analysis_cache')
           .insert({
             job_id,
-            user_session_id: sessionId,
-            user_email: userEmail,
+            user_id: authUserId,
             analysis_type: 'student_strategy',
             strategy_data: strategy,
             profile_hash: profileHash,

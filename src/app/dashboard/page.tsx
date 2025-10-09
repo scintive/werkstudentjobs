@@ -107,7 +107,19 @@ export default function DashboardPage() {
         .single()
 
       if (!profileData?.onboarding_completed) {
-        router.push('/')
+        router.push('/onboarding')
+        return
+      }
+
+      // Check if user has uploaded resume
+      const { data: resumeCheck } = await supabase
+        .from('resume_data')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1)
+
+      if (!resumeCheck || resumeCheck.length === 0) {
+        router.push('/upload')
         return
       }
 
@@ -328,14 +340,14 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Profile Completion */}
-        <div className="stat-card">
+        <div className="stat-card cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/edit-resume')}>
           <div className="stat-icon-wrapper" style={{ background: stats.profileCompletion === 100 ? 'var(--success-bg)' : 'var(--warning-bg)' }}>
             <CheckCircle className="w-6 h-6" style={{ color: stats.profileCompletion === 100 ? 'var(--success)' : 'var(--warning)' }} />
           </div>
           <div>
             <p className="stat-label">Profile Completion</p>
             <p className="stat-value">{stats.profileCompletion}%</p>
-            <p className="stat-sublabel">{stats.profileCompletion === 100 ? 'Ready to apply' : 'Complete your profile'}</p>
+            <p className="stat-sublabel">{stats.profileCompletion === 100 ? 'Click to edit resume' : 'Complete your profile'}</p>
           </div>
           <div className="stat-progress">
             <div className="stat-progress-fill" style={{ width: `${stats.profileCompletion}%`, background: stats.profileCompletion === 100 ? 'var(--success)' : 'var(--warning)' }} />

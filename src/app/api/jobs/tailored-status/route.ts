@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/serverClient'
-import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerSupabase(request)
-    const cookieStore = await cookies()
-    const userId = cookieStore.get('user_session')?.value
+
+    // SECURITY FIX: Only use Supabase auth
+    let userId: string | null = null
+    try {
+      const { data: authRes } = await supabase.auth.getUser()
+      if (authRes?.user) {
+        userId = authRes.user.id
+      }
+    } catch (e) {
+      console.log('Tailored status: auth.getUser() failed:', e)
+    }
 
     if (!userId) {
       return NextResponse.json({ tailoredJobs: [] })

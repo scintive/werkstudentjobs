@@ -21,6 +21,26 @@ export interface Database {
           website_url: string | null
           created_at: string
           updated_at: string
+          external_id: string | null
+          linkedin_url: string | null
+          description: string | null
+          slogan: string | null
+          employee_count: number | null
+          location: string | null
+          founded_year: number | null
+          careers_page_url: string | null
+          headquarters_location: string | null
+          office_locations: string[] | null
+          industry_sector: string | null
+          business_model: string | null
+          key_products_services: string[] | null
+          company_size_category: string | null
+          funding_status: string | null
+          notable_investors: string[] | null
+          leadership_team: string[] | null
+          company_values: string[] | null
+          culture_highlights: string[] | null
+          glassdoor_rating: number | null
         }
         Insert: {
           id?: string
@@ -70,12 +90,8 @@ export interface Database {
           salary_currency: string | null
           salary_period: 'hourly' | 'monthly' | 'yearly' | null
           content_language: 'DE' | 'EN' | 'unknown' | null
-          skills_original: string[] | null
-          tools_original: string[] | null
-          skills_canonical: string[] | null
-          tools_canonical: string[] | null
-          skills_canonical_flat: string[] | null
-          tools_canonical_flat: string[] | null
+          skills: string[] | null
+          tools: string[] | null
           language_required: 'DE' | 'EN' | 'BOTH' | 'UNKNOWN' | null
           description_embedding: number[] | null
           posted_at: string | null
@@ -99,13 +115,11 @@ export interface Database {
           user_applied: boolean | null
           user_notes: string | null
           match_score: number | null
-          responsibilities_original: string[] | null
-          nice_to_have_original: string[] | null
-          benefits_original: string[] | null
-          application_requirements_original: string[] | null
-          responsibilities_canonical: string[] | null
-          nice_to_have_canonical: string[] | null
-          benefits_canonical: string[] | null
+          responsibilities: string[] | null
+          nice_to_have: string[] | null
+          benefits: string[] | null
+          application_requirements: string[] | null
+          who_we_are_looking_for: string[] | null
           remote_allowed: boolean | null
           hybrid_allowed: boolean | null
           onsite_required: boolean | null
@@ -138,21 +152,15 @@ export interface Database {
           user_applied?: boolean
           user_notes?: string | null
           match_score?: number | null
-          // MULTILINGUAL MATCHING FIELDS (added for weighted scoring)
+          // Simplified English-only fields
           content_language?: 'DE' | 'EN' | 'unknown' | null
-          skills_original?: string[] | null
-          tools_original?: string[] | null
-          responsibilities_original?: string[] | null
-          nice_to_have_original?: string[] | null
-          benefits_original?: string[] | null
-          application_requirements_original?: string[] | null
-          skills_canonical?: string[] | null
-          tools_canonical?: string[] | null
-          responsibilities_canonical?: string[] | null
-          nice_to_have_canonical?: string[] | null
-          benefits_canonical?: string[] | null
-          skills_canonical_flat?: string[] | null
-          tools_canonical_flat?: string[] | null
+          skills?: string[] | null
+          tools?: string[] | null
+          responsibilities?: string[] | null
+          nice_to_have?: string[] | null
+          benefits?: string[] | null
+          application_requirements?: string[] | null
+          who_we_are_looking_for?: string[] | null
           language_required?: 'DE' | 'EN' | 'BOTH' | 'UNKNOWN' | null
           remote_allowed?: boolean | null
           hybrid_allowed?: boolean | null
@@ -186,21 +194,15 @@ export interface Database {
           user_applied?: boolean
           user_notes?: string | null
           match_score?: number | null
-          // MULTILINGUAL MATCHING FIELDS (added for weighted scoring)
+          // Simplified English-only fields
           content_language?: 'DE' | 'EN' | 'unknown' | null
-          skills_original?: string[] | null
-          tools_original?: string[] | null
-          responsibilities_original?: string[] | null
-          nice_to_have_original?: string[] | null
-          benefits_original?: string[] | null
-          application_requirements_original?: string[] | null
-          skills_canonical?: string[] | null
-          tools_canonical?: string[] | null
-          responsibilities_canonical?: string[] | null
-          nice_to_have_canonical?: string[] | null
-          benefits_canonical?: string[] | null
-          skills_canonical_flat?: string[] | null
-          tools_canonical_flat?: string[] | null
+          skills?: string[] | null
+          tools?: string[] | null
+          responsibilities?: string[] | null
+          nice_to_have?: string[] | null
+          benefits?: string[] | null
+          application_requirements?: string[] | null
+          who_we_are_looking_for?: string[] | null
           language_required?: 'DE' | 'EN' | 'BOTH' | 'UNKNOWN' | null
           remote_allowed?: boolean | null
           hybrid_allowed?: boolean | null

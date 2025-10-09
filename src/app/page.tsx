@@ -1,608 +1,515 @@
 'use client'
 
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, Sparkles, FileText, Target, Download } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
-import "@/styles/enhanced-ui.css"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { StepIndicator } from "@/components/ui/step-indicator"
-import { ResumeUpload } from "@/components/onboarding/resume-upload"
-import { PerfectStudio } from "@/components/resume-editor/PerfectStudio"
-import { JobBrowser } from "@/components/jobs/JobBrowser"
-import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow"
-import { useResumeActions } from "@/lib/contexts/ResumeContext"
-import { SupabaseResumeProvider, useSupabaseResumeContext, SaveStatusIndicator } from "@/lib/contexts/SupabaseResumeContext"
-import { EditModeProvider } from "@/lib/contexts/EditModeContext"
+import { motion } from "framer-motion"
+import {
+  ArrowRight,
+  Briefcase,
+  Building2,
+  MapPin,
+  Clock,
+  Sparkles,
+  FileText,
+  Target,
+  Zap,
+  CheckCircle,
+  Globe2,
+  Check,
+  Bookmark,
+  BookmarkCheck,
+  X,
+  Edit3,
+  Wand2,
+  Download,
+  Eye
+} from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
-import type { AppStep, UserProfile, ResumeData, JobData, AnalysisResult } from "@/lib/types"
-import type { JobWithCompany } from "@/lib/supabase/types"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
-// Application steps
-const steps: AppStep[] = [
-  {
-    id: 'upload',
-    title: 'Upload',
-    description: 'Upload your resume',
-    completed: false,
-    current: true
-  },
-  {
-    id: 'editor',
-    title: 'Editor',  
-    description: 'Visual resume editor',
-    completed: false,
-    current: false
-  },
-  {
-    id: 'jobs',
-    title: 'Jobs',
-    description: 'Select target job',
-    completed: false,
-    current: false
-  },
-  {
-    id: 'strategy',
-    title: 'Strategy',
-    description: 'AI job strategy',
-    completed: false,
-    current: false
-  },
-  {
-    id: 'finalize',
-    title: 'Generate',
-    description: 'Download documents',
-    completed: false,
-    current: false
-  }
+interface Job {
+  id: string
+  title: string
+  city: string
+  country: string
+  employment_type: string
+  work_mode: string
+  created_at: string
+  company_name?: string
+  company_logo?: string
+  match_score?: number
+  german_required?: string
+  is_werkstudent?: boolean
+  skills_canonical?: string[]
+}
+
+// Match score colors from JobBrowser
+const getMatchScoreColor = (score: number) => {
+  if (score >= 90) return 'bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg'
+  if (score >= 85) return 'bg-gradient-to-r from-emerald-400 to-teal-400 shadow-md'
+  if (score >= 75) return 'bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md'
+  if (score >= 70) return 'bg-gradient-to-r from-sky-400 to-indigo-400'
+  if (score >= 60) return 'bg-gradient-to-r from-blue-400 to-cyan-400'
+  if (score >= 50) return 'bg-gradient-to-r from-amber-400 to-orange-400'
+  if (score > 0) return 'bg-gradient-to-r from-orange-300 to-red-400'
+  return 'bg-gradient-to-r from-red-500 to-rose-600 shadow-md'
+}
+
+const getMatchScoreTextColor = (score: number) => {
+  if (score >= 50) return 'text-white'
+  if (score === 0) return 'text-white'
+  return 'text-gray-700'
+}
+
+// Colorful skill pill styles - varied colors for visual interest
+const skillColors = [
+  'bg-blue-100 text-blue-700 border-blue-200',
+  'bg-purple-100 text-purple-700 border-purple-200',
+  'bg-pink-100 text-pink-700 border-pink-200',
+  'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'bg-teal-100 text-teal-700 border-teal-200',
+  'bg-green-100 text-green-700 border-green-200',
+  'bg-amber-100 text-amber-700 border-amber-200',
+  'bg-orange-100 text-orange-700 border-orange-200',
+  'bg-rose-100 text-rose-700 border-rose-200',
 ]
 
-// Main app component that uses ResumeContext
-function MainApp() {
-  const [currentStep, setCurrentStep] = React.useState<string>('upload')
-  const [appSteps, setAppSteps] = React.useState<AppStep[]>(steps)
-  const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null)
-  const [selectedTheme, setSelectedTheme] = React.useState<string>('swiss')
-  const [organizedSkills, setOrganizedSkills] = React.useState<any>(null)
-  const [selectedJob, setSelectedJob] = React.useState<JobWithCompany | null>(null)
-  const [isCheckingProfile, setIsCheckingProfile] = React.useState(true)
-  const [isAuthed, setIsAuthed] = React.useState<boolean>(false)
-  const [checkedAuth, setCheckedAuth] = React.useState<boolean>(false)
-  const [showOnboarding, setShowOnboarding] = React.useState(false)
-  const [userId, setUserId] = React.useState<string>('')
-  const [userEmail, setUserEmail] = React.useState<string>('')
-  
-  // Use ResumeContext hooks
-  const { setResumeData } = useResumeActions()
-  
-  // Check for existing user profile on mount
+const getSkillColor = (index: number) => skillColors[index % skillColors.length]
+
+export default function HomePage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false)
+  const [latestJobs, setLatestJobs] = React.useState<Job[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [savedJobs, setSavedJobs] = React.useState<Set<string>>(new Set())
+
   React.useEffect(() => {
-    const checkExistingProfile = async () => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession()
+      const isLoggedIn = !!data.session?.user
+      setIsAuthenticated(isLoggedIn)
+
+      // If user is logged in, redirect to dashboard
+      if (isLoggedIn) {
+        router.push('/dashboard')
+        return
+      }
+
       try {
-        // Check if user is authenticated
-        const { data: session } = await supabase.auth.getSession()
-        const isAuthenticated = !!session.session?.user
-        const currentUserId = session.session?.user?.id || ''
-        const currentUserEmail = session.session?.user?.email || ''
-
-        setIsAuthed(isAuthenticated)
-        setCheckedAuth(true)
-        setUserId(currentUserId)
-        setUserEmail(currentUserEmail)
-
-        // Show landing page if not authenticated
-        if (!isAuthenticated) {
-          console.log('User not authenticated, showing landing page')
-          setIsCheckingProfile(false)
-          // Redirect to landing page
-          window.location.href = '/landing'
-          return
-        }
-
-        // Check if user has completed onboarding
-        const { data: profileData } = await supabase
-          .from('user_profiles')
-          .select('onboarding_completed')
-          .eq('user_id', currentUserId)
-          .single()
-
-        if (!profileData?.onboarding_completed) {
-          console.log('Onboarding not completed, showing onboarding flow')
-          setShowOnboarding(true)
-          setIsCheckingProfile(false)
-          return
-        }
-
-        const token = session.session?.access_token
-        const response = await fetch('/api/profile/latest', {
+        const token = data.session?.access_token
+        const response = await fetch('/api/jobs/latest', {
           credentials: 'include',
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         })
 
-        // If no resume found (404), stay on upload page
-        if (!response.ok) {
-          console.log('No resume found, staying on upload page')
-          setIsCheckingProfile(false)
-          return
-        }
-
         if (response.ok) {
           const result = await response.json()
-          if (result.success && result.resumeData) {
-            // Check if resume data has actual content
-            const hasContent = result.resumeData.personalInfo?.name && 
-                             result.resumeData.personalInfo?.email &&
-                             (result.resumeData.experience?.length > 0 || 
-                              result.resumeData.education?.length > 0 ||
-                              Object.keys(result.resumeData.skills || {}).length > 0)
-            
-            if (hasContent) {
-              // Check if user explicitly wants to upload a new resume
-              const urlParams = new URLSearchParams(window.location.search)
-              const forceUpload = urlParams.get('upload') === 'new'
-              const editMode = urlParams.get('edit') === '1'
-              
-              if (forceUpload) {
-                console.log('Force upload mode - allowing new resume upload')
-              } else if (editMode) {
-                console.log('Edit mode requested - open editor directly')
-                setResumeData(result.resumeData)
-                setIsCheckingProfile(false)
-                setCurrentStep('editor')
-                updateStepStatus('editor', false, true)
-                // Compute organized skills so the editor doesn't show "Waiting for Skills"
-                try {
-                  const enhanceResp = await fetch('/api/skills/enhance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      userProfile: { ...result.resumeData, skills: result.resumeData.skills },
-                      currentSkills: result.resumeData.skills || {}
-                    })
-                  })
-                  if (enhanceResp.ok) {
-                    const enhanced = await enhanceResp.json()
-                    if (enhanced && enhanced.organized_skills) {
-                      const organized_categories: Record<string, any> = {}
-                      Object.entries(enhanced.organized_skills).forEach(([cat, list]: any) => {
-                        organized_categories[String(cat)] = {
-                          skills: Array.isArray(list) ? list : [],
-                          suggestions: Array.isArray(enhanced.suggestions?.[cat]) ? enhanced.suggestions[cat] : [],
-                          reasoning: enhanced.reasoning || ''
-                        }
-                      })
-                      setOrganizedSkills({ organized_categories, reasoning: enhanced.reasoning || '' })
-                    }
-                  }
-                } catch (e) {
-                  console.warn('Enhance skills failed in edit mode')
-                }
-                return
-              } else {
-                // Default behavior: go to jobs page if not editing
-                console.log('Complete profile found, redirecting to jobs')
-                window.location.href = '/jobs'
-                return
-              }
-            } else {
-              console.log('Profile exists but incomplete, staying on upload page')
-            }
-          }
+          setLatestJobs(result.jobs?.slice(0, 5) || [])
         }
       } catch (error) {
-        console.log('No existing profile found, showing onboarding')
+        console.error('Failed to fetch jobs:', error)
       } finally {
-        setIsCheckingProfile(false)
+        setLoading(false)
       }
     }
-    
-    checkExistingProfile()
+
+    init()
   }, [])
 
-  const updateStepStatus = React.useCallback((stepId: string, completed: boolean, current: boolean = false) => {
-    setAppSteps(prev => prev.map(step => ({
-      ...step,
-      completed: step.id === stepId ? completed : (step.completed || false),
-      current: step.id === stepId ? current : false
-    })))
-  }, [])
+  const getTimeSincePosted = (dateString: string) => {
+    const now = new Date()
+    const posted = new Date(dateString)
+    const diffTime = Math.abs(now.getTime() - posted.getTime())
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
-  const moveToNextStep = React.useCallback((nextStepId: string) => {
-    setCurrentStep(nextStepId)
-    setAppSteps(prev => prev.map(step => ({
-      ...step,
-      current: step.id === nextStepId
-    })))
-  }, [])
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+    return `${Math.floor(diffDays / 30)}mo ago`
+  }
 
-  const handleProfileExtracted = React.useCallback((profile: UserProfile, organizedSkills?: any) => {
-    setUserProfile(profile)
-    setOrganizedSkills(organizedSkills)
-    
-    // Only update ResumeContext if we're currently on the upload step
-    // This prevents overwriting edits when user re-uploads the same file
-    if (currentStep === 'upload') {
-      // Add safety checks for profile structure
-      if (!profile || !profile.personal_details) {
-        console.error('Invalid profile structure:', profile)
-        return
+  const toggleSaveJob = (jobId: string) => {
+    setSavedJobs(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId)
+      } else {
+        newSet.add(jobId)
       }
-      
-      // Convert profile to resume data format and update context
-      const newResumeData: ResumeData = {
-        personalInfo: {
-          name: profile.personal_details?.name || 'Unknown',
-          email: profile.personal_details?.contact?.email || '',
-          phone: profile.personal_details?.contact?.phone || '',
-          location: profile.personal_details?.contact?.address || '',
-          linkedin: profile.personal_details?.contact?.linkedin || ''
-        },
-        professionalTitle: profile.professional_title || "Professional",
-        professionalSummary: profile.professional_summary || "Detail-oriented professional with extensive experience and proven ability to drive results.",
-        enableProfessionalSummary: !!profile.professional_summary,
-        skills: {
-          technical: profile.skills?.technology || [],
-          soft_skills: profile.skills?.soft_skills || [],
-          tools: profile.skills?.design || [], // Reusing design as tools for demo
-          // Removed languages from skills - they're now stored separately
-        },
-        experience: (profile.experience || []).map(exp => ({
-          company: exp.company,
-          position: exp.position,
-          duration: exp.duration,
-          achievements: exp.responsibilities
-        })),
-        education: (profile.education || []).map(edu => ({
-          degree: edu.degree,
-          field_of_study: edu.field_of_study,
-          institution: edu.institution,
-          year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
-        })),
-        projects: (profile.projects || []).map(proj => ({
-          name: proj.title,
-          description: proj.description,
-          technologies: [],
-          date: "2023" // Default date
-        })),
-        // Languages array for editor Languages card (kept in sync from skills.languages)
-        languages: (profile.languages || []).map((lang: any) => {
-          // Handle both string format and object format
-          if (typeof lang === 'string') {
-            // Parse "Language (Proficiency)" format
-            const match = lang.match(/^(.+?)\s*\((.+?)\)$/)
-            if (match) {
-              return {
-                name: match[1].trim(),
-                language: match[1].trim(),
-                level: match[2].trim(),
-                proficiency: match[2].trim()
-              }
-            }
-            return {
-              name: lang,
-              language: lang,
-              level: 'Not specified',
-              proficiency: 'Not specified'
-            }
-          }
-          // Handle object format from extraction
-          return {
-            name: lang.language || lang.name || '',
-            language: lang.language || lang.name || '',
-            level: lang.proficiency || lang.level || 'Not specified',
-            proficiency: lang.proficiency || lang.level || 'Not specified'
-          }
-        }),
-        certifications: profile.certifications.map(cert => ({
-          name: cert.title,
-          issuer: cert.institution,
-          date: cert.date
-        })),
-        customSections: (profile as any).custom_sections ? (() => {
-          // Deduplicate sections by title (case-insensitive)
-          const seenTitles = new Set<string>();
-          return (profile as any).custom_sections
-            .filter((section: any) => {
-              const normalizedTitle = section.title.toLowerCase().trim();
-              if (seenTitles.has(normalizedTitle)) {
-                console.log('🔍 SKIPPING DUPLICATE CUSTOM SECTION:', section.title);
-                return false;
-              }
-              seenTitles.add(normalizedTitle);
-              return true;
-            })
-            .map((section: any, index: number) => ({
-              id: `custom-${index}`,
-              title: section.title,
-              type: 'custom',
-              items: section.items.map((item: any) => ({
-                title: item.title || '',
-                subtitle: item.subtitle || '',
-                date: item.date || '',
-                description: item.description || ''
-              }))
-            }));
-        })() : []
-      }
-      
-      // Update resume data through context
-      setResumeData(newResumeData)
-    }
-    
-    updateStepStatus('upload', true)
-    
-    // Automatically move to editor after successful extraction (only if currently on upload)
-    if (currentStep === 'upload') {
-      setTimeout(() => {
-        moveToNextStep('editor')
-        updateStepStatus('editor', false, true)
-      }, 500) // Small delay for better UX transition
-    }
-  }, [setResumeData, updateStepStatus, moveToNextStep, currentStep])
+      return newSet
+    })
+  }
 
-  const handleUploadNext = React.useCallback(() => {
-    moveToNextStep('editor')
-    updateStepStatus('editor', false, true)
-  }, [moveToNextStep, updateStepStatus])
+  return (
+    <div className="page-content">
+      {/* Hero Section - 2 Columns */}
+      <div className="max-w-7xl mx-auto mb-20 pt-8">
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          {/* Left: Hero Content */}
+          <div className="pr-4">
+            <h1 className="text-5xl font-black text-gray-900 mb-4 leading-tight">
+              AI-powered job applications for Werkstudent roles
+            </h1>
+            <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+              Upload your resume once. Our AI analyzes it, matches you with relevant jobs, and generates tailored applications in seconds.
+            </p>
 
-  // Show loading while checking for existing profile
-  if (isCheckingProfile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"
-          />
-          <p className="text-gray-600">Checking your profile...</p>
+            <div className="flex items-center gap-3 mb-6">
+              {isAuthenticated ? (
+                <>
+                  <Link href="/dashboard">
+                    <button className="btn btn-primary">
+                      Go to Dashboard
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                  <Link href="/jobs">
+                    <button className="btn btn-secondary">
+                      Browse Jobs
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/register">
+                    <button className="btn btn-primary">
+                      Get Started Free
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                  <Link href="/login">
+                    <button className="btn btn-secondary">
+                      Sign In
+                    </button>
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Trust indicators */}
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>Free</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>AI-powered</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>1000+ jobs</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Latest 5 Jobs - Ultra Compact */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Latest Opportunities</h3>
+                <p className="text-xs text-gray-500">Fresh roles updated daily</p>
+              </div>
+              {!isAuthenticated && (
+                <Badge className="badge badge-success text-xs px-2 py-0.5">New</Badge>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="space-y-1.5">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="skeleton" style={{ height: '64px' }} />
+                ))}
+              </div>
+            ) : latestJobs.length > 0 ? (
+              <div className="space-y-1.5">
+                {latestJobs.map((job, index) => (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    <div
+                      className={cn(
+                        "p-2 border-l-2 cursor-pointer transition-all duration-200 group relative rounded-md",
+                        "bg-white hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50",
+                        "border-blue-200 hover:border-blue-400 hover:shadow-md"
+                      )}
+                      onClick={() => router.push(isAuthenticated ? `/jobs/${job.id}` : '/register')}
+                    >
+                      <div className="flex gap-2">
+                        {/* Company Logo */}
+                        <div className="flex-shrink-0">
+                          <div className="w-7 h-7 bg-gradient-to-br from-blue-50 to-purple-50 rounded flex items-center justify-center overflow-hidden shadow-sm border border-blue-100">
+                            {job.company_logo ? (
+                              <img src={job.company_logo} alt={job.company_name || ''} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          {/* Title and Score */}
+                          <div className="flex items-start justify-between mb-0.5">
+                            <h3 className="font-semibold text-gray-900 text-xs truncate pr-1 leading-tight">{job.title}</h3>
+                            {job.match_score !== undefined && (
+                              <div
+                                className={cn(
+                                  "px-1.5 py-0.5 rounded-full text-xs font-bold flex-shrink-0 flex items-center gap-0.5 border",
+                                  getMatchScoreColor(job.match_score),
+                                  getMatchScoreTextColor(job.match_score),
+                                  "border-white/20"
+                                )}
+                              >
+                                <Sparkles className="w-2 h-2" />
+                                <span className="text-xs">{job.match_score}%</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-gray-600 truncate mb-0.5">{job.company_name}</p>
+
+                          {/* Meta - Ultra Compact */}
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                            {job.city && (
+                              <span className="flex items-center gap-0.5 truncate">
+                                <MapPin className="w-2.5 h-2.5" />
+                                <span className="text-xs">{job.city}</span>
+                              </span>
+                            )}
+                            {job.work_mode && job.work_mode !== 'Unknown' && (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-xs">{job.work_mode}</span>
+                              </>
+                            )}
+                            {job.created_at && (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-xs text-gray-400">
+                                  {getTimeSincePosted(job.created_at)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Badges - Super Compact */}
+                          <div className="flex items-center gap-0.5 flex-wrap mb-1">
+                            {job.is_werkstudent && (
+                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs h-3.5 px-1 font-medium">
+                                Werkstudent
+                              </Badge>
+                            )}
+                            {job.employment_type && job.employment_type.toLowerCase().includes('intern') && (
+                              <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs h-3.5 px-1 font-medium">
+                                Intern
+                              </Badge>
+                            )}
+                            {job.german_required && job.german_required !== 'unknown' && (
+                              <Badge className={cn("gap-0.5 text-xs h-3.5 px-1 font-medium border",
+                                job.german_required === 'DE' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                                job.german_required === 'EN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                job.german_required === 'both' ? 'bg-rose-50 text-rose-700 border-rose-200' : ''
+                              )}>
+                                <Globe2 className="w-2 h-2" />
+                                <span className="text-xs">
+                                  {job.german_required === 'DE' ? 'DE' :
+                                   job.german_required === 'EN' ? 'EN' :
+                                   job.german_required === 'both' ? 'DE/EN' : ''}
+                                </span>
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Top 5 Skills Pills - Colorful */}
+                          {job.skills_canonical && job.skills_canonical.length > 0 && (
+                            <div className="flex items-center gap-0.5 flex-wrap">
+                              {job.skills_canonical.slice(0, 5).map((skill, skillIndex) => (
+                                <span
+                                  key={skillIndex}
+                                  className={cn(
+                                    "px-1.5 py-0.5 rounded text-xs font-medium border inline-block",
+                                    getSkillColor(skillIndex)
+                                  )}
+                                  style={{ fontSize: '10px' }}
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="text-xs">No jobs available</p>
+              </div>
+            )}
+
+            {/* CTA */}
+            {!isAuthenticated && latestJobs.length > 0 && (
+              <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                <Link href="/register">
+                  <button className="btn btn-primary btn-sm w-full text-sm">
+                    Sign Up to View All
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    )
-  }
 
-  // Show onboarding flow if user hasn't completed it
-  if (showOnboarding) {
-    return (
-      <OnboardingFlow
-        userId={userId}
-        userEmail={userEmail}
-        onComplete={() => {
-          setShowOnboarding(false)
-          setIsCheckingProfile(false)
-          // After onboarding, show upload step
-          setCurrentStep('upload')
-        }}
-      />
-    )
-  }
-
-  const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 'upload':
-        return checkedAuth && !isAuthed ? (
-          <div className="bg-white/70 backdrop-blur rounded-2xl border border-gray-200 p-8 text-center card-hover">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign in to start</h2>
-            <p className="text-gray-600 mb-6">Create an account or log in to upload your resume and save progress securely.</p>
-            <div className="flex items-center justify-center gap-3">
-              <a href="/login" className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Login</a>
-              <a href="/register" className="px-4 py-2 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200">Register</a>
+      {/* Resume Editor Section */}
+      <div className="max-w-7xl mx-auto mb-24">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full mb-6">
+              <Edit3 className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-semibold text-blue-700">Visual Resume Editor</span>
             </div>
-          </div>
-        ) : (
-          <ResumeUpload
-            onProfileExtracted={handleProfileExtracted}
-            onNext={handleUploadNext}
-            className="w-full"
-          />
-        )
-      
-      case 'editor':
-        return (
-          <div className="space-y-6">
-            <PerfectStudio userProfile={userProfile} organizedSkills={organizedSkills} />
-            <div className="flex justify-center">
-              <Button 
-                size="lg" 
-                onClick={() => {
-                  updateStepStatus('editor', true)
-                  moveToNextStep('jobs')
-                  updateStepStatus('jobs', false, true)
-                }}
-                className="gap-2"
-              >
-                Continue to Job Selection
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )
-      
-      case 'jobs':
-        return (
-          <JobBrowser 
-            userProfile={userProfile}
-            onJobSelect={(job) => {
-              setSelectedJob(job)
-              // Automatically move to strategy step after job selection
-              setTimeout(() => {
-                updateStepStatus('jobs', true)
-                moveToNextStep('strategy')
-                updateStepStatus('strategy', false, true)
-              }, 500)
-            }}
-            className="w-full"
-          />
-        )
-      
-      case 'strategy':
-        return (
-          <Card className="w-full max-w-4xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl flex items-center justify-center gap-2">
-                <Sparkles className="w-6 h-6" />
-                AI Job Strategy Analysis
-              </CardTitle>
-              <CardDescription>
-                Get personalized insights and recommendations for your job application
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center py-12">
-              <div className="space-y-6">
-                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <FileText className="w-8 h-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Strategy Analysis Coming Soon</h3>
-                  <p className="text-muted-foreground">
-                    AI-powered job strategy with fit analysis, tips, and tailored suggestions
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => {
-                    updateStepStatus('strategy', true)
-                    moveToNextStep('finalize')
-                    updateStepStatus('finalize', false, true)
-                  }}
-                  size="lg"
-                >
-                  Continue to Generation
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      
-      case 'finalize':
-        return (
-          <Card className="w-full max-w-4xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl flex items-center justify-center gap-2">
-                <Download className="w-6 h-6" />
-                Generate Documents
-              </CardTitle>
-              <CardDescription>
-                Download your tailored resume and cover letter
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center py-12">
-              <div className="space-y-6">
-                <div className="mx-auto w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
-                  <Download className="w-8 h-8 text-green-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Documents Ready!</h3>
-                  <p className="text-muted-foreground">
-                    Your optimized resume and cover letter are ready for download
-                  </p>
-                </div>
-                <div className="flex gap-4 justify-center">
-                  <Button size="lg" variant="outline">
-                    Download Resume
-                  </Button>
-                  <Button size="lg">
-                    Download Cover Letter
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      
-      default:
-        return null
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-400/8 to-blue-300/6 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-slate-200/8 to-gray-100/6 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-300/4 to-slate-200/4 rounded-full blur-3xl"></div>
-      </div>
-
-
-      {/* Main Content */}
-      <main className="relative w-full">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, y: 30, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -30, scale: 0.98 }}
-            transition={{ duration: 0.4, type: "spring", stiffness: 100 }}
-            className="w-full"
-          >
-            {renderCurrentStep()}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-
-      {/* Premium Mobile Progress Indicator */}
-      <div className="lg:hidden fixed bottom-6 left-4 right-4 z-50">
-        <motion.div 
-          className="bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <div className="flex items-center justify-between">
-            {appSteps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center relative">
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
-                  ${step.completed 
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 shadow-md' 
-                    : step.current 
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 shadow-md animate-pulse' 
-                    : 'bg-gray-100 border border-gray-200'
-                  }
-                `}>
-                  {step.completed ? (
-                    <span className="text-white font-bold text-xs">✓</span>
-                  ) : (
-                    <span className={`font-bold text-xs ${
-                      step.current ? 'text-white' : 'text-gray-400'
-                    }`}>
-                      {index + 1}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-xs mt-2 font-medium ${
-                  step.current ? 'text-blue-600' : step.completed ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  {step.title}
-                </span>
-
-                {/* Mobile connecting line */}
-                {index < appSteps.length - 1 && (
-                  <div className="absolute top-4 left-8 w-6 h-px">
-                    <div className={`h-full transition-all duration-500 ${
-                      step.completed ? 'bg-gradient-to-r from-green-400 to-emerald-400' : 'bg-gray-200'
-                    }`}></div>
+            <h2 className="text-4xl font-black text-gray-900 mb-4">
+              Professional resume editor with live preview
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Edit your resume with a powerful visual editor that shows you exactly how it will look. No more guessing or formatting issues.
+            </p>
+            <ul className="space-y-3">
+              {[
+                { icon: Eye, text: "Split-pane editor with live PDF preview" },
+                { icon: Wand2, text: "AI-powered skill categorization" },
+                { icon: FileText, text: "Dynamic sections for custom content" },
+                { icon: Download, text: "Export to multiple professional templates" }
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="icon-container icon-container-sm icon-container-primary flex-shrink-0">
+                    <item.icon className="w-4 h-4" />
                   </div>
-                )}
-              </div>
-            ))}
+                  <span className="text-body" style={{ color: 'var(--text-secondary)' }}>
+                    {item.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </motion.div>
+          <div className="relative">
+            <div className="aspect-video bg-gray-100 rounded-xl border-2 border-gray-200 flex items-center justify-center">
+              <FileText className="w-24 h-24 text-gray-300" />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  )
-}
 
-// Export default function that provides SupabaseResumeContext
-export default function HomePage() {
-  return (
-    <SupabaseResumeProvider autoSaveInterval={2000}>
-      <EditModeProvider>
-        <MainApp />
-      </EditModeProvider>
-    </SupabaseResumeProvider>
+      {/* Job Tailoring Section */}
+      <div className="max-w-7xl mx-auto mb-24">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="order-2 lg:order-1 relative">
+            <div className="aspect-video bg-gray-100 rounded-xl border-2 border-gray-200 flex items-center justify-center">
+              <Zap className="w-24 h-24 text-gray-300" />
+            </div>
+          </div>
+          <div className="order-1 lg:order-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-full mb-6">
+              <Target className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-semibold text-purple-700">Smart Job Tailoring</span>
+            </div>
+            <h2 className="text-4xl font-black text-gray-900 mb-4">
+              AI tailors your resume for every job
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Our AI analyzes each job posting and automatically adapts your resume to highlight the most relevant experience and skills. Accept or reject suggestions with one click.
+            </p>
+            <ul className="space-y-3">
+              {[
+                { icon: Sparkles, text: "AI analyzes job requirements and your profile" },
+                { icon: Target, text: "Suggests targeted improvements for each section" },
+                { icon: Check, text: "Inline accept/reject for full control" },
+                { icon: Download, text: "Generate tailored PDF in seconds" }
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="icon-container icon-container-sm icon-container-purple flex-shrink-0">
+                    <item.icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-body" style={{ color: 'var(--text-secondary)' }}>
+                    {item.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Cover Letter Section */}
+      <div className="max-w-7xl mx-auto mb-24">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full mb-6">
+              <FileText className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-semibold text-green-700">Cover Letter Generator</span>
+            </div>
+            <h2 className="text-4xl font-black text-gray-900 mb-4">
+              Personalized cover letters in seconds
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Generate professional, job-specific cover letters that highlight why you're the perfect fit. No more starting from a blank page.
+            </p>
+            <ul className="space-y-3">
+              {[
+                { icon: Wand2, text: "AI writes tailored cover letter for each job" },
+                { icon: Edit3, text: "Edit and customize every word" },
+                { icon: Eye, text: "Live preview while you edit" },
+                { icon: Download, text: "Export as formatted PDF" }
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="icon-container icon-container-sm icon-container-success flex-shrink-0">
+                    <item.icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-body" style={{ color: 'var(--text-secondary)' }}>
+                    {item.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="relative">
+            <div className="aspect-video bg-gray-100 rounded-xl border-2 border-gray-200 flex items-center justify-center">
+              <FileText className="w-24 h-24 text-gray-300" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Final CTA */}
+      {!isAuthenticated && (
+        <div className="max-w-3xl mx-auto text-center mb-24">
+          <h2 className="text-4xl font-black text-gray-900 mb-4">
+            Ready to land your next role?
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Join thousands of students finding Werkstudent jobs with AI-powered applications
+          </p>
+          <Link href="/register">
+            <button className="btn btn-primary btn-lg">
+              Get Started for Free
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </Link>
+        </div>
+      )}
+    </div>
   )
 }

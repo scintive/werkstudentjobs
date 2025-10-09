@@ -70,9 +70,9 @@ export function ComprehensiveJobAnalysis({
 
     // Fallback to generating if strategy doesn't have task analysis
     const allSkills = [
-      ...(jobData.skills_original || []),
-      ...(jobData.tools_original || []),
-      ...(jobData.responsibilities_original || [])
+      ...(jobData.skills || []),
+      ...(jobData.tools || []),
+      ...(jobData.responsibilities || [])
     ];
 
     return allSkills.slice(0, 8).map(skill => {
@@ -115,8 +115,8 @@ export function ComprehensiveJobAnalysis({
     return skillCategories.map(([category, skills]) => {
       const categorySkills = Array.isArray(skills) ? skills : [];
       const jobSkills = [
-        ...(jobData.skills_original || []),
-        ...(jobData.tools_original || [])
+        ...(jobData.skills || []),
+        ...(jobData.tools || [])
       ];
 
       const matched = categorySkills.filter((userSkill: any) => {

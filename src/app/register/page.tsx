@@ -55,7 +55,7 @@ export default function RegisterPage() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ sessionId: loginData.session.user.id, email: loginData.session.user.email })
                 })
-                router.push('/dashboard')
+                router.push('/onboarding')
                 return
               }
             }
@@ -74,7 +74,7 @@ export default function RegisterPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: signUpData.session.user.id, email: signUpData.session.user.email })
         })
-        router.push('/dashboard')
+        router.push('/onboarding')
       }
     } catch (error: any) {
       setError(error.message || 'Registration failed')

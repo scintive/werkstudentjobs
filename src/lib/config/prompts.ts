@@ -9,7 +9,7 @@ export const PROMPTS = {
   JOB_EXTRACTION: {
     SYSTEM: "You are a precise information extractor that returns strict JSON only.",
     
-    USER_TEMPLATE: `You are master job researcher and really good at analyzing job descriptions and understanding everything about the job roles. Extract the following fields from the job post JSON. Copy important lists word-for-word (no rephrasing). If German, include original lists and add English translations alongside. Output STRICT JSON matching the schema below, no extra text.
+    USER_TEMPLATE: `You are master job researcher and really good at analyzing job descriptions and understanding everything about the job roles. Extract the following fields from the job post JSON and OUTPUT EVERYTHING IN ENGLISH. If German, translate to English. Output STRICT JSON matching the schema below, no extra text.
 
 Schema:
 {
@@ -23,19 +23,53 @@ Schema:
   "location_city": string | null,
   "location_country": string | null,
   "hiring_manager": string | null,
-  "tasks_responsibilities": { original: string[] | null, english: string[] | null },
-  "nice_to_have": { original: string[] | null, english: string[] | null },
-  "benefits": { original: string[] | null, english: string[] | null },
-  "named_skills_tools": string[],
-  "important_statements": string[]
+  "tasks_responsibilities": string[],  // What you will DO in the job - responsibilities, duties, day-to-day work - in ENGLISH
+  "who_we_are_looking_for": string[],  // What you NEED to have - required qualifications, education, skills, experience - in ENGLISH
+  "nice_to_have": string[],  // ONLY items explicitly marked as optional/preferred/nice-to-have/advantageous/plus/bonus - in ENGLISH
+  "benefits": string[],  // Perks and benefits offered - in ENGLISH
+  "named_skills_tools": string[],  // List of specific technologies, tools, programming languages mentioned - in ENGLISH
+  "important_statements": string[]  // Key requirements or statements - in ENGLISH
 }
 
-Rules:
-- Copy lists verbatim. Do not paraphrase. Preserve punctuation and capitalization.
-- If the job is in German, keep original lists and provide English translations in parallel.
-- Only fill translations if German detected; otherwise set english to null.
-- Set fields to null if unknown.
-- Determine german_required: DE if job primarily in German; EN if English; both if mixed.
+CRITICAL RULES FOR FIELD CATEGORIZATION:
+
+**tasks_responsibilities** (What you will DO):
+- Job duties, responsibilities, day-to-day activities
+- What the role involves doing
+- Examples: "Develop marketing campaigns", "Analyze data trends", "Lead team meetings"
+
+**who_we_are_looking_for** (What you MUST HAVE):
+- Required qualifications, education, experience
+- Mandatory skills and competencies
+- "You will need", "Requirements", "Qualifications", "We expect", "You should have"
+- Examples: "Master's degree in Engineering", "3+ years of experience", "Strong Python skills", "Fluent in German"
+
+**nice_to_have** (Optional/Preferred):
+- ONLY items EXPLICITLY marked as optional/preferred/bonus
+- Keywords: "advantageous", "plus", "bonus", "preferred but not required", "nice to have", "would be a plus"
+- Examples: "Knowledge of Siemens NX CAD advantageous", "Python experience is a plus"
+
+**benefits** (What the company offers YOU):
+- ONLY actual perks, benefits, and compensation offered by the company
+- Examples: "Flexible hours", "Remote work", "Health insurance", "Professional development budget", "Team events", "Modern equipment"
+- DO NOT INCLUDE: Job metadata ("Actively Hiring"), application instructions, company status, or anything not a tangible benefit to the employee
+- NEVER include status indicators like "Actively Hiring", "Urgent", "New posting", etc.
+
+**When in doubt:**
+- If it describes what they'll do → tasks_responsibilities
+- If it's a requirement → who_we_are_looking_for
+- ONLY if explicitly optional → nice_to_have
+- ONLY if it's something the company gives to employees → benefits
+
+LANGUAGE RULES:
+- OUTPUT EVERYTHING IN ENGLISH - translate German to English
+- Preserve meaning and detail when translating
+- Keep technical terms and proper nouns in their original form
+- Set fields to null if unknown
+
+OTHER RULES:
+- Determine german_required: DE if job primarily in German; EN if English; both if mixed
+- Copy lists with accurate translations, preserving detail and punctuation
 
 Job JSON:
 {{JOB_DATA}}`,

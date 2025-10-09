@@ -1,31 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/serverClient'
-import { cookies } from 'next/headers'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerSupabase(request)
-    const cookieStore = await cookies()
 
-    // Try to get user ID from cookies first (cookie-based sessions)
-    let userId = cookieStore.get('user_session')?.value || null
-
-    // Also try Supabase auth (Authorization header)
-    if (!userId) {
-      try {
-        const { data: authRes } = await supabase.auth.getUser()
-        if (authRes?.user) {
-          userId = authRes.user.id
-        }
-      } catch (e) {
-        console.log('Share create: auth.getUser() not available or failed')
+    // SECURITY FIX: Only use Supabase auth
+    let userId: string | null = null
+    try {
+      const { data: authRes } = await supabase.auth.getUser()
+      if (authRes?.user) {
+        userId = authRes.user.id
       }
+    } catch (e) {
+      console.log('Share create: auth.getUser() failed:', e)
     }
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Please log in' },
         { status: 401 }
       )
     }

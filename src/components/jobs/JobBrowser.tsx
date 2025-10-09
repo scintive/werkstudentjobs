@@ -663,12 +663,12 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         if (job.city?.toLowerCase().includes(query)) return true
         if (job.country?.toLowerCase().includes(query)) return true
         // Search in skills
-        if (job.skills_original && Array.isArray(job.skills_original)) {
-          if (job.skills_original.some(skill => skill.toLowerCase().includes(query))) return true
+        if (job.skills && Array.isArray(job.skills)) {
+          if (job.skills.some(skill => skill.toLowerCase().includes(query))) return true
         }
         // Search in tools
-        if (job.tools_original && Array.isArray(job.tools_original)) {
-          if (job.tools_original.some(tool => tool.toLowerCase().includes(query))) return true
+        if (job.tools && Array.isArray(job.tools)) {
+          if (job.tools.some(tool => tool.toLowerCase().includes(query))) return true
         }
         // Search in job description
         if (job.description?.toLowerCase().includes(query)) return true
@@ -1183,7 +1183,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           </div>
                           
                           <div className="flex items-center gap-1 mb-0.5">
-                            <p className="text-xs text-gray-600 truncate">{job.company.name}</p>
+                            <p className="text-[11px] text-gray-600 truncate font-medium">{job.company.name}</p>
                           </div>
 
                           {/* Ultra Compact Meta with Distance */}
@@ -1255,8 +1255,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 // Check if job content appears to be in English
                                 const englishIndicators = [
                                   job.title?.includes('Intern'),
-                                  job.responsibilities_original?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
-                                  job.skills_original?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some(eng => s.includes(eng)))
+                                  job.responsibilities?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                                  job.skills?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some(eng => s.includes(eng)))
                                 ];
                                 
                                 if (englishIndicators.filter(Boolean).length >= 2) {
@@ -1443,8 +1443,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           // Check if job content appears to be in English
                           const englishIndicators = [
                             selectedJob.title?.includes('Intern'),
-                            selectedJob.responsibilities_original?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
-                            selectedJob.skills_original?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some(eng => s.includes(eng)))
+                            selectedJob.responsibilities?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                            selectedJob.skills?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some(eng => s.includes(eng)))
                           ];
                           
                           if (englishIndicators.filter(Boolean).length >= 2) {
@@ -1505,15 +1505,15 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                   {/* Main Content */}
                   <div className="lg:col-span-2 space-y-3">
                     {/* Salary Information - Inline */}
-                    {(extractSalaryFromBenefits(selectedJob.benefits_original) || selectedJob.salary_min || selectedJob.salary_max || selectedJob.salary_info) && (
+                    {(extractSalaryFromBenefits(selectedJob.benefits) || selectedJob.salary_min || selectedJob.salary_max || selectedJob.salary_info) && (
                       <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded p-2 border border-emerald-200">
                         <div className="flex items-center gap-2 mb-1">
                           <DollarSign className="w-3 h-3 text-emerald-600" />
                           <h3 className="font-medium text-emerald-900 text-sm">Compensation</h3>
                         </div>
                         <div className="text-emerald-800 text-xs space-y-0.5">
-                          {extractSalaryFromBenefits(selectedJob.benefits_original) && (
-                            <p className="font-medium">{extractSalaryFromBenefits(selectedJob.benefits_original)}</p>
+                          {extractSalaryFromBenefits(selectedJob.benefits) && (
+                            <p className="font-medium">{extractSalaryFromBenefits(selectedJob.benefits)}</p>
                           )}
                           {(selectedJob.salary_min || selectedJob.salary_max) && (
                             <p>
@@ -1530,93 +1530,82 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                       </div>
                     )}
 
+                    {/* Company Context/Description - Compact */}
+                    {selectedJob.company?.description && (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building2 className="w-3 h-3 text-blue-600" />
+                          <h3 className="font-medium text-blue-900 text-sm">About {selectedJob.company.name}</h3>
+                        </div>
+                        <div className="text-blue-800 text-xs leading-relaxed">
+                          <p>{selectedJob.company.description}</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Responsibilities - Compact */}
-                    {selectedJob.responsibilities_original && (Array.isArray(selectedJob.responsibilities_original) ? selectedJob.responsibilities_original.length > 0 : true) && (
+                    {selectedJob.responsibilities && (Array.isArray(selectedJob.responsibilities) ? selectedJob.responsibilities.length > 0 : true) && (
                       <div className="bg-white rounded border border-gray-200 p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <Target className="w-3 h-3 text-blue-600" />
                           <h3 className="font-medium text-gray-900 text-sm">What You'll Do</h3>
                         </div>
                         <div className="text-xs">
-                          {renderJobContent(selectedJob.responsibilities_original)}
+                          {renderJobContent(selectedJob.responsibilities)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Who We Are Looking For - Compact */}
+                    {selectedJob.who_we_are_looking_for && (Array.isArray(selectedJob.who_we_are_looking_for) ? selectedJob.who_we_are_looking_for.length > 0 : true) && (
+                      <div className="bg-white rounded border border-gray-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="w-3 h-3 text-indigo-600" />
+                          <h3 className="font-medium text-gray-900 text-sm">Who We're Looking For</h3>
+                        </div>
+                        <div className="text-xs">
+                          {renderJobContent(selectedJob.who_we_are_looking_for)}
                         </div>
                       </div>
                     )}
 
                     {/* Nice to Have - Compact */}
-                    {selectedJob.nice_to_have_original && (Array.isArray(selectedJob.nice_to_have_original) ? selectedJob.nice_to_have_original.length > 0 : true) && (
+                    {selectedJob.nice_to_have && (Array.isArray(selectedJob.nice_to_have) ? selectedJob.nice_to_have.length > 0 : true) && (
                       <div className="bg-white rounded border border-gray-200 p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <Star className="w-3 h-3 text-emerald-600" />
                           <h3 className="font-medium text-gray-900 text-sm">Nice to Have</h3>
                         </div>
                         <div className="text-xs">
-                          {renderJobContent(selectedJob.nice_to_have_original)}
+                          {renderJobContent(selectedJob.nice_to_have)}
                         </div>
                       </div>
                     )}
 
                     {/* Benefits - Compact */}
-                    {selectedJob.benefits_original && (Array.isArray(selectedJob.benefits_original) ? selectedJob.benefits_original.length > 0 : true) && (
+                    {selectedJob.benefits && (Array.isArray(selectedJob.benefits) ? selectedJob.benefits.length > 0 : true) && (
                       <div className="bg-white rounded border border-gray-200 p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <Award className="w-3 h-3 text-purple-600" />
                           <h3 className="font-medium text-gray-900 text-sm">What We Offer</h3>
                         </div>
                         <div className="text-xs">
-                          {renderJobContent(selectedJob.benefits_original)}
+                          {renderJobContent(selectedJob.benefits)}
                         </div>
                       </div>
                     )}
 
-                    {/* Who We Are Looking For - Compact */}
-                    {selectedJob.who_we_are_looking_for_original && (() => {
-                      try {
-                        const whoWeAreLookingFor = JSON.parse(selectedJob.who_we_are_looking_for_original);
-                        const content = Array.isArray(whoWeAreLookingFor) && whoWeAreLookingFor.length > 0 ? whoWeAreLookingFor : null;
-                        
-                        if (content) {
-                          return (
-                            <div className="bg-white rounded border border-gray-200 p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Users className="w-3 h-3 text-indigo-600" />
-                                <h3 className="font-medium text-gray-900 text-sm">Who We're Looking For</h3>
-                              </div>
-                              <div className="text-xs">
-                                {renderJobContent(content)}
-                              </div>
-                            </div>
-                          );
-                        }
-                      } catch (e) {
-                        if (typeof selectedJob.who_we_are_looking_for_original === 'string' && selectedJob.who_we_are_looking_for_original.trim()) {
-                          return (
-                            <div className="bg-white rounded border border-gray-200 p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Users className="w-3 h-3 text-indigo-600" />
-                                <h3 className="font-medium text-gray-900 text-sm">Who We're Looking For</h3>
-                              </div>
-                              <div className="text-xs">
-                                {renderJobContent(selectedJob.who_we_are_looking_for_original)}
-                              </div>
-                            </div>
-                          );
-                        }
-                      }
-                      return null;
-                    })()}
-
                     {/* Application Requirements - Pills Format */}
-                    {selectedJob.application_requirements_original && Array.isArray(selectedJob.application_requirements_original) && selectedJob.application_requirements_original.length > 0 && (
+                    {selectedJob.application_requirements && Array.isArray(selectedJob.application_requirements) && selectedJob.application_requirements.length > 0 && (
                       <div className="bg-white rounded border border-gray-200 p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <FileText className="w-3 h-3 text-orange-600" />
                           <h3 className="font-medium text-gray-900 text-sm">What to Include in Your Application</h3>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedJob.application_requirements_original.map((requirement, index) => (
-                            <Badge 
-                              key={index} 
+                          {selectedJob.application_requirements.map((requirement, index) => (
+                            <Badge
+                              key={index}
                               variant="outline"
                               className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-2 py-1 font-medium hover:bg-orange-100 transition-colors"
                             >
@@ -1664,7 +1653,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                   });
                                 }
                                 const normalizedUserSkills = allUserSkills.map(s => s.toLowerCase().trim());
-                                const rawJobSkills = (selectedJob as any).skills_original || (selectedJob as any).skills_canonical_flat || (selectedJob as any).skills_canonical || [];
+                                const rawJobSkills = (selectedJob as any).skills || [];
                                 const jobSkills = Array.isArray(rawJobSkills) ? rawJobSkills.map((s: any) => String(s).toLowerCase().trim()) : [];
                                 const matchingSkills = jobSkills.filter(jobSkill => normalizedUserSkills.some(userSkill => userSkill === jobSkill || userSkill.includes(jobSkill) || jobSkill.includes(userSkill)));
                                 if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
@@ -1758,7 +1747,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                   }
                                 });
                               }
-                              const jobSkills = (selectedJob as any).skills_original || (selectedJob as any).skills_canonical_flat || (selectedJob as any).skills_canonical || [];
+                              const jobSkills = (selectedJob as any).skills || [];
                               const matchingTechSkills = (jobSkills as any[]).filter(jobSkill => userTechSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
                               const matchingSoftSkills = (jobSkills as any[]).filter(jobSkill => userSoftSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
                               const matchingDesignSkills = (jobSkills as any[]).filter(jobSkill => userDesignSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
@@ -1837,14 +1826,13 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                     {/* Skills Analysis Panel - Moved to top */}
                     {(() => {
-                      const skills = (selectedJob as any).skills_original
-                        || (selectedJob as any).skills_canonical_flat
-                        || (selectedJob as any).skills_canonical;
+                      const skills = (selectedJob as any).skills
+                        ;
                       return Array.isArray(skills) && skills.length > 0;
                     })() && (
                       <div className="transform scale-90 origin-top">
                         <SkillsAnalysisPanel 
-                          jobSkills={(selectedJob as any).skills_original
+                          jobSkills={(selectedJob as any).skills
                             || (selectedJob as any).skills_canonical_flat
                             || (selectedJob as any).skills_canonical}
                           jobTitle={selectedJob.title}

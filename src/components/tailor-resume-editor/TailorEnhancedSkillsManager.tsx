@@ -285,8 +285,8 @@ export function TailorEnhancedSkillsManager({
       const jobKeywords = [
         ...(strategy.ats_keywords || []),
         ...(strategy.must_have_gaps || []).map((gap: any) => gap.skill),
-        ...(jobData.skills_original || []),
-        ...(jobData.responsibilities_original || [])
+        ...(jobData.skills || []),
+        ...(jobData.responsibilities || [])
       ]
       
       const enhancedCategories: Record<string, OrganizedCategory> = {}
@@ -662,8 +662,8 @@ export function TailorEnhancedSkillsManager({
       const jobContext = {
         title: jobData.title || '',
         company: jobData.company_name || '',
-        skills_required: jobData.skills_original || [],
-        responsibilities: jobData.responsibilities_original || [],
+        skills_required: jobData.skills || [],
+        responsibilities: jobData.responsibilities || [],
         ats_keywords: strategy?.ats_keywords || [],
         must_have_gaps: strategy?.must_have_gaps || []
       }
@@ -688,7 +688,7 @@ export function TailorEnhancedSkillsManager({
         // Fallback to job-based suggestions
         console.log(`🎯 TailorSkills: API failed, using job-based fallback for ${categoryKey}`)
         const jobSkills = [
-          ...(jobData.skills_original || []),
+          ...(jobData.skills || []),
           ...(strategy?.ats_keywords || []),
           ...(strategy?.must_have_gaps || []).map((gap: any) => gap.skill)
         ]

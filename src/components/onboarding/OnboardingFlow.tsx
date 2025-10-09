@@ -2,15 +2,17 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Upload, Camera, ArrowRight, ArrowLeft, Check } from 'lucide-react'
+import { Camera, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import Image from 'next/image'
+import { ImageCropModal } from '@/components/resume-editor/ImageCropModal'
 
 interface OnboardingData {
   photo?: File
   photoUrl?: string
   hoursAvailable?: number
   currentSemester?: number
+  universityName?: string
   startPreference?: 'immediately' | 'within_month' | 'within_3_months' | 'flexible'
 }
 
@@ -25,8 +27,10 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<OnboardingData>({})
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [showCropModal, setShowCropModal] = useState(false)
+  const [tempImageSrc, setTempImageSrc] = useState<string | null>(null)
 
-  const totalSteps = 4
+  const totalSteps = 5
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -39,13 +43,36 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
         alert('Image size must be less than 5MB')
         return
       }
-      setData({ ...data, photo: file })
+
+      // Read the file and show crop modal
       const reader = new FileReader()
       reader.onloadend = () => {
-        setPhotoPreview(reader.result as string)
+        setTempImageSrc(reader.result as string)
+        setShowCropModal(true)
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    // Convert blob to file
+    const file = new File([croppedBlob], 'profile-photo.jpg', { type: 'image/jpeg' })
+    setData({ ...data, photo: file })
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result as string)
+    }
+    reader.readAsDataURL(croppedBlob)
+
+    setShowCropModal(false)
+    setTempImageSrc(null)
+  }
+
+  const handleCropCancel = () => {
+    setShowCropModal(false)
+    setTempImageSrc(null)
   }
 
   const uploadPhoto = async (file: File): Promise<string | null> => {
@@ -83,24 +110,64 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
         photoUrl = await uploadPhoto(data.photo) || undefined
       }
 
-      const { error } = await supabase
+      // First, check if user_profile exists
+      const { data: existingProfile } = await supabase
         .from('user_profiles')
-        .update({
-          photo_url: photoUrl,
-          hours_available: data.hoursAvailable,
-          current_semester: data.currentSemester,
-          start_preference: data.startPreference,
-          onboarding_completed: true,
-          onboarding_completed_at: new Date().toISOString()
-        })
+        .select('user_id')
         .eq('user_id', userId)
+        .single()
+
+      const profileData = {
+        photo_url: photoUrl,
+        hours_available: data.hoursAvailable,
+        current_semester: data.currentSemester,
+        university_name: data.universityName,
+        start_preference: data.startPreference,
+        onboarding_completed: true,
+        onboarding_completed_at: new Date().toISOString()
+      }
+
+      let error
+      if (existingProfile) {
+        // Update existing profile
+        const result = await supabase
+          .from('user_profiles')
+          .update(profileData)
+          .eq('user_id', userId)
+        error = result.error
+      } else {
+        // Create new profile
+        const result = await supabase
+          .from('user_profiles')
+          .insert({
+            user_id: userId,
+            email: userEmail,
+            ...profileData
+          })
+        error = result.error
+      }
 
       if (error) {
-        console.error('Error updating profile:', error)
+        console.error('Error saving profile:', error)
         alert('Failed to save onboarding data. Please try again.')
         return
       }
 
+      // Also update resume_data.photo_url if photoUrl exists
+      if (photoUrl) {
+        const { error: resumeUpdateError } = await supabase
+          .from('resume_data')
+          .update({ photo_url: photoUrl })
+          .eq('user_id', userId)
+
+        if (resumeUpdateError) {
+          console.warn('Warning: Could not update photo in resume_data:', resumeUpdateError)
+        } else {
+          console.log('✅ Photo URL also updated in resume_data')
+        }
+      }
+
+      console.log('✅ Onboarding completed successfully!')
       onComplete()
     } catch (error) {
       console.error('Error completing onboarding:', error)
@@ -112,7 +179,13 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
 
   const nextStep = () => {
     if (step < totalSteps) {
-      setStep(step + 1)
+      const nextStepNum = step + 1
+      setStep(nextStepNum)
+
+      // Set default semester to 1 when entering step 3
+      if (nextStepNum === 3 && !data.currentSemester) {
+        setData({ ...data, currentSemester: 1 })
+      }
     } else {
       handleComplete()
     }
@@ -125,12 +198,14 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
   const canProceed = () => {
     switch (step) {
       case 1:
-        return true
+        return true // Photo is optional
       case 2:
         return data.hoursAvailable !== undefined && data.hoursAvailable > 0
       case 3:
-        return data.currentSemester !== undefined && data.currentSemester > 0
+        return true // Semester has default value of 1
       case 4:
+        return data.universityName !== undefined && data.universityName.trim().length > 0
+      case 5:
         return data.startPreference !== undefined
       default:
         return false
@@ -138,21 +213,21 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-      <div className="w-full max-w-lg px-6">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 z-50 flex items-center justify-center">
+      <div className="w-full max-w-2xl px-6">
         {/* Progress */}
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-3">
-            {[1, 2, 3, 4].map((s) => (
+            {[1, 2, 3, 4, 5].map((s) => (
               <div
                 key={s}
                 className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                  s <= step ? 'bg-gray-900' : 'bg-gray-200'
+                  s <= step ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-200'
                 }`}
               />
             ))}
           </div>
-          <p className="text-sm text-gray-500">Step {step} of {totalSteps}</p>
+          <p className="text-body-small" style={{ color: 'var(--text-secondary)' }}>Step {step} of {totalSteps}</p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -165,8 +240,8 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Add your photo</h2>
-              <p className="text-gray-600 mb-8">Optional - helps employers put a face to your profile</p>
+              <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>Add your photo</h2>
+              <p className="text-body mb-8" style={{ color: 'var(--text-secondary)' }}>Optional - helps employers put a face to your profile</p>
 
               <div className="flex justify-center mb-8">
                 {photoPreview ? (
@@ -215,8 +290,8 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Hours per week</h2>
-              <p className="text-gray-600 mb-8">How many hours can you work?</p>
+              <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>Hours per week</h2>
+              <p className="text-body mb-8" style={{ color: 'var(--text-secondary)' }}>How many hours can you work?</p>
 
               <div className="space-y-3">
                 {[10, 15, 20].map((hours) => (
@@ -269,38 +344,65 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Current semester</h2>
-              <p className="text-gray-600 mb-8">Which semester are you in?</p>
+              <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>Current semester</h2>
+              <p className="text-body mb-8" style={{ color: 'var(--text-secondary)' }}>Which semester are you in?</p>
 
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((sem) => (
-                  <button
-                    key={sem}
-                    onClick={() => setData({ ...data, currentSemester: sem })}
-                    className={`aspect-square p-4 rounded-lg border text-2xl font-semibold transition-all ${
-                      data.currentSemester === sem
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 text-gray-900 hover:border-gray-300'
-                    }`}
-                  >
-                    {sem}
-                  </button>
-                ))}
+              {/* Current Semester Display */}
+              <div className="mb-6 text-center">
+                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white mb-4">
+                  <span className="text-4xl font-black">{data.currentSemester || 1}</span>
+                </div>
+                <p className="text-body" style={{ color: 'var(--text-secondary)' }}>
+                  {data.currentSemester === 1 ? '1st semester' :
+                   data.currentSemester === 2 ? '2nd semester' :
+                   data.currentSemester === 3 ? '3rd semester' :
+                   `${data.currentSemester}th semester`}
+                </p>
               </div>
 
-              <input
-                type="number"
-                min="1"
-                max="20"
-                placeholder="10+ (enter custom)"
-                value={data.currentSemester && data.currentSemester > 9 ? data.currentSemester : ''}
-                onChange={(e) => setData({ ...data, currentSemester: parseInt(e.target.value) || undefined })}
-                className="w-full p-4 border border-gray-200 rounded-lg focus:border-gray-900 focus:outline-none transition-colors"
-              />
+              {/* Slider */}
+              <div className="mb-6">
+                <input
+                  type="range"
+                  min="1"
+                  max="12"
+                  value={data.currentSemester || 1}
+                  onChange={(e) => setData({ ...data, currentSemester: parseInt(e.target.value) })}
+                  className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  style={{
+                    background: `linear-gradient(to right, rgb(37, 99, 235) 0%, rgb(37, 99, 235) ${((data.currentSemester || 1) - 1) / 11 * 100}%, rgb(229, 231, 235) ${((data.currentSemester || 1) - 1) / 11 * 100}%, rgb(229, 231, 235) 100%)`
+                  }}
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-2">
+                  <span>1st</span>
+                  <span>6th</span>
+                  <span>12th+</span>
+                </div>
+              </div>
+
+              {/* Custom Input for 13+ */}
+              {(data.currentSemester || 1) >= 12 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4"
+                >
+                  <input
+                    type="number"
+                    min="12"
+                    max="20"
+                    placeholder="Enter semester (12+)"
+                    value={data.currentSemester || ''}
+                    onChange={(e) => setData({ ...data, currentSemester: parseInt(e.target.value) || 12 })}
+                    className="input input-lg w-full"
+                    autoFocus
+                  />
+                </motion.div>
+              )}
             </motion.div>
           )}
 
-          {/* Step 4: Start Date */}
+          {/* Step 4: University Name */}
           {step === 4 && (
             <motion.div
               key="step4"
@@ -309,8 +411,63 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">When can you start?</h2>
-              <p className="text-gray-600 mb-8">Help employers know your availability</p>
+              <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>Your University</h2>
+              <p className="text-body mb-8" style={{ color: 'var(--text-secondary)' }}>Which university are you attending?</p>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="e.g., Technical University of Munich"
+                  value={data.universityName || ''}
+                  onChange={(e) => setData({ ...data, universityName: e.target.value })}
+                  className="input input-lg w-full"
+                  autoFocus
+                />
+                <p className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                  This helps employers understand your educational background
+                </p>
+
+                {/* Common German universities as quick options */}
+                <div className="space-y-2 pt-4">
+                  <p className="text-caption font-semibold" style={{ color: 'var(--text-secondary)' }}>Popular choices:</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      'Technical University of Munich (TUM)',
+                      'Ludwig Maximilian University of Munich (LMU)',
+                      'University of Heidelberg',
+                      'Humboldt University of Berlin',
+                      'RWTH Aachen University',
+                      'Free University of Berlin'
+                    ].map((uni) => (
+                      <button
+                        key={uni}
+                        onClick={() => setData({ ...data, universityName: uni })}
+                        className={`text-left px-4 py-3 rounded-lg border transition-all ${
+                          data.universityName === uni
+                            ? 'border-blue-600 bg-blue-50 text-blue-900'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="text-body">{uni}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 5: Start Date */}
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>When can you start?</h2>
+              <p className="text-body mb-8" style={{ color: 'var(--text-secondary)' }}>Help employers know your availability</p>
 
               <div className="space-y-3">
                 {[
@@ -345,15 +502,11 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
         </AnimatePresence>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between mt-12 pt-8 border-t border-gray-200">
+        <div className="flex items-center justify-between mt-12 pt-8 border-t" style={{ borderColor: 'var(--border)' }}>
           <button
             onClick={prevStep}
             disabled={step === 1}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-              step === 1
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-gray-700 hover:text-gray-900'
-            }`}
+            className={`btn btn-ghost ${step === 1 ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -362,11 +515,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
           <button
             onClick={nextStep}
             disabled={!canProceed() || loading}
-            className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              canProceed() && !loading
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
+            className={`btn ${canProceed() && !loading ? 'btn-primary' : 'btn-secondary'}`}
           >
             {loading ? (
               <>
@@ -391,12 +540,21 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
         <div className="text-center mt-4">
           <button
             onClick={onComplete}
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            className="link link-muted text-body-small"
           >
             Skip for now
           </button>
         </div>
       </div>
+
+      {/* Image Crop Modal */}
+      {showCropModal && tempImageSrc && (
+        <ImageCropModal
+          image={tempImageSrc}
+          onComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   )
 }

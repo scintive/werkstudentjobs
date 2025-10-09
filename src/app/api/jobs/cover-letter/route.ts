@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { llmService } from '@/lib/services/llmService';
 import type { StudentProfile } from '@/lib/types/studentProfile';
@@ -38,6 +37,29 @@ const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
  */
 export async function POST(request: NextRequest) {
   try {
+    // Create server-side Supabase client
+    const supabase = createServerSupabase(request);
+
+    // SECURITY FIX: Verify authentication
+    let authUserId: string | null = null;
+    try {
+      const { data: authRes } = await supabase.auth.getUser();
+      if (authRes?.user) {
+        authUserId = authRes.user.id;
+      }
+    } catch (e) {
+      console.log('🎓 COVER LETTER: auth.getUser() failed:', e);
+    }
+
+    if (!authUserId) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
+      );
+    }
+
+    console.log(`🎓 COVER LETTER: Authenticated user: ${authUserId}`);
+
     const {
       job_id,
       user_profile_id,
@@ -53,14 +75,14 @@ export async function POST(request: NextRequest) {
       include_semester = true, // NEW: Toggle for semester info
       include_hours = true // NEW: Toggle for weekly hours
     } = await request.json();
-    
+
     if (!job_id || (!user_profile_id && !student_profile)) {
       return NextResponse.json(
         { error: 'job_id and either user_profile_id or student_profile required' },
         { status: 400 }
       );
     }
-    
+
     console.log(`🎓 STUDENT COVER LETTER: Generating ${tone} ${length} letter for job ${job_id}`);
     if (custom_instructions) {
       console.log(`🎓 STUDENT COVER LETTER: Custom instructions provided: ${custom_instructions.substring(0, 100)}...`);
@@ -77,9 +99,6 @@ export async function POST(request: NextRequest) {
         cached: true
       });
     }
-
-    // Create server-side Supabase client
-    const supabase = createServerSupabase(request);
 
     // Check for existing cover letter in variant
     const { data: variants } = await supabase
@@ -353,9 +372,9 @@ export async function POST(request: NextRequest) {
         is_werkstudent: jobData.title?.toLowerCase().includes('werkstudent') ||
                         jobData.title?.toLowerCase().includes('working student'),
         requirements: {
-          skills: jobData.skills_original || [],
-          tools: jobData.tools_original || [],
-          responsibilities: jobData.responsibilities_original || []
+          skills: jobData.skills || [],
+          tools: jobData.tools || [],
+          responsibilities: jobData.responsibilities || []
         },
         location: jobData.location_city,
         work_mode: jobData.work_mode,
@@ -595,14 +614,39 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
         throw new Error('GPT returned invalid JSON. Please try again.');
       }
 
+      // FIX: GPT sometimes puts closing/sign_off inside body_paragraphs array
+      // Extract them if they're strings starting with "closing:" or "sign_off:"
+      if (Array.isArray(letterData.body_paragraphs)) {
+        const cleanedParagraphs = [];
+        for (const item of letterData.body_paragraphs) {
+          if (typeof item === 'string') {
+            if (item.trim().toLowerCase().startsWith('closing:')) {
+              letterData.closing = item.replace(/^closing:\s*/i, '').trim();
+            } else if (item.trim().toLowerCase().startsWith('sign_off:')) {
+              letterData.sign_off = item.replace(/^sign_off:\s*/i, '').trim();
+            } else if (item.trim().toLowerCase().startsWith('projects_highlighted:')) {
+              // Skip this malformed entry
+              continue;
+            } else if (item.trim().startsWith('[') || item.trim().endsWith(']')) {
+              // Skip malformed array entries
+              continue;
+            } else {
+              cleanedParagraphs.push(item);
+            }
+          }
+        }
+        letterData.body_paragraphs = cleanedParagraphs;
+      }
+
       // Validate required fields
       const requiredFields = ['subject', 'salutation', 'intro', 'body_paragraphs', 'closing', 'sign_off'];
       const missingFields = requiredFields.filter(field => !letterData[field]);
 
       if (missingFields.length > 0) {
         console.error('❌ COVER LETTER: Missing required fields:', missingFields);
-        console.error('❌ Received data:', letterData);
-        throw new Error(`GPT response missing required fields: ${missingFields.join(', ')}`);
+        console.error('❌ Received data:', JSON.stringify(letterData, null, 2));
+        console.error('❌ Available fields:', Object.keys(letterData));
+        throw new Error(`GPT response missing required fields: ${missingFields.join(', ')}. Available fields: ${Object.keys(letterData).join(', ')}`);
       }
 
       // Validate body_paragraphs is an array

@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 PROFILE EXTRACTION - Custom sections extracted:', JSON.stringify(profile.custom_sections, null, 2));
     console.log('🔍 PROFILE EXTRACTION - Profile keys:', Object.keys(profile));
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       profile,
       organizedSkills, // Include organized skills in the response

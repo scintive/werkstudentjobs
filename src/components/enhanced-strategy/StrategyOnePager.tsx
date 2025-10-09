@@ -224,7 +224,7 @@ function quickLearnLinks(task: string): { label: string; url: string }[] {
 
 export default function StrategyOnePager({ userProfile, jobData, strategy, onTailorSkills, onMatchScoreCalculated }: Props) {
   // Source tasks from strategy when available, else job responsibilities
-  const rawTasks: string[] = (strategy?.job_task_analysis?.map((t: any) => t.task) || jobData?.responsibilities_original || [])
+  const rawTasks: string[] = (strategy?.job_task_analysis?.map((t: any) => t.task) || jobData?.responsibilities || [])
     .filter((t: any) => !!t && typeof t === 'string');
 
   // Keep the top 6 concise tasks for a dense two‑column layout

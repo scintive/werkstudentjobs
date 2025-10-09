@@ -74,6 +74,11 @@ export default function AppHeader() {
           setPhotoUrl(resumeData[0].photo_url || null)
         }
 
+        // If no name from resume_data, fallback to auth metadata
+        if (!resumeData?.[0]?.personal_info?.name && user.user_metadata?.name) {
+          setUserName(user.user_metadata.name)
+        }
+
         // If no photo in resume_data, check user_profiles
         if (!resumeData?.[0]?.photo_url) {
           const { data: profileData } = await supabase
@@ -112,7 +117,7 @@ export default function AppHeader() {
   const isActiveRoute = (href: string) => {
     if (href === '/dashboard') return pathname === href
     if (href === '/jobs?tailor=1') return pathname.includes('/tailor')
-    if (href === '/?edit=1') return pathname === '/' && !pathname.includes('/jobs')
+    if (href === '/edit-resume') return pathname === '/edit-resume'
     return pathname.startsWith(href)
   }
 
@@ -122,43 +127,45 @@ export default function AppHeader() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Desktop Navigation */}
           <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2">
+            <Link href={email ? "/dashboard" : "/"} className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary)' }}>
                 <span className="text-white font-bold">W</span>
               </div>
               <span className="font-bold text-xl hidden sm:block" style={{ color: 'var(--text-primary)' }}>
-                WerkstudentJobs
+                WerkStudentJobs
               </span>
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:ml-8 md:flex md:space-x-1">
-              {navigationItems.map((item) => {
-                const Icon = item.icon
-                const isActive = isActiveRoute(item.href)
+            {/* Desktop Navigation - Only show when authenticated */}
+            {email && (
+              <nav className="hidden md:ml-8 md:flex md:space-x-1">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = isActiveRoute(item.href)
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "px-3 py-2 text-sm font-medium rounded-md flex items-center gap-2 transition-colors",
-                      isActive
-                        ? "bg-orange-50 text-orange-600 font-medium"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                    {item.badge && (
-                      <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </Link>
-                )
-              })}
-            </nav>
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium rounded-md flex items-center gap-2 transition-colors",
+                        isActive
+                          ? "bg-orange-50 text-orange-600 font-medium"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                      {item.badge && (
+                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
+            )}
           </div>
 
           {/* Right side - User menu or Auth buttons */}
@@ -170,7 +177,7 @@ export default function AppHeader() {
                   variant="ghost"
                   size="sm"
                   className="hidden sm:flex"
-                  onClick={() => router.push('/?edit=1')}
+                  onClick={() => router.push('/edit-resume')}
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Edit Resume
@@ -228,7 +235,7 @@ export default function AppHeader() {
                   size="sm"
                   onClick={() => router.push('/login')}
                 >
-                  Login
+                  Sign In
                 </Button>
                 <Button
                   size="sm"
@@ -236,7 +243,7 @@ export default function AppHeader() {
                   style={{ background: 'var(--primary)' }}
                   className="hover:opacity-90 text-white"
                 >
-                  Get Started
+                  Sign Up
                 </Button>
               </div>
             )}

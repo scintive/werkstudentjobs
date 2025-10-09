@@ -10,10 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AI Resume Builder - Create Professional Resumes with AI",
-  description: "Upload your resume, get tailored job matches, and generate professional documents with AI. Built with the latest technology for today's job seekers.",
-  keywords: ["resume builder", "AI", "job applications", "cover letter", "career"],
-  authors: [{ name: "AI Resume Builder Team" }],
+  title: "WerkStudentJobs - AI-Powered Job Applications for Students",
+  description: "Find Werkstudent jobs in Germany. Upload your resume, get AI-matched with relevant positions, and generate tailored applications in seconds.",
+  keywords: ["werkstudent", "AI", "job applications", "student jobs", "germany", "resume builder"],
+  authors: [{ name: "Scintive" }],
 };
 
 export const viewport: Viewport = {

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/serverClient'
-import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerSupabase(request)
-    const cookieStore = await cookies()
 
     const body = await request.json()
     const { job_id, applied } = body
@@ -17,10 +15,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = cookieStore.get('user_session')?.value
+    // SECURITY FIX: Only use Supabase auth
+    let userId: string | null = null
+    try {
+      const { data: authRes } = await supabase.auth.getUser()
+      if (authRes?.user) {
+        userId = authRes.user.id
+      }
+    } catch (e) {
+      console.log('Update applied status: auth.getUser() failed:', e)
+    }
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized - Please log in' }, { status: 401 })
     }
 
     // Get user profile to get user_profile_id

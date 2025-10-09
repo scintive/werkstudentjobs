@@ -62,9 +62,9 @@ export function TailorSimpleSkillsManager({
       } else {
         // Fallback to job requirements analysis
         const jobRequirements = [
-          ...(jobData.skills_original || []),
-          ...(jobData.tools_original || []),
-          ...(jobData.responsibilities_original || [])
+          ...(jobData.skills || []),
+          ...(jobData.tools || []),
+          ...(jobData.responsibilities || [])
         ]
 
         jobRequirements.slice(0, 8).forEach(requirement => {

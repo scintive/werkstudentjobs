@@ -74,11 +74,11 @@ export async function POST(request: NextRequest) {
         title: jobData.title,
         company: jobData.company_name || 'Company',
         must_haves: [
-          ...(jobData.skills_original || []),
-          ...(jobData.tools_original || []),
-          ...(jobData.responsibilities_original || [])
+          ...(jobData.skills || []),
+          ...(jobData.tools || []),
+          ...(jobData.responsibilities || [])
         ].slice(0, 8),
-        nice_to_haves: (jobData.nice_to_have_original || []).slice(0, 6),
+        nice_to_haves: (jobData.nice_to_have || []).slice(0, 6),
         work_mode: jobData.work_mode,
         location: jobData.location_city
       },

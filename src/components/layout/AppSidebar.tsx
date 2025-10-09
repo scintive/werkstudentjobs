@@ -42,7 +42,7 @@ export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarP
 
   const mainNavItems: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'My Resumes', href: '/?edit=1', icon: FileText },
+    { label: 'My Resumes', href: '/edit-resume', icon: FileText },
     { label: 'Job Browser', href: '/jobs', icon: Briefcase },
     { label: 'AI Resume Builder', href: '/jobs?tailor=1', icon: Sparkles },
     { label: 'Cover Letters', href: '/cover-letters', icon: PenTool },
@@ -62,7 +62,7 @@ export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarP
   const isActiveRoute = (href: string) => {
     if (href === '/dashboard') return pathname === href
     if (href === '/jobs?tailor=1') return pathname.includes('/tailor')
-    if (href === '/?edit=1') return pathname === '/' && !pathname.includes('/jobs')
+    if (href === '/edit-resume') return pathname === '/edit-resume'
     return pathname.startsWith(href.split('?')[0])
   }
 
