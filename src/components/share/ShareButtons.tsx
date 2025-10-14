@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Copy, Share2, Check, Loader2, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase/client'
 
 interface ShareButtonsProps {
   shareType: 'resume' | 'cover_letter'
@@ -29,10 +30,19 @@ export function ShareButtons({
     setError(null)
 
     try {
+      // Get session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error('Please log in to generate a share link')
+      }
+
       const response = await fetch('/api/share/create', {
         method: 'POST',
+        credentials: 'include', // Include cookies for authentication
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           shareType,

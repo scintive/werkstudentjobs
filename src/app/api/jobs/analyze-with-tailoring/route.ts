@@ -4,6 +4,7 @@ export const maxDuration = 60; // 60 seconds timeout for Vercel
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { llmService } from '@/lib/services/llmService';
+import { intelligentJobAnalysisService } from '@/lib/services/intelligentJobAnalysisService';
 import { getConfig } from '@/lib/config/app';
 import crypto from 'crypto';
 
@@ -751,15 +752,26 @@ export async function POST(request: NextRequest) {
     
     const hasPersistedPlan = Array.isArray((variant as any)?.tailored_data?.skillsCategoryPlan?.categories) &&
       (variant as any).tailored_data.skillsCategoryPlan.categories.length > 0;
+    const hasJobAnalysis = (variant as any)?.job_analysis !== null && (variant as any)?.job_analysis !== undefined;
 
-    if (!force_refresh && !suggestionsError && existingSuggestions && existingSuggestions.length > 0 && hasPersistedPlan) {
-      console.log(`📋 Found ${existingSuggestions.length} existing suggestions for variant ${variant.id}`);
+    console.log('🔍 CACHE CHECK:', {
+      force_refresh,
+      suggestionsError: !!suggestionsError,
+      existingSuggestions: existingSuggestions?.length || 0,
+      hasPersistedPlan,
+      hasJobAnalysis,
+      willUseCache: !force_refresh && !suggestionsError && existingSuggestions && existingSuggestions.length > 0 && hasPersistedPlan && hasJobAnalysis
+    });
+
+    if (!force_refresh && !suggestionsError && existingSuggestions && existingSuggestions.length > 0 && hasPersistedPlan && hasJobAnalysis) {
+      console.log(`📋 ✅ RETURNING CACHED DATA: Found ${existingSuggestions.length} existing suggestions for variant ${variant.id}`);
       return NextResponse.json({
         success: true,
         strategy: {},
         tailored_resume: variant.tailored_data,
         atomic_suggestions: existingSuggestions,
         skills_category_plan: variant.tailored_data?.skillsCategoryPlan || null,
+        job_analysis: (variant as any).job_analysis || null,
         variant_id: variant.id,
         base_resume_id,
         job_id,
@@ -768,26 +780,41 @@ export async function POST(request: NextRequest) {
     }
 
     if (!suggestionsError && existingSuggestions && existingSuggestions.length > 0) {
-      console.log(`🧹 Clearing ${existingSuggestions.length} stale suggestions for variant ${variant.id}`);
+      console.log(`🧹 CLEARING STALE DATA: Removing ${existingSuggestions.length} old suggestions for variant ${variant.id} (missing job_analysis or plan)`);
       await db
         .from('resume_suggestions')
         .delete()
         .eq('variant_id', variant.id);
+    } else {
+      console.log('🆕 NO EXISTING SUGGESTIONS: Will generate fresh analysis');
     }
 
     // 7. CHECK FINGERPRINT-BASED CACHE (after fetching data)
     const currentFingerprint = generateFingerprint(jobData, baseResume);
+    console.log('🔐 FINGERPRINT CHECK:', {
+      cacheKey,
+      currentFingerprint,
+      hasCachedData: strategyTailoringCache.has(cacheKey)
+    });
+
     if (!force_refresh) {
       const cached = strategyTailoringCache.get(cacheKey);
       if (cached &&
           (Date.now() - cached.timestamp) < CACHE_TTL &&
           cached.fingerprint === currentFingerprint &&
           cached.version === CACHE_VERSION) {
+        console.log('✅ RETURNING FINGERPRINT-CACHED DATA');
         return NextResponse.json({
           success: true,
           ...cached.data,
           cached: true,
           fingerprint: currentFingerprint
+        });
+      } else if (cached) {
+        console.log('❌ CACHE INVALID:', {
+          expired: (Date.now() - cached.timestamp) >= CACHE_TTL,
+          fingerprintMismatch: cached.fingerprint !== currentFingerprint,
+          versionMismatch: cached.version !== CACHE_VERSION
         });
       }
     }
@@ -2385,13 +2412,86 @@ Return your response as a valid JSON object only. Do not include any additional 
         console.error("UNIFIED_ANALYSIS_ERROR", { ...logContext, stage: 'update_variant', code: 'update_failed', message: variantUpdateError.message });
       }
       
-      // 11. PREPARE RESPONSE
+      // 11. GENERATE INTELLIGENT JOB ANALYSIS
+      logContext.stage = 'intelligent_analysis';
+      let jobAnalysis = null;
+
+      try {
+        console.log('🎯 ==========================================');
+        console.log('🎯 STARTING INTELLIGENT JOB ANALYSIS');
+        console.log('🎯 ==========================================');
+        console.log('🎯 Job:', jobData.title, 'at', jobData.companies?.name || jobData.company_name);
+        console.log('🎯 User:', baseResume.personal_info?.name);
+
+        // Prepare user skills from baseResume
+        const userSkills: Record<string, string[]> = {};
+        if (baseResume.skills && typeof baseResume.skills === 'object') {
+          Object.entries(baseResume.skills).forEach(([category, skills]) => {
+            if (Array.isArray(skills)) {
+              userSkills[category] = skills;
+            }
+          });
+        }
+
+        console.log('🎯 User Skills Categories:', Object.keys(userSkills).length);
+        console.log('🎯 User Experience Entries:', baseResume.experience?.length || 0);
+        console.log('🎯 Calling intelligentJobAnalysisService.analyzeJobCompatibility...');
+
+        jobAnalysis = await intelligentJobAnalysisService.analyzeJobCompatibility({
+          job: jobData,
+          userProfile: {
+            name: baseResume.personal_info?.name || 'Candidate',
+            education: baseResume.education || [],
+            certifications: baseResume.certifications || [],
+            custom_sections: baseResume.custom_sections || {}
+          },
+          userExperience: baseResume.experience || [],
+          userProjects: baseResume.projects || [],
+          userSkills
+        });
+
+        console.log('🎯 ==========================================');
+        console.log('✅ INTELLIGENT ANALYSIS COMPLETE');
+        console.log('✅ Overall Match Score:', jobAnalysis.overall_match_score);
+        console.log('✅ Responsibilities Analyzed:', jobAnalysis.responsibility_breakdown?.length || 0);
+        console.log('✅ Relevant Experiences:', jobAnalysis.relevant_experiences?.length || 0);
+        console.log('✅ Skills Categories Analyzed:', jobAnalysis.skills_analysis?.length || 0);
+        console.log('🎯 ==========================================');
+
+        // Update variant with analysis score and full analysis object
+        console.log('💾 Saving job analysis to variant:', variant.id);
+        console.log('💾 Analysis preview:', JSON.stringify(jobAnalysis).substring(0, 300));
+        const { error: saveError } = await db
+          .from('resume_variants')
+          .update({
+            match_score: jobAnalysis.overall_match_score,
+            job_analysis: jobAnalysis
+          })
+          .eq('id', variant.id);
+
+        if (saveError) {
+          console.error('❌ Failed to save job analysis:', saveError);
+          throw saveError;
+        }
+        console.log('✅ Job analysis saved successfully');
+
+      } catch (analysisError) {
+        console.error('🎯 ==========================================');
+        console.error('❌ INTELLIGENT ANALYSIS FAILED');
+        console.error('❌ Error:', analysisError);
+        console.error('🎯 ==========================================');
+        // Don't fail the entire request, just log the error
+        logContext.analysis_error = (analysisError as Error).message;
+      }
+
+      // 12. PREPARE RESPONSE
       const response = {
         strategy: analysisData.strategy || {},
         tailored_resume: tailoredDataWithOriginalInfo, // Use the version with preserved personal info
         atomic_suggestions: analysisData.atomic_suggestions || [],
         skills_suggestions: analysisData.skills_suggestions || [],
         skills_category_plan: analysisData.skills_category_plan || null,
+        job_analysis: jobAnalysis, // Add intelligent analysis
         variant_id: variant.id,
         base_resume_id,
         job_id,

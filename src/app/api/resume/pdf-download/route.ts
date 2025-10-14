@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabase } from '@/lib/supabase/serverClient';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // Lazy import puppeteer to avoid bundling/runtime issues
@@ -14,6 +15,165 @@ async function getPuppeteer() {
   return _puppeteer;
 }
 import type { ResumeData } from '@/lib/types';
+
+/**
+ * GET /api/resume/pdf-download?variant_id=xxx
+ * Download resume PDF for a specific variant
+ */
+export async function GET(request: NextRequest) {
+  let browser;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const variantId = searchParams.get('variant_id');
+
+    if (!variantId) {
+      return NextResponse.json({ error: 'variant_id is required' }, { status: 400 });
+    }
+
+    console.log('📥 GET PDF Download - variant_id:', variantId);
+
+    // Create server supabase client with auth from request
+    const supabase = createServerSupabase(request);
+
+    // Fetch variant data from Supabase
+    const { data: variant, error: variantError } = await supabase
+      .from('resume_variants')
+      .select(`
+        *,
+        jobs(
+          id,
+          title,
+          companies(
+            name
+          )
+        )
+      `)
+      .eq('id', variantId)
+      .single();
+
+    if (variantError || !variant) {
+      console.error('❌ Variant not found:', variantError);
+      return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
+    }
+
+    // Fetch base resume data
+    const { data: baseResume, error: resumeError } = await supabase
+      .from('resume_data')
+      .select('*')
+      .eq('id', variant.base_resume_id)
+      .single();
+
+    if (resumeError || !baseResume) {
+      console.error('❌ Base resume not found:', resumeError);
+      return NextResponse.json({ error: 'Base resume not found' }, { status: 404 });
+    }
+
+    // Merge base resume with variant data
+    const resumeData = {
+      ...baseResume,
+      ...variant.tailored_data,
+    };
+
+    // Generate filename: UserFullName_CompanyName_Resume.pdf
+    const userName = (resumeData.personal_info?.name || resumeData.personalInfo?.name || 'User')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    const companyName = (variant.jobs?.companies?.name || 'Company')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    const filename = `${userName}_${companyName}_Resume.pdf`;
+
+    console.log('📄 Generated filename:', filename);
+
+    // Generate HTML from preview API
+    const origin = process.env.NEXTJS_URL || `http://localhost:${process.env.PORT || '3000'}`;
+    const previewResponse = await fetch(`${origin}/api/resume/preview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        resumeData,
+        template: variant.template || 'swiss',
+        userProfile: resumeData,
+        showSkillLevelsInResume: false
+      })
+    });
+
+    if (!previewResponse.ok) {
+      throw new Error('Failed to generate HTML from preview API');
+    }
+
+    const previewData = await previewResponse.json();
+    const html = previewData.html;
+
+    // Launch Puppeteer
+    const puppeteer = await getPuppeteer();
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-features=VizDisplayCompositor'
+      ]
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, {
+      waitUntil: ['networkidle0', 'load', 'domcontentloaded']
+    });
+    await page.evaluateHandle('document.fonts.ready');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm'
+      },
+      preferCSSPageSize: true
+    });
+
+    console.log('✅ PDF Generated successfully, size:', pdfBuffer.length);
+
+    // Return PDF with proper filename
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': pdfBuffer.length.toString(),
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ GET PDF generation error:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Failed to generate PDF',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
 
 export async function POST(request: NextRequest) {
   let browser;

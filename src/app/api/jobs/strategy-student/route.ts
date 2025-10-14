@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
     }
     
     const profileHash = generateProfileHash(profileData);
-    const cacheKey = `student_v3_${job_id}_${profileHash}`; // v3 to force cache refresh with real data
+    const cacheKey = `student_v9_${job_id}_${profileHash}`; // v9 with GPT-5-mini + URL verification + NO Udemy/Coursera
 
     // Check Supabase cache first (7-day TTL) using auth user_id
     console.log('🎓 STUDENT STRATEGY: Checking Supabase cache...');
@@ -317,7 +317,7 @@ export async function POST(request: NextRequest) {
     console.log('  - Projects count:', Array.isArray(profileData.projects) ? profileData.projects.length : 'N/A');
     console.log('  - Compact context student:', compactContext.student);
     
-    const systemPrompt = `You are a German job market expert specializing in Werkstudent/intern positions. 
+    const systemPrompt = `You are a German job market expert specializing in Werkstudent/intern positions with deep expertise in modern skills including content creation, AI tools, marketing, and technical development.
 
 🎯 CRITICAL MISSION: Create a HYPER-TAILORED analysis that maps this SPECIFIC student's profile to these EXACT job responsibilities. This is NOT a generic template.
 
@@ -326,7 +326,12 @@ export async function POST(request: NextRequest) {
 - For EACH responsibility, determine how the student's background addresses it
 - Provide SPECIFIC evidence from their resume/projects/coursework
 - Calculate realistic compatibility scores (0-100) based on actual evidence
-- Give targeted learning recommendations for gaps
+- Give HIGHLY SPECIFIC learning recommendations for gaps:
+  * For content creation roles: include video editing (Premiere, DaVinci, CapCut), TikTok/Reels creation, YouTube strategy
+  * For marketing roles: social media platforms (Meta Blueprint, TikTok Creator Portal), analytics, growth hacking
+  * For AI/tech roles: ChatGPT for graphics (DALL-E, GPT-4 Vision), Google Gemini, Midjourney, prompt engineering
+  * For design roles: Canva, Figma, Adobe Creative Suite, AI design tools
+  * Match resources to the EXACT task, not generic categories
 
 🎓 STUDENT PROFILE MAPPING:
 - Use ONLY the student's actual education, projects, certifications, and experience
@@ -352,10 +357,6 @@ For each job responsibility, provide:
    - 0-19: No relevant experience or skills
 
 3) user_alignment: a specific, organic sentence tying user's best relevant certification/experience/project to this task (reference the exact item name). If nothing truly relevant exists, say so clearly (e.g., "No direct WordPress experience")
-4) learning_paths: concrete actions grouped as { quick_wins, certifications, deepening } with DIRECT LINKS
-   - Shape for each list: [{ label: string, url: string }]
-   - Provide working URLs to OFFICIAL or reputable sources: vendor docs, vendor certification pages, Coursera/edX/Udacity/Google/AWS/Azure/Meta, or a single high‑quality YouTube crash course.
-   - Avoid generic Google searches. Use the most relevant, specific link for THIS task.
 
 STRICT RELEVANCE RULES:
 - Do NOT include unrelated evidence (e.g., prompt‑engineering project is NOT relevant to WordPress site building)
@@ -378,12 +379,7 @@ OUTPUT SCHEMA:
       "task_explainer": "1–2 sentences explaining the real‑world shape of this task",
       "compatibility_score": 0-100,
       "user_alignment": "organic, specific sentence tying best related project/experience; or state 'no direct experience'",
-      "user_evidence": "SPECIFIC project/coursework/experience names that support the alignment (or empty)",
-      "learning_paths": {
-        "quick_wins": [{ "label": "resource name", "url": "https://..." }],
-        "certifications": [{ "label": "certificate/course name", "url": "https://..." }],
-        "deepening": [{ "label": "course/project", "url": "https://..." }]
-      }
+      "user_evidence": "SPECIFIC project/coursework/experience names that support the alignment (or empty)"
     }
   ],
   "skills_analysis": {
@@ -459,10 +455,13 @@ OUTPUT SCHEMA:
 }`;
     
     try {
-      const aiResponse = await llmService.createJsonCompletion({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `🎯 ANALYZE THIS SPECIFIC STUDENT AND JOB MATCH:
+      // PARALLEL EXECUTION: GPT-4o-mini for analysis + GPT-5-mini for learning paths
+      const [aiResponse, learningPathsPromise] = await Promise.all([
+        // GPT-4o-mini: Fast, cheap task analysis (NO learning paths)
+        llmService.createJsonCompletion({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `🎯 ANALYZE THIS SPECIFIC STUDENT AND JOB MATCH:
 
 CRITICAL: Use the EXACT job responsibilities listed below, NOT generic skills. Each task in job_task_analysis MUST correspond to a real responsibility from the job posting.
 
@@ -479,11 +478,17 @@ STUDENT PROFILE DATA:
 ${JSON.stringify(compactContext.student)}
 
 Return your analysis in valid JSON format matching the schema provided. Make sure EACH job responsibility above gets analyzed in the job_task_analysis array.` }
-        ],
-        model: 'gpt-4o-mini', // Using GPT-4o-mini for better analysis
-        temperature: 0.3,
-        max_tokens: 12000  // Increased to ensure complete response with all task details
-      });
+          ],
+          model: 'gpt-4o-mini',
+          temperature: 0.3,
+          max_tokens: 6000  // REDUCED: No learning paths = less tokens needed
+        }),
+
+        // GPT-5-mini: Accurate, comprehensive learning resource links (replacing Claude)
+        llmService.generateLearningPaths(
+          compactContext.job.responsibilities.map(resp => ({ task: resp }))
+        )
+      ]);
       
       const rawContent = aiResponse.choices?.[0]?.message?.content || '{}';
       console.log('🎓 STUDENT STRATEGY: Raw AI response length:', rawContent.length);
@@ -584,9 +589,39 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
           };
         }
       }
-      
+
+      // Merge GPT-5 learning paths into GPT-4o-mini task analysis
+      console.log('🎓 STUDENT STRATEGY: Merging GPT-5 learning paths with GPT-4o-mini analysis');
+      if (learningPathsPromise && strategyData.job_task_analysis) {
+        strategyData.job_task_analysis = strategyData.job_task_analysis.map((task: any) => {
+          // Try to find matching learning paths from GPT-5
+          // GPT-5 uses task text as key, need to match flexibly
+          const matchingKey = Object.keys(learningPathsPromise).find(key =>
+            key.toLowerCase().includes(task.task.toLowerCase().substring(0, 20)) ||
+            task.task.toLowerCase().includes(key.toLowerCase().substring(0, 20))
+          );
+
+          if (matchingKey && learningPathsPromise[matchingKey]) {
+            return {
+              ...task,
+              learning_paths: learningPathsPromise[matchingKey]
+            };
+          }
+
+          // Fallback: empty learning paths if GPT-5 didn't generate for this task
+          return {
+            ...task,
+            learning_paths: {
+              quick_wins: [],
+              certifications: [],
+              deepening: []
+            }
+          };
+        });
+      }
+
       // Add German keywords to ATS keywords if job is in Germany
-      if (jobData.location_country?.toLowerCase().includes('germany') || 
+      if (jobData.location_country?.toLowerCase().includes('germany') ||
           jobData.language_required?.includes('DE')) {
         strategyData.ats_keywords = [
           ...(strategyData.ats_keywords || []),

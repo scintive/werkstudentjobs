@@ -51,7 +51,7 @@ export function AIAnalysisLoader({ type, title, subtitle }: AIAnalysisLoaderProp
     : 'Analyzing and tailoring your resume for this specific opportunity...'
 
   useEffect(() => {
-    let timers: NodeJS.Timeout[] = []
+    const timers: NodeJS.Timeout[] = []
 
     // Intelligent timing: spread steps across expected GPT duration (30-45s)
     // Steps 1-3: Faster (2-4s each) - builds trust early

@@ -117,10 +117,16 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Full Name"
           value={localData.personalInfo.name}
-          onChange={(value) => setLocalData({
-            ...localData,
-            personalInfo: { ...localData.personalInfo, name: value }
-          })}
+          onChange={(value) => {
+            setLocalData({
+              ...localData,
+              personalInfo: { ...localData.personalInfo, name: value }
+            })
+            // Auto-save name - trigger context update immediately
+            try {
+              updateField('personalInfo.name', value)
+            } catch {}
+          }}
           icon={<User className="w-4 h-4" />}
         />
         <CleanInput
@@ -150,47 +156,77 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Email"
           value={localData.personalInfo.email}
-          onChange={(value) => setLocalData({
-            ...localData,
-            personalInfo: { ...localData.personalInfo, email: value }
-          })}
+          onChange={(value) => {
+            setLocalData({
+              ...localData,
+              personalInfo: { ...localData.personalInfo, email: value }
+            })
+            // Auto-save email
+            try {
+              updateField('personalInfo.email', value)
+            } catch {}
+          }}
           icon={<Mail className="w-4 h-4" />}
         />
         <CleanInput
           label="Phone"
           value={localData.personalInfo.phone}
-          onChange={(value) => setLocalData({
-            ...localData,
-            personalInfo: { ...localData.personalInfo, phone: value }
-          })}
+          onChange={(value) => {
+            setLocalData({
+              ...localData,
+              personalInfo: { ...localData.personalInfo, phone: value }
+            })
+            // Auto-save phone
+            try {
+              updateField('personalInfo.phone', value)
+            } catch {}
+          }}
           icon={<Phone className="w-4 h-4" />}
         />
         <CleanInput
           label="Location"
           value={localData.personalInfo.location}
-          onChange={(value) => setLocalData({
-            ...localData,
-            personalInfo: { ...localData.personalInfo, location: value }
-          })}
+          onChange={(value) => {
+            setLocalData({
+              ...localData,
+              personalInfo: { ...localData.personalInfo, location: value }
+            })
+            // Auto-save location
+            try {
+              updateField('personalInfo.location', value)
+            } catch {}
+          }}
           icon={<MapPin className="w-4 h-4" />}
         />
         <CleanInput
           label="LinkedIn Profile"
           value={localData.personalInfo.linkedin || ''}
-          onChange={(value) => setLocalData({
-            ...localData,
-            personalInfo: { ...localData.personalInfo, linkedin: value }
-          })}
+          onChange={(value) => {
+            setLocalData({
+              ...localData,
+              personalInfo: { ...localData.personalInfo, linkedin: value }
+            })
+            // Auto-save linkedin
+            try {
+              updateField('personalInfo.linkedin', value)
+            } catch {}
+          }}
           placeholder="e.g., linkedin.com/in/yourprofile"
           icon={<Linkedin className="w-4 h-4" />}
         />
         <CleanInput
           label="Portfolio/Website"
           value={localData.personalInfo.website || ''}
-          onChange={(value) => setLocalData({
-            ...localData,
-            personalInfo: { ...localData.personalInfo, website: value }
-          })}
+          onChange={(value) => {
+            setLocalData({
+              ...localData,
+              personalInfo: { ...localData.personalInfo, website: value }
+            })
+            // Auto-save website
+            try {
+              updateField('personalInfo.website', value)
+            } catch {}
+          }}
           placeholder="e.g., yourportfolio.com or github.com/username"
           icon={<Globe className="w-4 h-4" />}
         />
@@ -229,6 +265,7 @@ export const PersonalInfoSection = React.memo(({
           </div>
         )}
       </div>
+
     </>
   )
 })

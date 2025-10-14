@@ -50,19 +50,35 @@ export async function GET(request: NextRequest) {
       const resumeRecord = resumeDataList[0];
       console.log('🔍 LATEST PROFILE: Found complete resume data');
 
-      // Get photo from user_profiles if available
+      // Get photo and student info from user_profiles if available
       let photoUrl = resumeRecord.photo_url || null;
+      let hoursAvailable = null;
+      let currentSemester = null;
+      let universityName = null;
+      let startPreference = null;
       console.log('📸 PHOTO DEBUG: resume_data.photo_url =', photoUrl);
 
-      if (authUserId && !photoUrl) {
-        const { data: profile } = await supabase
+      if (authUserId) {
+        const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
-          .select('photo_url')
+          .select('photo_url, hours_available, current_semester, university_name, start_preference')
           .eq('user_id', authUserId)
           .single();
-        if (profile?.photo_url) {
-          photoUrl = profile.photo_url;
-          console.log('📸 PHOTO DEBUG: Got photo from user_profiles =', photoUrl);
+
+        console.log('👨‍🎓 PROFILE QUERY: error =', profileError, 'has data =', !!profile);
+
+        if (profile && !profileError) {
+          if (profile.photo_url) {
+            photoUrl = profile.photo_url;
+            console.log('📸 PHOTO DEBUG: Got photo from user_profiles =', photoUrl);
+          }
+          hoursAvailable = profile.hours_available;
+          currentSemester = profile.current_semester;
+          universityName = profile.university_name;
+          startPreference = profile.start_preference;
+          console.log('👨‍🎓 STUDENT INFO: hours_available =', hoursAvailable, 'semester =', currentSemester);
+        } else {
+          console.log('👨‍🎓 STUDENT INFO: No user_profiles data found or error occurred');
         }
       }
 
@@ -80,7 +96,12 @@ export async function GET(request: NextRequest) {
         projects: resumeRecord.projects || [],
         certifications: resumeRecord.certifications || [],
         customSections: resumeRecord.custom_sections || [],
-        languages: resumeRecord.languages || [] // Include languages from separate column
+        languages: resumeRecord.languages || [], // Include languages from separate column
+        // Student info from user_profiles
+        hours_available: hoursAvailable,
+        current_semester: currentSemester,
+        university_name: universityName,
+        start_preference: startPreference
       };
       
       return NextResponse.json({

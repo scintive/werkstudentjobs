@@ -50,8 +50,8 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link href="/login" className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">Login</Link>
-              <Link href="/register" className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 text-sm hover:bg-gray-200">Register</Link>
+              <Link href="/login" className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">Sign in</Link>
+              <Link href="/register" className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 text-sm hover:bg-gray-200">Sign up</Link>
             </>
           )}
         </div>

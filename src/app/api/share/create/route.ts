@@ -9,15 +9,20 @@ export async function POST(request: NextRequest) {
     // SECURITY FIX: Only use Supabase auth
     let userId: string | null = null
     try {
-      const { data: authRes } = await supabase.auth.getUser()
+      const { data: authRes, error: authError } = await supabase.auth.getUser()
+      console.log('🔗 SHARE CREATE: auth.getUser() result - error:', authError, 'user:', authRes?.user?.id)
       if (authRes?.user) {
         userId = authRes.user.id
+        console.log('🔗 SHARE CREATE: Authenticated user:', userId)
+      } else {
+        console.log('🔗 SHARE CREATE: No user in auth response')
       }
     } catch (e) {
-      console.log('Share create: auth.getUser() failed:', e)
+      console.log('🔗 SHARE CREATE: auth.getUser() exception:', e)
     }
 
     if (!userId) {
+      console.log('🔗 SHARE CREATE: Returning 401 - no userId')
       return NextResponse.json(
         { error: 'Unauthorized - Please log in' },
         { status: 401 }

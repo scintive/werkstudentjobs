@@ -63,7 +63,7 @@ export function useGeoEnhancedJobs({
           }
 
           // Use original match score - fastMatchingService already handles location properly
-          let enhancedMatchScore = job.match_score;
+          const enhancedMatchScore = job.match_score;
 
           return {
             ...job,

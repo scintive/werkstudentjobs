@@ -31,9 +31,19 @@ export function RequireAuth({ children, fallback }: RequireAuthProps) {
   if (isAuthenticated === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        <div className="relative">
+          {/* Outer spinning circle */}
+          <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+
+          {/* Inner pulsing dot */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="w-4 h-4 bg-blue-600 rounded-full"
+              style={{
+                animation: 'pulse 1.5s ease-in-out infinite'
+              }}
+            />
+          </div>
         </div>
       </div>
     )

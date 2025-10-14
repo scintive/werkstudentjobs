@@ -434,25 +434,28 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
           )}
 
           {/* Diversity - Bullet List */}
-          {company.diversity_initiatives && company.diversity_initiatives.length > 0 && (
+          {company.diversity_initiatives && company.diversity_initiatives.length > 0 &&
+           company.diversity_initiatives.some(initiative => initiative && initiative.trim() && initiative !== 'null') && (
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-violet-600" />
                 <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Diversity</h4>
               </div>
               <div className="space-y-0.5">
-                {(expandedSections.diversity ? company.diversity_initiatives : company.diversity_initiatives.slice(0, 3)).map((initiative, index) => (
-                  <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
-                    <span className="text-violet-500 mt-0.5">•</span>
-                    <span className="leading-relaxed">{initiative}</span>
-                  </div>
-                ))}
-                {company.diversity_initiatives.length > 3 && (
+                {(expandedSections.diversity ? company.diversity_initiatives : company.diversity_initiatives.slice(0, 3))
+                  .filter(initiative => initiative && initiative.trim() && initiative !== 'null')
+                  .map((initiative, index) => (
+                    <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
+                      <span className="text-violet-500 mt-0.5">•</span>
+                      <span className="leading-relaxed">{initiative}</span>
+                    </div>
+                  ))}
+                {company.diversity_initiatives.filter(i => i && i.trim() && i !== 'null').length > 3 && (
                   <button
                     onClick={() => setExpandedSections(prev => ({ ...prev, diversity: !prev.diversity }))}
                     className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-0.5"
                   >
-                    {expandedSections.diversity ? '↑ Less' : `↓ +${company.diversity_initiatives.length - 3} more`}
+                    {expandedSections.diversity ? '↑ Less' : `↓ +${company.diversity_initiatives.filter(i => i && i.trim() && i !== 'null').length - 3} more`}
                   </button>
                 )}
               </div>
@@ -460,25 +463,28 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
           )}
 
           {/* Awards - Bullet List */}
-          {company.awards_recognition && company.awards_recognition.length > 0 && (
+          {company.awards_recognition && company.awards_recognition.length > 0 &&
+           company.awards_recognition.some(award => award && award.trim() && award !== 'null') && (
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Trophy className="w-3.5 h-3.5 text-amber-600" />
                 <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Awards</h4>
               </div>
               <div className="space-y-0.5">
-                {(expandedSections.awards ? company.awards_recognition : company.awards_recognition.slice(0, 3)).map((award, index) => (
-                  <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
-                    <span className="text-amber-500 mt-0.5">•</span>
-                    <span className="leading-relaxed">{award}</span>
-                  </div>
-                ))}
-                {company.awards_recognition.length > 3 && (
+                {(expandedSections.awards ? company.awards_recognition : company.awards_recognition.slice(0, 3))
+                  .filter(award => award && award.trim() && award !== 'null')
+                  .map((award, index) => (
+                    <div key={index} className="flex items-start gap-1.5 text-xs text-slate-600">
+                      <span className="text-amber-500 mt-0.5">•</span>
+                      <span className="leading-relaxed">{award}</span>
+                    </div>
+                  ))}
+                {company.awards_recognition.filter(a => a && a.trim() && a !== 'null').length > 3 && (
                   <button
                     onClick={() => setExpandedSections(prev => ({ ...prev, awards: !prev.awards }))}
                     className="text-xs text-amber-600 hover:text-amber-700 font-medium mt-0.5"
                   >
-                    {expandedSections.awards ? '↑ Less' : `↓ +${company.awards_recognition.length - 3} more`}
+                    {expandedSections.awards ? '↑ Less' : `↓ +${company.awards_recognition.filter(a => a && a.trim() && a !== 'null').length - 3} more`}
                   </button>
                 )}
               </div>

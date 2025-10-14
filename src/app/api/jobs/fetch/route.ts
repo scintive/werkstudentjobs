@@ -10,45 +10,93 @@ type Company = Database['public']['Tables']['companies']['Row'];
 type JobWithCompany = Job & { companies: Company };
 
 /**
- * Extract tools from combined skills/tools array
- * Common tools: IDEs, software, frameworks, platforms
+ * Revolutionary universal tool extraction using semantic patterns
+ * Works across ALL industries: tech, medicine, warehouse, finance, etc.
+ *
+ * Philosophy: Tools are typically NOUNS (things you use), while skills are ACTIONS/QUALITIES
+ * Tools include: software, equipment, systems, machinery, instruments, platforms
  */
 function extractToolsFromSkills(skillsAndTools: string[]): string[] {
   if (!Array.isArray(skillsAndTools)) return [];
-  
-  const toolKeywords = [
-    // IDEs & Editors
-    'vscode', 'visual studio', 'intellij', 'eclipse', 'atom', 'sublime', 'vim', 'emacs',
-    // Databases
-    'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'oracle', 'sqlite',
-    // Cloud Platforms  
-    'aws', 'azure', 'gcp', 'google cloud', 'heroku', 'digitalocean', 'vercel',
-    // DevOps Tools
-    'docker', 'kubernetes', 'jenkins', 'gitlab ci', 'github actions', 'terraform', 'ansible',
-    // Design Tools
-    'figma', 'sketch', 'photoshop', 'illustrator', 'adobe', 'canva', 'invision',
-    // Project Management
-    'jira', 'confluence', 'trello', 'asana', 'monday', 'notion', 'slack', 'teams',
-    // Analytics
-    'google analytics', 'tableau', 'power bi', 'excel', 'looker', 'mixpanel',
-    // CRM & Business
-    'salesforce', 'hubspot', 'mailchimp', 'shopify', 'wordpress', 'sap'
-  ];
-  
+
   const tools: string[] = [];
-  const toolsLower = toolKeywords.map(t => t.toLowerCase());
-  
+
+  // Universal semantic patterns that indicate a tool (not skill)
+  const toolIndicators = [
+    // Generic tool indicators (work for ANY industry)
+    /\b(system|software|platform|tool|application|suite|solution)[s]?\b/i,
+
+    // Brand/Product patterns (proper nouns, typically capitalized)
+    /^[A-Z][a-zA-Z0-9]*(\s+[A-Z][a-zA-Z0-9]*)*$/,  // "Excel", "Microsoft Teams", "SAP"
+
+    // Acronyms (2-6 uppercase letters, possibly with numbers)
+    /^[A-Z]{2,6}(\d+)?$/,  // "CRM", "ERP", "SQL", "AWS", "MS365"
+
+    // Version numbers (indicates specific software/tool)
+    /\b(v\d+|\d+\.\d+|version\s+\d+|20\d{2})\b/i,  // "Python 3.x", "Excel 2019"
+
+    // Microsoft/Google products
+    /^(microsoft|ms|google|adobe|apple|ibm|oracle)\s+/i,
+
+    // Equipment/Machinery indicators
+    /\b(machine|equipment|device|instrument|apparatus|machinery)\b/i,
+
+    // Medical equipment patterns
+    /\b(scanner|monitor|ventilator|analyzer|pump|meter|scope)\b/i,
+
+    // Warehouse/logistics patterns
+    /\b(forklift|pallet\s+jack|scanner|conveyor|loader|truck|vehicle)\b/i,
+
+    // Point-of-sale and retail
+    /\b(pos|register|scanner|terminal)\b/i,
+
+    // Programming frameworks/libraries (end with common suffixes)
+    /\.(js|py|rb|php|net|io)$/i,
+    /(React|Angular|Vue|Django|Flask|Rails|Laravel|Spring)/i,
+
+    // Database systems
+    /\b(database|db|sql|nosql|mongo|postgres|mysql|oracle)\b/i,
+  ];
+
+  // Skill indicators (things that are NOT tools)
+  const skillIndicators = [
+    // Action verbs
+    /^(managing|leading|analyzing|designing|developing|creating|building|implementing|coordinating|communicating|organizing|planning|solving)\b/i,
+
+    // Abstract qualities/abilities
+    /\b(ability|skill|knowledge|experience|proficiency|expertise|capability|competency)\b/i,
+
+    // Soft skills patterns
+    /\b(communication|teamwork|leadership|management|organization|problem[\s-]solving|time[\s-]management|attention\s+to\s+detail)\b/i,
+
+    // Language proficiency (these are skills, not tools)
+    /^(german|english|french|spanish|italian|chinese|japanese|hindi|arabic|portuguese|russian)(\s+(fluent|native|basic|intermediate|advanced|c1|b2|a1|a2))?$/i,
+  ];
+
   for (const item of skillsAndTools) {
     if (!item || typeof item !== 'string') continue;
-    
-    const itemLower = item.toLowerCase().trim();
-    
-    // Check if item matches any tool keyword
-    if (toolsLower.some(tool => itemLower.includes(tool) || tool.includes(itemLower))) {
-      tools.push(item);
+
+    const trimmed = item.trim();
+
+    // Skip if it's clearly a skill, not a tool
+    const isSkill = skillIndicators.some(pattern => pattern.test(trimmed));
+    if (isSkill) continue;
+
+    // Check if it matches tool patterns
+    const isTool = toolIndicators.some(pattern => pattern.test(trimmed));
+
+    // Additional heuristics:
+    // 1. If it's capitalized and not all caps (likely a brand/product name)
+    const isProperNoun = /^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(trimmed) && trimmed.length > 3;
+
+    // 2. If it contains special tech characters
+    const hasTechChars = /[.#@/\\-]/.test(trimmed);
+
+    if (isTool || isProperNoun || hasTechChars) {
+      tools.push(trimmed);
     }
   }
-  
+
   return [...new Set(tools)]; // Remove duplicates
 }
 
@@ -57,8 +105,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(
-      parseInt(searchParams.get('limit') || '20'),
-      50 // Maximum limit for performance
+      parseInt(searchParams.get('limit') || '200'),
+      500 // Increased maximum limit to show all jobs
     );
     const offset = parseInt(searchParams.get('offset') || '0');
     const forceRefresh = searchParams.get('refresh') === 'true';
@@ -123,6 +171,12 @@ export async function GET(request: NextRequest) {
       .from('jobs')
       .select('*', { count: 'exact', head: true })
       .eq('is_active', true);
+
+    // DEBUG: Log what we're sending to client
+    console.log('🔍 FETCH API: Sending jobs to client');
+    console.log('🔍 FETCH API: First job skills:', jobsData[0]?.skills?.slice(0, 3));
+    console.log('🔍 FETCH API: First job skills count:', jobsData[0]?.skills?.length || 0);
+    console.log('🔍 FETCH API: First job title:', jobsData[0]?.title);
 
     return NextResponse.json({
       success: true,
@@ -229,7 +283,7 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     );
     
     // 4. Geocode job location if available
-    let jobGeoData = { latitude: null, longitude: null };
+    const jobGeoData = { latitude: null, longitude: null };
     const jobLocation = extractedJob.location_city || rawJob.location;
     
     if (jobLocation && jobLocation.trim() && !jobLocation.toLowerCase().includes('remote')) {

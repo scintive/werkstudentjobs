@@ -25,8 +25,7 @@ import { getConfig, APP_CONFIG } from '@/lib/config/app';
 import { supabase } from '@/lib/supabase/client';
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker';
 import { AlignmentCards } from '@/components/werkstudent/AlignmentCards';
-import { ComprehensiveJobAnalysis } from '@/components/werkstudent/ComprehensiveJobAnalysis';
-import StrategyOnePager from '@/components/enhanced-strategy/StrategyOnePager';
+import { CompactJobAnalysis } from '@/components/job-analysis';
 import BulletRewriter from '@/components/werkstudent/BulletRewriter';
 import ComprehensiveStrategy from '@/components/enhanced-strategy/ComprehensiveStrategy';
 import { EnhancedRichText } from '@/components/resume-editor/enhanced-rich-text';
@@ -147,26 +146,37 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
 
 // Enhanced Tab configuration with visual elements
 const TABS = [
-  { 
-    id: 'strategy', 
-    label: 'AI Strategy', 
-    icon: Brain, 
+  {
+    id: 'strategy',
+    label: 'AI Strategy',
+    icon: Brain,
     gradient: 'from-purple-500 to-pink-500',
-    description: 'Smart analysis & positioning'
+    description: 'Smart analysis & positioning',
+    requiresCompletion: false
   },
-  { 
-    id: 'resume', 
-    label: 'Resume Studio', 
-    icon: Diamond, 
+  {
+    id: 'resume',
+    label: 'Resume Studio',
+    icon: Diamond,
     gradient: 'from-blue-500 to-cyan-500',
-    description: 'Live editing & optimization'
-  }, 
-  { 
-    id: 'cover-letter', 
-    label: 'Letter Craft', 
-    icon: PenTool, 
+    description: 'Live editing & optimization',
+    requiresCompletion: true
+  },
+  {
+    id: 'cover-letter',
+    label: 'Letter Craft',
+    icon: PenTool,
     gradient: 'from-green-500 to-emerald-500',
-    description: 'Interactive letter builder'
+    description: 'Interactive letter builder',
+    requiresCompletion: true
+  },
+  {
+    id: 'download',
+    label: 'Application Kit',
+    icon: Download,
+    gradient: 'from-orange-500 to-red-500',
+    description: 'Download complete package',
+    requiresCompletion: false
   }
 ] as const;
 
@@ -194,7 +204,7 @@ function TailorApplicationPage() {
 
       // Read tab from URL
       const tabParam = urlParams.get('tab') as TabId;
-      if (tabParam && ['strategy', 'resume', 'cover-letter'].includes(tabParam)) {
+      if (tabParam && ['strategy', 'resume', 'cover-letter', 'download'].includes(tabParam)) {
         setActiveTab(tabParam);
       }
 
@@ -202,7 +212,7 @@ function TailorApplicationPage() {
       const handlePopState = () => {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab') as TabId;
-        if (tab && ['strategy', 'resume', 'cover-letter'].includes(tab)) {
+        if (tab && ['strategy', 'resume', 'cover-letter', 'download'].includes(tab)) {
           setActiveTab(tab);
         } else {
           setActiveTab('strategy');
@@ -234,6 +244,7 @@ function TailorApplicationPage() {
   const [job, setJob] = useState<JobWithCompany | null>(null);
   const [strategy, setStrategy] = useState<JobStrategy | null>(null);
   const [studentStrategy, setStudentStrategy] = useState<StudentJobStrategy | null>(null);
+  const [jobAnalysis, setJobAnalysis] = useState<any>(null); // Store intelligent job analysis from GPT
   // Removed enhancedStrategy - not needed
   const [userProfile, setUserProfile] = useState<any>(null);
   const [patches, setPatches] = useState<any[]>([]);
@@ -256,6 +267,20 @@ function TailorApplicationPage() {
   const [includeUniversity, setIncludeUniversity] = useState(true);
   const [includeSemester, setIncludeSemester] = useState(true);
   const [includeHours, setIncludeHours] = useState(true);
+
+  // Completion status tracking
+  const [completionStatus, setCompletionStatus] = useState({
+    resume: false,
+    coverLetter: false
+  });
+
+  // Update completion status when variant or cover letter changes
+  useEffect(() => {
+    setCompletionStatus({
+      resume: !!variantId, // Resume is complete if variant exists
+      coverLetter: !!coverLetter // Cover letter is complete if it exists
+    });
+  }, [variantId, coverLetter]);
 
   // Load job data on mount
   useEffect(() => {
@@ -298,12 +323,12 @@ function TailorApplicationPage() {
     }
   }, [job, resumeData, resumeId]);
 
-  // Load existing cover letter when switching to cover-letter tab
+  // Load existing cover letter when variant is ready (instant loading from Supabase)
   useEffect(() => {
-    if (activeTab === 'cover-letter' && variantId && !coverLetter && !loading.letter) {
+    if (variantId && !coverLetter && !loading.letter) {
       loadExistingCoverLetter();
     }
-  }, [activeTab, variantId]);
+  }, [variantId]);
   
   const loadJobData = async () => {
     try {
@@ -360,10 +385,19 @@ function TailorApplicationPage() {
 
   const loadStrategy = async () => {
     if (!job || !resumeData) return;
-    
+
     setLoading(prev => ({ ...prev, strategy: true }));
-    
+
     try {
+      // Get session token for authentication
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        console.warn('🔒 Strategy load blocked: user not signed in');
+        setLoading(prev => ({ ...prev, strategy: false }));
+        return;
+      }
+
       // Convert resume data to profile format for strategy generation
       const profileForStrategy = {
         id: 'latest', // Use latest for student endpoints
@@ -383,7 +417,7 @@ function TailorApplicationPage() {
       // Determine if we should use student strategy API
       const isWerkstudent = job?.is_werkstudent || job?.title?.toLowerCase().includes('werkstudent');
       const hasEducation = resumeData.education && resumeData.education.length > 0;
-      const hasCurrentEducation = hasEducation && resumeData.education.some((edu: any) => 
+      const hasCurrentEducation = hasEducation && resumeData.education.some((edu: any) =>
         edu.year?.includes('Expected') || edu.year?.includes('2025') || edu.year?.includes('2026')
       );
       const endpoint = (isWerkstudent || hasCurrentEducation) ? '/api/jobs/strategy-student' : '/api/jobs/strategy';
@@ -393,11 +427,11 @@ function TailorApplicationPage() {
 
       // For student endpoints we pass 'latest' and let the API resolve by session; otherwise pass the id
       const userProfileId = (endpoint.includes('student')) ? 'latest' : profileForStrategy.id;
-      
+
       console.log(`🎯 STEP 3: Calling ${endpoint} for NEW strategy generation (💰 using credits)`);
-      
+
       // Prepare request body based on endpoint type
-      const requestBody = endpoint.includes('student') 
+      const requestBody = endpoint.includes('student')
         ? {
             job_id: jobId,
             student_profile: profileForStrategy // Pass the profile data directly
@@ -409,7 +443,10 @@ function TailorApplicationPage() {
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(requestBody)
       });
       
@@ -449,24 +486,24 @@ function TailorApplicationPage() {
       console.log('🔍 UPFRONT ANALYSIS: Checking for existing variant...');
       const { data: existingVariants } = await supabase
         .from('resume_variants')
-        .select('id, updated_at')
+        .select('id, updated_at, job_analysis')
         .eq('job_id', job.id)
         .eq('base_resume_id', resumeId)
         .order('updated_at', { ascending: false })
         .limit(1);
 
+      let existingVariantId: string | null = null;
       if (existingVariants && existingVariants.length > 0) {
-        const existingVariantId = existingVariants[0].id;
-        console.log('✅ UPFRONT ANALYSIS: Found existing variant, using cached:', existingVariantId);
+        existingVariantId = existingVariants[0].id;
+        console.log('✅ UPFRONT ANALYSIS: Found existing variant, will refresh analysis:', existingVariantId);
         setVariantId(existingVariantId);
         setCurrentVariantId(existingVariantId);
-        setPreAnalysisComplete(true);
-        setLoading(prev => ({ ...prev, preAnalysis: false }));
-        return;
+      } else {
+        console.log('🚀 UPFRONT ANALYSIS: No existing variant, creating new one...');
       }
 
-      // SECOND: No existing variant, run analysis (7-12 seconds)
-      console.log('🚀 UPFRONT ANALYSIS: No existing variant, creating new one...');
+      // ALWAYS run fresh analysis to get latest GPT recommendations (including new course recommendations)
+      console.log('🎯 UPFRONT ANALYSIS: Running fresh GPT analysis...');
 
       const analyzeResp = await fetch('/api/jobs/analyze-with-tailoring', {
         method: 'POST',
@@ -487,6 +524,11 @@ function TailorApplicationPage() {
           setVariantId(analyzeData.variant_id);
           setCurrentVariantId(analyzeData.variant_id); // Sync with parent state
           console.log('✅ UPFRONT ANALYSIS: Complete! New variant created:', analyzeData.variant_id);
+        }
+        // Store job analysis from GPT
+        if (analyzeData.job_analysis) {
+          setJobAnalysis(analyzeData.job_analysis);
+          console.log('✅ Job analysis received:', analyzeData.job_analysis.overall_match_score);
         }
       }
 
@@ -516,7 +558,7 @@ function TailorApplicationPage() {
       // Use unified cover letter endpoint
       const endpoint = '/api/jobs/cover-letter';
 
-      console.log(`📋 Loading existing cover letter for job ${jobId}`);
+      console.log(`📋 Loading existing cover letter for variant ${variantId}`);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -526,6 +568,7 @@ function TailorApplicationPage() {
         },
         body: JSON.stringify({
           job_id: jobId,
+          variant_id: variantId, // Pass variant_id for direct lookup
           user_profile_id: 'latest',
           tone: 'confident', // Default values just to satisfy API
           length: 'medium',
@@ -694,11 +737,21 @@ function TailorApplicationPage() {
         throw new Error('PDF generation failed');
       }
 
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `Cover_Letter_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`; // fallback
+      if (contentDisposition) {
+        const matches = /filename="([^"]+)"/.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Cover_Letter_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -861,6 +914,9 @@ function TailorApplicationPage() {
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const isCompleted = tab.id === 'resume' ? completionStatus.resume :
+                                  tab.id === 'cover-letter' ? completionStatus.coverLetter :
+                                  false;
 
               return (
                 <button
@@ -877,6 +933,18 @@ function TailorApplicationPage() {
                   <span className="hidden sm:inline">{tab.label}</span>
                   {tab.id === 'strategy' && (strategy || studentStrategy) && !isActive && (
                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  )}
+                  {isCompleted && (
+                    <CheckCircle className={cn(
+                      "w-4 h-4",
+                      isActive ? "text-green-600" : "text-green-500"
+                    )} />
+                  )}
+                  {tab.requiresCompletion && !isCompleted && (
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border-2",
+                      isActive ? "border-gray-400" : "border-gray-300"
+                    )} />
                   )}
                 </button>
               );
@@ -904,7 +972,9 @@ function TailorApplicationPage() {
                   strategy={strategy}
                   studentStrategy={studentStrategy}
                   userProfile={userProfile}
+                  jobAnalysis={jobAnalysis}
                   loading={loading.strategy}
+                  loadingAnalysis={loading.preAnalysis}
                   onRetryStrategy={loadStrategy}
                   handleMatchScoreCalculated={handleMatchScoreCalculated}
                 />
@@ -926,6 +996,8 @@ function TailorApplicationPage() {
                   onVariantIdChange={setCurrentVariantId}
                   preAnalysisComplete={preAnalysisComplete}
                   cachedVariantId={variantId}
+                  jobAnalysis={jobAnalysis}
+                  setJobAnalysis={setJobAnalysis}
                 />
               )}
               
@@ -952,6 +1024,19 @@ function TailorApplicationPage() {
                   variantId={variantId}
                 />
               )}
+
+              {activeTab === 'download' && (
+                <DownloadKitTab
+                  job={job}
+                  userProfile={userProfile}
+                  variantId={variantId}
+                  coverLetter={coverLetter}
+                  completionStatus={completionStatus}
+                  jobAnalysis={jobAnalysis}
+                  strategy={strategy}
+                  studentStrategy={studentStrategy}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -966,7 +1051,9 @@ function StrategyTab({
   strategy,
   studentStrategy,
   userProfile,
+  jobAnalysis,
   loading,
+  loadingAnalysis,
   onRetryStrategy,
   handleMatchScoreCalculated
 }: {
@@ -975,30 +1062,28 @@ function StrategyTab({
   studentStrategy: StudentJobStrategy | null;
   enhancedStrategy: any;
   userProfile: any;
+  jobAnalysis: any;
   loading: boolean;
+  loadingAnalysis: boolean;
   onRetryStrategy: () => void;
   handleMatchScoreCalculated: (score: number) => void;
 }) {
-  // Render only the compact one‑pager (suppresses ATS/keywords/interview blocks)
-  if (!loading) {
+  // Show loading state during analysis
+  if (loading || loadingAnalysis) {
+    return <AIAnalysisLoader type="strategy" />;
+  }
+
+  // Render job analysis when ready
+  if (jobAnalysis) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-        <StrategyOnePager
+        <CompactJobAnalysis
+          analysis={jobAnalysis}
           userProfile={userProfile}
           jobData={job}
-          strategy={studentStrategy || strategy}
-          onTailorSkills={() => {}}
-          onMatchScoreCalculated={handleMatchScoreCalculated}
         />
       </motion.div>
     );
-  }
-  // Do not render the verbose comprehensive strategy; keep the one‑pager only
-  // (We keep the computed enhancedStrategy in state for future use but do not
-  //  render it here to avoid ATS/keywords/interview blocks.)
-
-  if (loading) {
-    return <AIAnalysisLoader type="strategy" />;
   }
   
   if (!strategy && !studentStrategy) {
@@ -1064,19 +1149,7 @@ function StrategyTab({
       transition={{ duration: 0.5 }}
     >
       {/* Compact, scroll-free Strategy Snapshot */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <StrategyOnePager
-          userProfile={userProfile}
-          jobData={job}
-          strategy={studentStrategy || strategy}
-          onTailorSkills={() => setActiveTab('resume')}
-          onMatchScoreCalculated={handleMatchScoreCalculated}
-        />
-      </motion.div>
+      {/* StrategyOnePager removed - replaced by ComprehensiveJobAnalysis above */}
 
       {/* Toggle for additional details */}
       <div className="flex items-center justify-center">
@@ -1482,7 +1555,9 @@ function ResumeStudioTab({
   currentVariantId,
   onVariantIdChange,
   preAnalysisComplete = false, // NEW: Flag from parent if upfront analysis already ran
-  cachedVariantId = null // NEW: Variant ID from upfront analysis
+  cachedVariantId = null, // NEW: Variant ID from upfront analysis
+  jobAnalysis,
+  setJobAnalysis
 }: any) {
   const [localVariantId, setLocalVariantId] = useState<string | null>(cachedVariantId);
   const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
@@ -1512,6 +1587,30 @@ function ResumeStudioTab({
         console.log('⚡ RESUME STUDIO: Loading cached variant instantly:', cachedVariantId);
         setPreparing(true);
 
+        // Fetch student info from API BEFORE loading cached variant
+        let studentInfoFromApi = null;
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const profileResp = await fetch('/api/profile/latest', {
+              credentials: 'include',
+              headers: { Authorization: `Bearer ${session.access_token}` }
+            });
+            if (profileResp.ok) {
+              const profileData = await profileResp.json();
+              studentInfoFromApi = {
+                hours_available: profileData.resumeData?.hours_available,
+                current_semester: profileData.resumeData?.current_semester,
+                university_name: profileData.resumeData?.university_name,
+                start_preference: profileData.resumeData?.start_preference
+              };
+              console.log('👨‍🎓 TAILOR (cached): Fetched student info from API:', studentInfoFromApi);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to fetch profile data for cached variant:', e);
+        }
+
         try {
           // Load variant data from database
           const { data: variantRow } = await supabase
@@ -1521,19 +1620,33 @@ function ResumeStudioTab({
             .single();
 
           if (variantRow?.tailored_data) {
-            setTailoredResumeData(variantRow.tailored_data);
+            const tailoredData = variantRow.tailored_data;
+            // Merge student info into cached variant data
+            if (studentInfoFromApi) {
+              Object.assign(tailoredData, studentInfoFromApi);
+              console.log('👨‍🎓 TAILOR (cached): Added student info to cached variant');
+            }
+            setTailoredResumeData(tailoredData);
             setLocalVariantId(cachedVariantId);
             onVariantIdChange?.(cachedVariantId);
             console.log('✅ RESUME STUDIO: Loaded cached variant instantly!');
           } else {
             // Fallback to base resume if variant not found
             console.warn('⚠️ Cached variant not found, using base resume');
-            setTailoredResumeData(resumeData);
+            const fallbackData = { ...resumeData };
+            if (studentInfoFromApi) {
+              Object.assign(fallbackData, studentInfoFromApi);
+            }
+            setTailoredResumeData(fallbackData);
             setLocalVariantId(cachedVariantId); // Still set the ID
           }
         } catch (error) {
           console.error('❌ Failed to load cached variant:', error);
-          setTailoredResumeData(resumeData);
+          const fallbackData = { ...resumeData };
+          if (studentInfoFromApi) {
+            Object.assign(fallbackData, studentInfoFromApi);
+          }
+          setTailoredResumeData(fallbackData);
           setLocalVariantId(cachedVariantId); // Still set the ID
         }
 
@@ -1561,8 +1674,9 @@ function ResumeStudioTab({
         return;
       }
 
-      // Fetch photoUrl from API since the outer provider uses skipProfileApiFetch
+      // Fetch photoUrl and student info from API since the outer provider uses skipProfileApiFetch
       let photoUrlFromApi = null;
+      let studentInfoFromApi = null;
       try {
         const profileResp = await fetch('/api/profile/latest', {
           credentials: 'include',
@@ -1571,10 +1685,17 @@ function ResumeStudioTab({
         if (profileResp.ok) {
           const profileData = await profileResp.json();
           photoUrlFromApi = profileData.resumeData?.photoUrl || null;
+          studentInfoFromApi = {
+            hours_available: profileData.resumeData?.hours_available,
+            current_semester: profileData.resumeData?.current_semester,
+            university_name: profileData.resumeData?.university_name,
+            start_preference: profileData.resumeData?.start_preference
+          };
           console.log('📸 TAILOR: Fetched photoUrl from API:', photoUrlFromApi);
+          console.log('👨‍🎓 TAILOR: Fetched student info from API:', studentInfoFromApi);
         }
       } catch (e) {
-        console.warn('Failed to fetch photoUrl for tailor editor:', e);
+        console.warn('Failed to fetch profile data for tailor editor:', e);
       }
 
       // Always analyze before loading editor to ensure fresh suggestions
@@ -1601,15 +1722,25 @@ function ResumeStudioTab({
         const planFromPayload = payload.skills_category_plan || payload.tailored_resume?.skillsCategoryPlan || null;
         latestPlan = planFromPayload;
 
+        // Extract job analysis from payload
+        if (payload.job_analysis) {
+          setJobAnalysis(payload.job_analysis);
+          console.log('✅ Job analysis loaded from editor:', payload.job_analysis.overall_match_score);
+        }
+
         const tailoredResume = payload.tailored_resume || payload.analysisData?.tailored_resume || resumeData;
         if (planFromPayload) {
           tailoredResume.skillsCategoryPlan = planFromPayload;
         }
 
-        // Add photoUrl from API to tailored resume
+        // Add photoUrl and student info from API to tailored resume
         if (photoUrlFromApi && !tailoredResume.photoUrl) {
           tailoredResume.photoUrl = photoUrlFromApi;
           console.log('📸 TAILOR: Added photoUrl to tailored resume:', photoUrlFromApi);
+        }
+        if (studentInfoFromApi) {
+          Object.assign(tailoredResume, studentInfoFromApi);
+          console.log('👨‍🎓 TAILOR: Added student info to tailored resume:', studentInfoFromApi);
         }
 
         latestTailored = tailoredResume;
@@ -1630,19 +1761,27 @@ function ResumeStudioTab({
           latestTailored = variantRow?.tailored_data || resumeData;
           latestPlan = latestTailored?.skillsCategoryPlan || null;
 
-          // Add photoUrl from API to fallback variant
+          // Add photoUrl and student info from API to fallback variant
           if (photoUrlFromApi && !latestTailored.photoUrl) {
             latestTailored.photoUrl = photoUrlFromApi;
             console.log('📸 TAILOR FALLBACK: Added photoUrl to variant:', photoUrlFromApi);
+          }
+          if (studentInfoFromApi) {
+            Object.assign(latestTailored, studentInfoFromApi);
+            console.log('👨‍🎓 TAILOR FALLBACK: Added student info to variant:', studentInfoFromApi);
           }
 
           setTailoredResumeData(latestTailored);
         } else {
           latestTailored = resumeData;
-          // Add photoUrl even when using base resumeData
+          // Add photoUrl and student info even when using base resumeData
           if (photoUrlFromApi && !latestTailored.photoUrl) {
             latestTailored = { ...latestTailored, photoUrl: photoUrlFromApi };
             console.log('📸 TAILOR NO VARIANT: Added photoUrl to base resume:', photoUrlFromApi);
+          }
+          if (studentInfoFromApi) {
+            latestTailored = { ...latestTailored, ...studentInfoFromApi };
+            console.log('👨‍🎓 TAILOR NO VARIANT: Added student info to base resume:', studentInfoFromApi);
           }
           setTailoredResumeData(latestTailored);
         }
@@ -2248,33 +2387,66 @@ function CoverLetterStudioTab({
                     <Sparkles className="w-3.5 h-3.5 text-gray-500" />
                     <span className="text-xs font-medium text-gray-600">Student Details</span>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={includeUniversity}
                         onChange={(e) => setIncludeUniversity(e.target.checked)}
-                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                        className="w-4 h-4 text-emerald-600 rounded mt-0.5 flex-shrink-0"
                       />
-                      <span className="text-xs text-gray-700">University & Degree</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-700 mb-0.5">University & Degree</div>
+                        {userProfile?.education?.[0] && (
+                          <div className="text-xs text-gray-500 leading-relaxed">
+                            {userProfile.education[0].degree} in {userProfile.education[0].field_of_study}
+                            {userProfile.education[0].institution && (
+                              <> • {userProfile.education[0].institution}</>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer group">
+                    <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={includeSemester}
                         onChange={(e) => setIncludeSemester(e.target.checked)}
-                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                        className="w-4 h-4 text-emerald-600 rounded mt-0.5 flex-shrink-0"
                       />
-                      <span className="text-xs text-gray-700">Semester Info</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-700 mb-0.5">Semester Info</div>
+                        {userProfile?.education?.[0]?.year && (
+                          <div className="text-xs text-gray-500">
+                            Expected Graduation: {userProfile.education[0].year}
+                          </div>
+                        )}
+                      </div>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer group">
+                    <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={includeHours}
                         onChange={(e) => setIncludeHours(e.target.checked)}
-                        className="w-3.5 h-3.5 text-blue-600 rounded"
+                        className="w-4 h-4 text-emerald-600 rounded mt-0.5 flex-shrink-0"
                       />
-                      <span className="text-xs text-gray-700">Weekly Hours</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-700 mb-0.5">Weekly Hours</div>
+                        {(userProfile?.weekly_availability || userProfile?.hours_available) ? (
+                          <div className="text-xs text-gray-500">
+                            {userProfile.weekly_availability ? (
+                              <>
+                                {userProfile.weekly_availability.hours_min}-{userProfile.weekly_availability.hours_max} hours/week
+                                {userProfile.weekly_availability.flexible && <> • Flexible</>}
+                              </>
+                            ) : (
+                              <>{userProfile.hours_available} hours/week</>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-400 italic">Set hours in Settings</div>
+                        )}
+                      </div>
                     </label>
                   </div>
                 </div>
@@ -2464,7 +2636,10 @@ function CoverLetterStudioTab({
                         {userProfile?.personal_details?.name || userProfile?.personalInfo?.name || userProfile?.name || 'Varun Mishra'}
                       </h4>
                       <p className="text-gray-600">
-                        {userProfile?.personal_details?.email || userProfile?.personalInfo?.email || userProfile?.email || 'varunmisra@gmail.com'} | {userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone || '+49 XXX XXX XXXX'}
+                        {userProfile?.personal_details?.email || userProfile?.personalInfo?.email || userProfile?.email || 'varunmisra@gmail.com'}
+                        {(userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone) &&
+                          ` | ${userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone}`
+                        }
                       </p>
                       <p className="text-gray-600">{userProfile?.personal_details?.location || userProfile?.personalInfo?.location || userProfile?.location || 'Germany'}</p>
                       <div className="mt-4 text-right text-gray-600">
@@ -2603,6 +2778,391 @@ function CoverLetterStudioTab({
 }
 
 // Wrapper component with RequireAuth, SupabaseResumeProvider and EditModeProvider
+// Download Kit Tab Component
+function DownloadKitTab({
+  job,
+  userProfile,
+  variantId,
+  coverLetter,
+  completionStatus,
+  jobAnalysis,
+  strategy,
+  studentStrategy
+}: {
+  job: JobWithCompany | null;
+  userProfile: any;
+  variantId: string | null;
+  coverLetter: CoverLetter | null;
+  completionStatus: { resume: boolean; coverLetter: boolean };
+  jobAnalysis: any;
+  strategy: JobStrategy | null;
+  studentStrategy: StudentJobStrategy | null;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<string>('');
+
+  // Helper to generate file name
+  const generateFileName = (type: 'resume' | 'coverletter' | 'analysis') => {
+    if (!userProfile || !job) return `document_${type}.pdf`;
+
+    const userName = (userProfile.personalInfo?.name || userProfile.name || 'User')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    const companyName = (job.company?.name || 'Company')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    let jobTitle = (job.title || 'Position')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    // Shorten job title if too long
+    if (jobTitle.length > 30) {
+      jobTitle = jobTitle.substring(0, 27) + '...';
+    }
+
+    switch (type) {
+      case 'resume':
+        return `${userName}_${companyName}_Resume.pdf`;
+      case 'coverletter':
+        return `${userName}_${companyName}_CoverLetter.pdf`;
+      case 'analysis':
+        return `${userName}_${jobTitle}_${companyName}.pdf`;
+      default:
+        return `${userName}_${companyName}_Document.pdf`;
+    }
+  };
+
+  const downloadResumePDF = async () => {
+    if (!variantId) {
+      alert('Resume variant not found. Please save your resume first by making changes in the Resume Studio tab.');
+      return null;
+    }
+
+    try {
+      // Get auth token
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      if (!token) {
+        alert('Authentication required. Please refresh the page and try again.');
+        return null;
+      }
+
+      const response = await fetch(`/api/resume/pdf-download?variant_id=${variantId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          alert('Resume not found. Please save your changes in the Resume Studio tab first.');
+          return null;
+        }
+        throw new Error('Failed to download resume');
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = generateFileName('resume'); // fallback
+      if (contentDisposition) {
+        const matches = /filename="([^"]+)"/.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      const blob = await response.blob();
+      return { blob, filename };
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+      // Don't throw if we already returned null from 404 handling
+      if (error instanceof Error && error.message !== 'Failed to download resume') {
+        return null;
+      }
+      throw error;
+    }
+  };
+
+  const downloadCoverLetterPDF = async () => {
+    if (!coverLetter) {
+      alert('Cover letter not found. Please create your cover letter first.');
+      return null;
+    }
+
+    try {
+      const response = await fetch('/api/cover-letter/pdf-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coverLetter,
+          job,
+          userProfile
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to download cover letter');
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = generateFileName('coverletter'); // fallback
+      if (contentDisposition) {
+        const matches = /filename="([^"]+)"/.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      const blob = await response.blob();
+      return { blob, filename };
+    } catch (error) {
+      console.error('Error downloading cover letter:', error);
+      throw error;
+    }
+  };
+
+  const downloadAnalysisPDF = async () => {
+    // TODO: Implement job analysis PDF generation
+    // For now, return a simple PDF with analysis text
+    return null;
+  };
+
+  const downloadApplicationKit = async () => {
+    if (!completionStatus.resume || !completionStatus.coverLetter) {
+      alert('Please complete both your resume and cover letter before downloading the application kit.');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      setDownloadProgress('Preparing resume...');
+
+      const resumeData = await downloadResumePDF();
+      if (!resumeData) return;
+
+      setDownloadProgress('Preparing cover letter...');
+      const coverLetterData = await downloadCoverLetterPDF();
+      if (!coverLetterData) return;
+
+      setDownloadProgress('Creating application kit...');
+
+      // Use JSZip to create a zip file
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+
+      zip.file(resumeData.filename, resumeData.blob);
+      zip.file(coverLetterData.filename, coverLetterData.blob);
+
+      setDownloadProgress('Finalizing download...');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+      // Create download link
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = generateFileName('analysis').replace('.pdf', '_ApplicationKit.zip');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setDownloadProgress('Complete!');
+      setTimeout(() => setDownloadProgress(''), 2000);
+    } catch (error) {
+      console.error('Error creating application kit:', error);
+      alert('Failed to create application kit. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const downloadIndividualFile = async (type: 'resume' | 'coverletter') => {
+    try {
+      setDownloading(true);
+      setDownloadProgress(`Downloading ${type}...`);
+
+      let fileData;
+      if (type === 'resume') {
+        fileData = await downloadResumePDF();
+      } else {
+        fileData = await downloadCoverLetterPDF();
+      }
+
+      if (!fileData) return;
+
+      const url = URL.createObjectURL(fileData.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileData.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setDownloadProgress('Complete!');
+      setTimeout(() => setDownloadProgress(''), 2000);
+    } catch (error) {
+      console.error(`Error downloading ${type}:`, error);
+      alert(`Failed to download ${type}. Please try again.`);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Application Kit</h2>
+        <p className="text-gray-600">
+          Download your complete application package or individual documents
+        </p>
+      </div>
+
+      {/* Completion Status */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Status</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Diamond className="w-5 h-5 text-blue-600" />
+              <span className="font-medium text-gray-900">Tailored Resume</span>
+            </div>
+            {completionStatus.resume ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Complete</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-gray-400">
+                <AlertCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Not Started</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <PenTool className="w-5 h-5 text-green-600" />
+              <span className="font-medium text-gray-900">Cover Letter</span>
+            </div>
+            {completionStatus.coverLetter ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Complete</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-gray-400">
+                <AlertCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Not Started</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Download Complete Kit */}
+      <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg border-2 border-orange-200 p-8 mb-6">
+        <div className="flex items-start gap-4 mb-4">
+          <div className="bg-orange-500 text-white p-3 rounded-lg">
+            <Download className="w-6 h-6" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Complete Application Kit
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Download all your application documents in a single ZIP file, ready to submit.
+            </p>
+            {!completionStatus.resume || !completionStatus.coverLetter ? (
+              <div className="bg-white border border-orange-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-orange-800">
+                  <strong>Action Required:</strong> Please complete both your resume and cover letter before downloading the application kit.
+                </p>
+              </div>
+            ) : null}
+            <button
+              onClick={downloadApplicationKit}
+              disabled={downloading || !completionStatus.resume || !completionStatus.coverLetter}
+              className={cn(
+                'px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2',
+                downloading || !completionStatus.resume || !completionStatus.coverLetter
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg hover:shadow-xl'
+              )}
+            >
+              {downloading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {downloadProgress || 'Preparing...'}
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  Download Application Kit
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Individual Downloads */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Individual Documents</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Diamond className="w-5 h-5 text-blue-600" />
+              <h4 className="font-medium text-gray-900">Resume</h4>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Your tailored resume optimized for this position
+            </p>
+            <button
+              onClick={() => downloadIndividualFile('resume')}
+              disabled={downloading || !completionStatus.resume}
+              className={cn(
+                'w-full px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2',
+                downloading || !completionStatus.resume
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              )}
+            >
+              <Download className="w-4 h-4" />
+              Download Resume
+            </button>
+          </div>
+
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <PenTool className="w-5 h-5 text-green-600" />
+              <h4 className="font-medium text-gray-900">Cover Letter</h4>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Your personalized cover letter for this application
+            </p>
+            <button
+              onClick={() => downloadIndividualFile('coverletter')}
+              disabled={downloading || !completionStatus.coverLetter}
+              className={cn(
+                'w-full px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2',
+                downloading || !completionStatus.coverLetter
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-green-500 text-white hover:bg-green-600'
+              )}
+            >
+              <Download className="w-4 h-4" />
+              Download Cover Letter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TailorApplicationPageWrapper() {
   return (
     <RequireAuth>

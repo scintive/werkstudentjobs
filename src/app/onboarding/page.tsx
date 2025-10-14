@@ -35,19 +35,8 @@ export default function OnboardingPage() {
         return
       }
 
-      // Check if user has uploaded resume
-      const { data: resumeData } = await supabase
-        .from('resume_data')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .single()
-
-      if (!resumeData) {
-        // No resume yet, redirect to upload first
-        router.push('/upload')
-        return
-      }
-
+      // Resume upload is now part of onboarding flow (Step 0)
+      // No need to check for resume_data or redirect to /upload
       setLoading(false)
     }
 

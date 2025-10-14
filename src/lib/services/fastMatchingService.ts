@@ -93,12 +93,14 @@ export class FastMatchingService {
    */
   private getJobSkills(job: any): string[] {
     const pools: Array<unknown> = [
+      job?.skills,            // PRIMARY: Standard skills field from database
       job?.skills_original,
       job?.skills_canonical_flat,
       job?.skills_canonical,
       // Some pipelines place both skills and tools into a single array
       job?.named_skills_tools
     ];
+    console.log('🔍 GETJOBSKILLS: Checking pools for skills...', { hasSkills: !!job?.skills, skillsLength: job?.skills?.length });
     const result: string[] = [];
     for (const pool of pools) {
       if (Array.isArray(pool)) {
@@ -118,6 +120,7 @@ export class FastMatchingService {
    */
   private getJobTools(job: any): string[] {
     const pools: Array<unknown> = [
+      job?.tools,             // PRIMARY: Standard tools field from database
       job?.tools_original,
       job?.tools_canonical_flat,
       job?.tools_canonical

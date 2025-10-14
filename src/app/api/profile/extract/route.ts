@@ -7,7 +7,7 @@ let _puppeteer: any = null;
 async function getPuppeteer() {
   if (_puppeteer) return _puppeteer;
   try {
-    // @ts-ignore
+    // @ts-expect-error - Dynamic import of puppeteer
     _puppeteer = (await import('puppeteer')).default;
   } catch (e) {
     console.error('🐛 Failed to import puppeteer:', e);

@@ -16,10 +16,12 @@ export default function SettingsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [autoSaving, setAutoSaving] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const autoSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -37,6 +39,70 @@ export default function SettingsPage() {
   useEffect(() => {
     loadUserData()
   }, [])
+
+  // Auto-save functionality with 2-second debounce
+  useEffect(() => {
+    // Skip auto-save on initial load or when user is not set
+    if (!userId || loading) return
+
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+
+    // Set new timeout for auto-save
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        setAutoSaving(true)
+        console.log('🔄 Auto-saving...')
+
+        // Update all resume_data entries for this user
+        const { error: updateError } = await supabase
+          .from('resume_data')
+          .update({
+            personal_info: {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              location: formData.location,
+              linkedin: formData.linkedin,
+              website: formData.website
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+
+        if (updateError) throw updateError
+
+        // Update onboarding fields in user_profiles
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({
+            hours_available: formData.hoursAvailable,
+            current_semester: formData.currentSemester,
+            university_name: formData.universityName,
+            start_preference: formData.startPreference,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+
+        if (profileError) throw profileError
+
+        console.log('✅ Auto-saved successfully')
+      } catch (err) {
+        console.error('❌ Auto-save failed:', err)
+      } finally {
+        setAutoSaving(false)
+      }
+    }, 2000)
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+    }
+  }, [formData, userId, loading])
 
   const loadUserData = async () => {
     try {
@@ -109,8 +175,10 @@ export default function SettingsPage() {
       setError(null)
       setSuccess(null)
 
+      console.log('💾 Saving personal info:', formData)
+
       // Update all resume_data entries for this user
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('resume_data')
         .update({
           personal_info: {
@@ -120,30 +188,42 @@ export default function SettingsPage() {
             location: formData.location,
             linkedin: formData.linkedin,
             website: formData.website
-          }
+          },
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', userId)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('❌ Resume data update error:', updateError)
+        throw updateError
+      }
+
+      console.log('✅ Resume data updated:', updateData)
 
       // Update onboarding fields in user_profiles
-      const { error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .update({
           hours_available: formData.hoursAvailable,
           current_semester: formData.currentSemester,
           university_name: formData.universityName,
-          start_preference: formData.startPreference
+          start_preference: formData.startPreference,
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', userId)
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.error('❌ Profile update error:', profileError)
+        throw profileError
+      }
+
+      console.log('✅ Profile updated:', profileData)
 
       setSuccess('Settings updated successfully!')
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      console.error('Error saving:', err)
-      setError('Failed to save changes')
+      console.error('❌ Error saving:', err)
+      setError('Failed to save changes. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -180,12 +260,22 @@ export default function SettingsPage() {
     <div className="page-content">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="heading-xl" style={{ color: 'var(--text-primary)' }}>
-            Settings
-          </h1>
-          <p className="text-base mt-2" style={{ color: 'var(--text-secondary)' }}>
-            Manage your account settings and personal information
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="heading-xl" style={{ color: 'var(--text-primary)' }}>
+                Settings
+              </h1>
+              <p className="text-base mt-2" style={{ color: 'var(--text-secondary)' }}>
+                Manage your account settings and personal information
+              </p>
+            </div>
+            {autoSaving && (
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span>Auto-saving...</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -343,7 +433,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4">
+            <div className="flex flex-col items-end pt-4 gap-2">
               <Button
                 onClick={handleSave}
                 disabled={saving}
@@ -351,8 +441,11 @@ export default function SettingsPage() {
                 className="text-white hover:opacity-90"
               >
                 <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? 'Saving...' : 'Save Now'}
               </Button>
+              <p className="text-xs text-gray-500">
+                Changes auto-save after 2 seconds
+              </p>
             </div>
           </CardContent>
         </Card>

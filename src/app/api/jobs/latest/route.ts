@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         company_id,
         german_required,
         is_werkstudent,
-        skills_canonical,
+        skills,
         companies (
           name,
           logo_url
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       company_logo: (job.companies as any)?.logo_url || null,
       german_required: job.german_required,
       is_werkstudent: job.is_werkstudent,
-      skills_canonical: job.skills_canonical || []
+      skills: job.skills || []
     })) || []
 
     return NextResponse.json({

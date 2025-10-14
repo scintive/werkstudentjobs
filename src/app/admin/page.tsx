@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function AdminPage() {
   const [profileCount, setProfileCount] = useState<number | null>(null)
@@ -143,7 +144,7 @@ export default function AdminPage() {
               <h3 className="font-bold text-blue-900 mb-2">How to get a fresh start:</h3>
               <ol className="list-decimal list-inside space-y-1 text-blue-800">
                 <li>Click "🚨 RESET EVERYTHING 🚨" to clear all data</li>
-                <li>Visit <a href="/" className="underline font-medium">http://localhost:3000</a> in a new tab</li>
+                <li>Visit <Link href="/" className="underline font-medium">http://localhost:3000</Link> in a new tab</li>
                 <li>You should now see the upload interface</li>
                 <li>Upload a resume to create a new profile</li>
               </ol>

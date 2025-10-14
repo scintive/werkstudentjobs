@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
 
     const {
       job_id,
+      variant_id, // NEW: Accept variant_id for direct lookup
       user_profile_id,
       student_profile,
       tone = 'motivated',
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🎓 STUDENT COVER LETTER: Generating ${tone} ${length} letter for job ${job_id}`);
+    console.log(`🎓 STUDENT COVER LETTER: ${load_only ? 'Loading' : 'Generating'} ${tone} ${length} letter for job ${job_id}${variant_id ? ` (variant: ${variant_id})` : ''}`);
     if (custom_instructions) {
       console.log(`🎓 STUDENT COVER LETTER: Custom instructions provided: ${custom_instructions.substring(0, 100)}...`);
     }
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
     // Check cache (skip if custom instructions provided)
     const cacheKey = `student_${job_id}_${user_profile_id || 'profile'}_${tone}_${length}_${language}`;
     const cached = studentLetterCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL && !custom_instructions) {
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL && !custom_instructions && !load_only) {
       console.log('🎓 STUDENT COVER LETTER: Cache hit');
       return NextResponse.json({
         success: true,
@@ -100,15 +101,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check for existing cover letter in variant
-    const { data: variants } = await supabase
-      .from('resume_variants')
-      .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count')
-      .eq('job_id', job_id)
-      .order('updated_at', { ascending: false })
-      .limit(1);
+    // Check for existing cover letter in variant - use variant_id if provided, otherwise query by job_id + user
+    let existingVariant = null;
 
-    const existingVariant = variants?.[0];
+    if (variant_id) {
+      // Direct lookup by variant_id (fastest)
+      const { data: variant } = await supabase
+        .from('resume_variants')
+        .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count, user_id')
+        .eq('id', variant_id)
+        .eq('user_id', authUserId)
+        .single();
+
+      existingVariant = variant;
+      console.log(`📋 COVER LETTER: Queried by variant_id (${variant_id}):`, existingVariant ? 'Found' : 'Not found');
+    } else {
+      // Fallback: Query by job_id + user_id
+      const { data: variants } = await supabase
+        .from('resume_variants')
+        .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count, user_id')
+        .eq('job_id', job_id)
+        .eq('user_id', authUserId)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      existingVariant = variants?.[0];
+      console.log(`📋 COVER LETTER: Queried by job_id (${job_id}):`, existingVariant ? 'Found' : 'Not found');
+    }
 
     // If variant exists with cover letter, return it (unless regenerating)
     if (existingVariant?.cover_letter_content && !custom_instructions && !force_regenerate) {
@@ -614,29 +633,87 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
         throw new Error('GPT returned invalid JSON. Please try again.');
       }
 
-      // FIX: GPT sometimes puts closing/sign_off inside body_paragraphs array
-      // Extract them if they're strings starting with "closing:" or "sign_off:"
+      // FIX: GPT sometimes returns malformed JSON with field names INSIDE body_paragraphs array
+      // Example: body_paragraphs: [..., "closing\": \"I am enthusiastic...\"", "sign_off\": \"Best regards\""]
+      console.log('🔍 CLEANUP: Processing body_paragraphs array:', letterData.body_paragraphs?.length || 0, 'items');
+
       if (Array.isArray(letterData.body_paragraphs)) {
         const cleanedParagraphs = [];
+
         for (const item of letterData.body_paragraphs) {
           if (typeof item === 'string') {
-            if (item.trim().toLowerCase().startsWith('closing:')) {
-              letterData.closing = item.replace(/^closing:\s*/i, '').trim();
-            } else if (item.trim().toLowerCase().startsWith('sign_off:')) {
-              letterData.sign_off = item.replace(/^sign_off:\s*/i, '').trim();
-            } else if (item.trim().toLowerCase().startsWith('projects_highlighted:')) {
-              // Skip this malformed entry
+            const itemStr = item.trim();
+
+            // PATTERN 1: Field with malformed quotes: 'closing": "text' or 'sign_off": "text'
+            const malformedFieldMatch = itemStr.match(/^(\w+)["'\s]*["\s]*:\s*["']?(.+?)["']?\s*$/);
+            if (malformedFieldMatch) {
+              const fieldName = malformedFieldMatch[1].toLowerCase();
+              const fieldValue = malformedFieldMatch[2]
+                .replace(/^["'\s]+/, '')  // Remove leading quotes/spaces
+                .replace(/["'\s]+$/, '')  // Remove trailing quotes/spaces
+                .trim();
+
+              console.log(`🔧 CLEANUP: Found malformed field: ${fieldName} = ${fieldValue.substring(0, 50)}...`);
+
+              if (fieldName === 'closing' && fieldValue.length > 10) {
+                letterData.closing = fieldValue;
+                console.log('✅ CLEANUP: Extracted closing');
+                continue;
+              } else if (fieldName === 'sign_off' && fieldValue.length > 5) {
+                letterData.sign_off = fieldValue;
+                console.log('✅ CLEANUP: Extracted sign_off');
+                continue;
+              }
+            }
+
+            // PATTERN 2: Field labels without values (skip these)
+            if (itemStr.match(/^(closing|sign_off|projects_highlighted|coursework_referenced|used_keywords)["'\s]*[:=]\s*["'[\s]*$/i)) {
+              console.log(`🚫 CLEANUP: Skipping label-only field: ${itemStr.substring(0, 30)}`);
               continue;
-            } else if (item.trim().startsWith('[') || item.trim().endsWith(']')) {
-              // Skip malformed array entries
+            }
+
+            // PATTERN 3: Array artifacts (skip these)
+            if (itemStr === '[' || itemStr === ']' || itemStr === '["' || itemStr === '"]' || itemStr === '') {
+              console.log(`🚫 CLEANUP: Skipping array artifact: "${itemStr}"`);
               continue;
+            }
+
+            // PATTERN 4: JSON fragments with field names (skip these)
+            if (itemStr.match(/["'\s]*\w+["'\s]*:\s*["'[\s]*$/) || itemStr.includes('":') || itemStr.includes('"]')) {
+              console.log(`🚫 CLEANUP: Skipping JSON fragment: ${itemStr.substring(0, 30)}`);
+              continue;
+            }
+
+            // If it's a real paragraph (substantive content), keep it
+            if (itemStr.length > 50) {
+              cleanedParagraphs.push(itemStr);
+              console.log(`✅ CLEANUP: Kept paragraph: ${itemStr.substring(0, 50)}...`);
             } else {
-              cleanedParagraphs.push(item);
+              console.log(`🚫 CLEANUP: Skipping short item: ${itemStr.substring(0, 50)}`);
             }
           }
         }
+
         letterData.body_paragraphs = cleanedParagraphs;
+        console.log(`📝 CLEANUP: Final paragraph count: ${cleanedParagraphs.length}`);
       }
+
+      // Fallback: If closing/sign_off still missing after cleanup, use defaults
+      if (!letterData.closing || letterData.closing.trim() === '') {
+        const defaultClosing = targetLanguage === 'DE'
+          ? 'Ich freue mich darauf, von Ihnen zu hören und stehe für ein persönliches Gespräch gerne zur Verfügung.'
+          : 'I look forward to hearing from you and would be happy to discuss this opportunity in more detail.';
+        letterData.closing = defaultClosing;
+        console.log('⚠️ CLEANUP: Using default closing');
+      }
+
+      if (!letterData.sign_off || letterData.sign_off.trim() === '') {
+        const defaultSignOff = targetLanguage === 'DE' ? 'Mit freundlichen Grüßen' : 'Best regards';
+        letterData.sign_off = defaultSignOff;
+        console.log('⚠️ CLEANUP: Using default sign_off');
+      }
+
+      console.log('✅ CLEANUP: Final data - closing:', letterData.closing?.substring(0, 50), '... sign_off:', letterData.sign_off);
 
       // Validate required fields
       const requiredFields = ['subject', 'salutation', 'intro', 'body_paragraphs', 'closing', 'sign_off'];

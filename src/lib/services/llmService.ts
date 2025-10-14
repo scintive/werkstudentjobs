@@ -6,6 +6,7 @@ import '@/lib/polyfills/url-canparse';
  */
 
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { AICacheService } from './aiCacheService';
 import { getConfig, getModelConfig } from '../config/app';
 import { getPrompt, fillPromptTemplate } from '../config/prompts';
@@ -233,6 +234,7 @@ const CategorySuggestionsSchema = {
 
 class LLMService {
   private client: OpenAI | null = null;
+  private anthropicClient: Anthropic | null = null;
 
   /**
    * Initialize OpenAI client with proper configuration
@@ -244,15 +246,32 @@ class LLMService {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
-    
+
     if (!apiKey) {
       if (getConfig('ERROR_HANDLING.ENABLE_MOCK_RESPONSES')) {
         return this.createMockClient();
       }
       throw new Error('OPENAI_API_KEY environment variable is required');
     }
-    
+
     return new OpenAI({ apiKey });
+  }
+
+  /**
+   * Initialize Anthropic Claude client
+   */
+  initializeAnthropicClient() {
+    if (typeof window !== 'undefined') {
+      throw new Error('Anthropic client should only be used on server side');
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is required');
+    }
+
+    return new Anthropic({ apiKey });
   }
 
   /**
@@ -2508,6 +2527,189 @@ Extract ALL information available. Be aggressive - infer company values and cult
         research: fallbackResearch,
         actualWebSearchUsed: false
       };
+    }
+  }
+
+  /**
+   * Verify if a URL is accessible (not 404)
+   * Returns true if accessible, false otherwise
+   */
+  private async verifyUrl(url: string): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch(url, {
+        method: 'HEAD', // Use HEAD to avoid downloading content
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+
+      clearTimeout(timeout);
+
+      const isValid = response.ok; // 200-299 status codes
+      console.log(`🔗 URL Verification: ${url} - ${isValid ? '✅ Valid' : `❌ Invalid (${response.status})`}`);
+      return isValid;
+    } catch (error) {
+      console.log(`🔗 URL Verification: ${url} - ❌ Failed (${error instanceof Error ? error.message : 'Unknown error'})`);
+      return false;
+    }
+  }
+
+  /**
+   * Generate learning paths using GPT-4o-mini - SINGLE CALL for all tasks
+   * Filters out Udemy/Coursera
+   * Using GPT-4o-mini for speed and cost efficiency
+   */
+  async generateLearningPaths(tasks: Array<{ task: string; category?: string }>): Promise<Record<string, { quick_wins: Array<{label: string; url: string}>; certifications: Array<{label: string; url: string}>; deepening: Array<{label: string; url: string}> }>> {
+    const prompt = `For each job responsibility below, suggest EXACTLY 1 best FREE learning resource per category (quick_wins, certifications, deepening). Just the #1 most valuable resource - nothing more.
+
+INCLUDE (diverse resource types):
+- Official documentation & guides
+- Interactive coding platforms (CodePen, Replit, StackBlitz)
+- YouTube tutorials from verified channels
+- GitHub repositories with examples
+- Free courses from freeCodeCamp, Codecademy (free tier), edX (audit)
+- Interactive learning tools
+- Technical blog posts from experts
+- Open-source books
+
+STRICTLY EXCLUDE:
+- NO Udemy links
+- NO Coursera links
+- NO paid courses
+- NO dead/404 links
+
+RULES:
+- 100% FREE and accessible
+- VERIFIED working URLs only
+- EXACT match to responsibility
+- Diverse resource types (not just tutorials)
+- Prefer official sources and well-known platforms
+
+OUTPUT JSON - EXACTLY 1 resource per category:
+{
+  "task": {
+    "quick_wins": [{"label": "Quick Start Resource", "url": "https://..."}],
+    "certifications": [{"label": "Free Certification", "url": "https://..."}],
+    "deepening": [{"label": "Deep Learning Resource", "url": "https://..."}]
+  }
+}
+
+RESPONSIBILITIES:
+${tasks.map((t, i) => `${i + 1}. ${t.task}`).join('\n')}`;
+
+    try {
+      console.log('🤖 GPT-4o-mini: Starting learning path generation for', tasks.length, 'tasks (SINGLE CALL)');
+      console.log('🤖 GPT-4o-mini: API key present:', !!process.env.OPENAI_API_KEY);
+
+      const client = this.getClient(); // Get OpenAI client instance
+
+      const response = await client.chat.completions.create({
+        model: 'gpt-4o-mini', // Using gpt-4o-mini for cost efficiency and speed
+        messages: [{
+          role: 'system',
+          content: 'You are an expert learning resource curator specializing in finding the best free educational content from diverse sources. You NEVER recommend Udemy or Coursera. You only recommend resources you are confident are active and valuable. Prioritize official documentation, interactive platforms, and well-established free resources. Return responses in valid JSON format only.'
+        }, {
+          role: 'user',
+          content: prompt
+        }],
+        max_completion_tokens: 12000, // Increased to handle all tasks with full URLs in single call
+        temperature: 0.3, // Lower temperature for consistent, focused recommendations
+        response_format: { type: "json_object" } // Enforce JSON output
+      });
+
+      console.log('🤖 GPT-4o-mini: Received response, status:', response.choices[0].finish_reason);
+      const content = response.choices[0].message.content || '{}';
+      console.log('🤖 GPT-4o-mini: Response length:', content.length);
+
+      // Check if response was truncated
+      if (response.choices[0].finish_reason === 'length') {
+        console.error('❌ GPT-4o-mini: Response was truncated due to max_completion_tokens limit!');
+        console.error('❌ GPT-4o-mini: Increase max_completion_tokens or reduce number of tasks');
+        console.error('❌ GPT-4o-mini: Partial content received:', content.substring(0, 200));
+      }
+
+      // Parse JSON response
+      let learningPaths;
+      try {
+        learningPaths = JSON.parse(content);
+        console.log(`🤖 GPT-4o-mini: Generated learning paths for ${Object.keys(learningPaths).length} tasks`);
+      } catch (parseError) {
+        console.error('❌ GPT-4o-mini: JSON parse error:', parseError instanceof Error ? parseError.message : String(parseError));
+        console.error('❌ GPT-4o-mini: Raw content:', content);
+        learningPaths = {}; // Return empty object on parse error
+      }
+
+      // Verify all URLs and filter out invalid ones
+      console.log('🔗 Verifying all URLs...');
+      const verifiedPaths: Record<string, any> = {};
+
+      for (const [task, categories] of Object.entries(learningPaths)) {
+        verifiedPaths[task] = {
+          quick_wins: [],
+          certifications: [],
+          deepening: []
+        };
+
+        // Verify quick_wins
+        for (const resource of (categories as any).quick_wins || []) {
+          const url = resource.url?.toLowerCase() || '';
+
+          // Skip Udemy/Coursera
+          if (url.includes('udemy.com') || url.includes('coursera.org')) {
+            console.log(`🚫 Filtered out banned platform: ${url}`);
+            continue;
+          }
+
+          // Verify URL
+          const isValid = await this.verifyUrl(resource.url);
+          if (isValid) {
+            verifiedPaths[task].quick_wins.push(resource);
+          }
+        }
+
+        // Verify certifications
+        for (const resource of (categories as any).certifications || []) {
+          const url = resource.url?.toLowerCase() || '';
+
+          // Skip Udemy/Coursera
+          if (url.includes('udemy.com') || url.includes('coursera.org')) {
+            console.log(`🚫 Filtered out banned platform: ${url}`);
+            continue;
+          }
+
+          // Verify URL
+          const isValid = await this.verifyUrl(resource.url);
+          if (isValid) {
+            verifiedPaths[task].certifications.push(resource);
+          }
+        }
+
+        // Verify deepening
+        for (const resource of (categories as any).deepening || []) {
+          const url = resource.url?.toLowerCase() || '';
+
+          // Skip Udemy/Coursera
+          if (url.includes('udemy.com') || url.includes('coursera.org')) {
+            console.log(`🚫 Filtered out banned platform: ${url}`);
+            continue;
+          }
+
+          // Verify URL
+          const isValid = await this.verifyUrl(resource.url);
+          if (isValid) {
+            verifiedPaths[task].deepening.push(resource);
+          }
+        }
+      }
+
+      console.log('✅ URL verification complete');
+      return verifiedPaths;
+    } catch (error) {
+      console.error('🤖 GPT-4o-mini learning path generation failed:', error);
+      console.error('🤖 GPT-4o-mini: Error details:', error instanceof Error ? error.message : String(error));
+      return {}; // Return empty object on error
     }
   }
 

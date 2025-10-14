@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { PerfectStudio } from '@/components/resume-editor/PerfectStudio'
-import { SupabaseResumeProvider, SaveStatusIndicator } from '@/lib/contexts/SupabaseResumeContext'
+import { SupabaseResumeProvider } from '@/lib/contexts/SupabaseResumeContext'
 import { EditModeProvider } from '@/lib/contexts/EditModeContext'
 
 export default function EditResumePage() {
@@ -59,7 +59,6 @@ export default function EditResumePage() {
     <EditModeProvider>
       <SupabaseResumeProvider mode="base">
         <div className="min-h-screen bg-gray-50">
-          <SaveStatusIndicator />
           <PerfectStudio onNext={handleNext} showNavigation={true} />
         </div>
       </SupabaseResumeProvider>

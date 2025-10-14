@@ -1,0 +1,13 @@
+{
+  "name": "job-scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "fetch": "node fetch-linkedin-jobs.js",
+    "jobspy": "node fetch-jobspy.js"
+  },
+  "dependencies": {
+    "apify-client": "^2.18.0",
+    "csv-parse": "^5.5.3"
+  }
+}

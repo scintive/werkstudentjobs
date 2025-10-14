@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/serverClient'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,12 +21,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (!userId) {
+      console.log('✨ TAILORED STATUS API: No userId, returning empty array')
       return NextResponse.json({ tailoredJobs: [] })
     }
 
-    // Use database function to bypass RLS
-    const { data: variants, error } = await supabase
-      .rpc('get_user_tailored_jobs', { p_user_id: userId })
+    // Use service role key to bypass RLS
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    })
+
+    // Query resume_variants directly for active tailored jobs
+    const { data: variants, error } = await serviceClient
+      .from('resume_variants')
+      .select('id, job_id, match_score, created_at, updated_at, variant_name')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+
+    console.log('✨ TAILORED STATUS API: userId:', userId, 'variants count:', variants?.length, 'error:', error)
+
+    if (variants && variants.length > 0) {
+      console.log('✨ TAILORED STATUS API: First 3 job IDs:', variants.slice(0, 3).map(v => v.job_id))
+    }
 
     if (error) {
       console.error('Error fetching tailored jobs:', error)

@@ -37,7 +37,8 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setErrorMsg(error.message)
-        throw error
+        setIsLoading(false)
+        return
       }
 
       if (data.session?.user) {
@@ -54,7 +55,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('Login error:', error)
-      if (!errorMsg) setErrorMsg('Login failed. Please try again.')
+      setErrorMsg('Login failed. Please try again.')
     } finally {
       setIsLoading(false)
     }

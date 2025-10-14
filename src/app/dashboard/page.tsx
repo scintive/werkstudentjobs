@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { MatchScore } from '@/components/ui/MatchScore'
 
 interface TailoredResume {
   id: string
@@ -42,6 +43,7 @@ interface TailoredResume {
   match_score: number
   created_at: string
   updated_at: string
+  has_cover_letter: boolean
   jobs: {
     id: string
     title: string
@@ -83,6 +85,7 @@ export default function DashboardPage() {
   })
   const [highMatchJobs, setHighMatchJobs] = React.useState<HighMatchJob[]>([])
   const [showNotifications, setShowNotifications] = React.useState(false)
+  const [downloading, setDownloading] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     loadDashboardData()
@@ -311,9 +314,7 @@ export default function DashboardPage() {
                           {formatDistanceToNow(new Date(job.posted_date), { addSuffix: true })}
                         </p>
                       </div>
-                      <Badge className="bg-green-100 text-green-700">
-                        {job.match_score}% match
-                      </Badge>
+                      <MatchScore score={job.match_score} size="sm" showLabel={true} />
                     </div>
                   </div>
                 ))}
@@ -467,6 +468,10 @@ export default function DashboardPage() {
                           <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor?tab=cover-letter`)}>
                             <FileText className="w-4 h-4 mr-2" />
                             Cover Letter
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/jobs/${resume.job_id}/tailor?tab=download`)}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Download Kit
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

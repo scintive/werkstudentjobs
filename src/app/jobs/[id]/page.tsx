@@ -30,6 +30,24 @@ async function getJob(id: string): Promise<JobWithCompany | null> {
   return job as JobWithCompany;
 }
 
+async function getTailoredVariant(jobId: string) {
+  const { data: variant, error } = await supabase
+    .from('resume_variants')
+    .select('id, match_score, updated_at, variant_name')
+    .eq('job_id', jobId)
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching tailored variant:', error);
+    return null;
+  }
+
+  return variant;
+}
+
 function extractSalaryFromBenefits(benefits: string[] | null): string | null {
   if (!benefits || !Array.isArray(benefits)) return null;
 
@@ -107,7 +125,10 @@ function WerkstudentBadge({ isWerkstudent }: { isWerkstudent: boolean | null }) 
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const job = await getJob(id);
+  const [job, tailoredVariant] = await Promise.all([
+    getJob(id),
+    getTailoredVariant(id)
+  ]);
 
   if (!job) {
     notFound();
@@ -209,6 +230,41 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
       </div>
+
+      {/* Tailored Resume Banner */}
+      {tailoredVariant && (
+        <div className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 border-y border-emerald-200">
+          <div className="px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-100 rounded-xl shadow-sm">
+                  <Sparkles className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-emerald-900 flex items-center gap-2">
+                    You have a tailored resume for this job
+                    {tailoredVariant.match_score && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600 text-white">
+                        {tailoredVariant.match_score}% match
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-sm text-emerald-700">
+                    Last updated {new Date(tailoredVariant.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={`/jobs/${id}/tailor`}
+                className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-sm hover:shadow-md"
+              >
+                View & Edit Tailored Resume
+                <ArrowLeft className="w-4 h-4 ml-2 transform rotate-180" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="w-full">

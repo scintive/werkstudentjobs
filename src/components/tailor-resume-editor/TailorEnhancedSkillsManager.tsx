@@ -1143,7 +1143,7 @@ export function TailorEnhancedSkillsManager({
         })
 
         // First try to find languages in organized data
-        let languageEntry = Object.entries(organizedData.organized_categories).find(([key]) => {
+        const languageEntry = Object.entries(organizedData.organized_categories).find(([key]) => {
           const displayName = key
             .replace(/___/g, ' & ')
             .split('_')

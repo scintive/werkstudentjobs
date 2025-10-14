@@ -61,45 +61,75 @@ export default function AppHeader() {
       if (user) {
         setEmail(user.email || null)
 
-        // Try to get user's name and photo from resume_data
-        const { data: resumeData } = await supabase
-          .from('resume_data')
-          .select('personal_info, photo_url')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
+        // SECURITY: Always clear previous user data first
+        setUserName('')
+        setPhotoUrl(null)
 
-        if (resumeData && resumeData[0]) {
-          setUserName(resumeData[0].personal_info?.name || '')
-          setPhotoUrl(resumeData[0].photo_url || null)
-        }
-
-        // If no name from resume_data, fallback to auth metadata
-        if (!resumeData?.[0]?.personal_info?.name && user.user_metadata?.name) {
-          setUserName(user.user_metadata.name)
-        }
-
-        // If no photo in resume_data, check user_profiles
-        if (!resumeData?.[0]?.photo_url) {
-          const { data: profileData } = await supabase
-            .from('user_profiles')
-            .select('photo_url')
+        try {
+          // Try to get user's name and photo from resume_data - MUST match user_id
+          const { data: resumeData, error: resumeError } = await supabase
+            .from('resume_data')
+            .select('personal_info, photo_url')
             .eq('user_id', user.id)
-            .single()
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
 
-          if (profileData?.photo_url) {
-            setPhotoUrl(profileData.photo_url)
+          if (resumeError) {
+            console.error('Error fetching resume data:', resumeError)
           }
+
+          if (resumeData) {
+            setUserName(resumeData.personal_info?.name || '')
+            setPhotoUrl(resumeData.photo_url || null)
+          }
+
+          // If no name from resume_data, fallback to auth metadata
+          if (!resumeData?.personal_info?.name && user.user_metadata?.name) {
+            setUserName(user.user_metadata.name)
+          }
+
+          // If no photo in resume_data, check user_profiles - MUST match user_id
+          if (!resumeData?.photo_url) {
+            const { data: profileData, error: profileError } = await supabase
+              .from('user_profiles')
+              .select('photo_url')
+              .eq('user_id', user.id)
+              .maybeSingle()
+
+            if (profileError) {
+              console.error('Error fetching profile data:', profileError)
+            }
+
+            if (profileData?.photo_url) {
+              setPhotoUrl(profileData.photo_url)
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user data:', error)
+          // Keep user data cleared on error
+          setUserName('')
+          setPhotoUrl(null)
         }
+      } else {
+        // No user session - clear all data
+        setEmail(null)
+        setUserName('')
+        setPhotoUrl(null)
       }
     }
 
     loadUserData()
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      setEmail(session?.user?.email || null)
-      if (session?.user && !userName) {
+      if (session?.user) {
+        // User logged in - load their data
         loadUserData()
+      } else {
+        // User logged out - clear all data immediately
+        setEmail(null)
+        setUserName('')
+        setPhotoUrl(null)
       }
     })
 
@@ -107,7 +137,7 @@ export default function AppHeader() {
       sub.subscription.unsubscribe()
       mounted = false
     }
-  }, [userName])
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -122,16 +152,16 @@ export default function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Desktop Navigation */}
           <div className="flex items-center">
-            <Link href={email ? "/dashboard" : "/"} className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary)' }}>
-                <span className="text-white font-bold">W</span>
+            <Link href={email ? "/dashboard" : "/"} className="flex items-center space-x-3 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all duration-300 group-hover:scale-105">
+                <span className="text-white font-bold text-lg">W</span>
               </div>
-              <span className="font-bold text-xl hidden sm:block" style={{ color: 'var(--text-primary)' }}>
+              <span className="font-bold text-xl hidden sm:block bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
                 WerkStudentJobs
               </span>
             </Link>
@@ -230,22 +260,22 @@ export default function AppHeader() {
                 </DropdownMenu>
               </>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Link href="/login" prefetch={true}>
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100/80 transition-all duration-200"
                   >
-                    Sign In
+                    Login
                   </Button>
                 </Link>
                 <Link href="/register" prefetch={true}>
                   <Button
                     size="sm"
-                    style={{ background: 'var(--primary)' }}
-                    className="hover:opacity-90 text-white"
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 border-0"
                   >
-                    Sign Up
+                    Register
                   </Button>
                 </Link>
               </div>

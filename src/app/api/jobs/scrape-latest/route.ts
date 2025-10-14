@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeAllSources, type ScrapedJob } from '@/lib/services/apifyJobScraper';
-import { LLMService } from '@/lib/services/llmService';
+import { llmService } from '@/lib/services/llmService';
 import { supabase } from '@/lib/supabase/client';
 import { createClient } from '@supabase/supabase-js';
 
@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Process each job through the LLM pipeline
-    const llmService = LLMService.getInstance();
     const processedJobs: any[] = [];
     const failedJobs: Array<{ job: ScrapedJob; error: string }> = [];
 

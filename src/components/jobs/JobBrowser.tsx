@@ -67,6 +67,7 @@ import { SkillsAnalysisPanel } from './SkillsAnalysisPanel'
 import { CompanyIntelligencePanel } from './CompanyIntelligencePanel'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { AITailorButton } from '@/components/ui/AITailorButton'
+import { MatchScore } from '@/components/ui/MatchScore'
 import { useGeoEnhancedJobs } from '@/lib/hooks/useGeoEnhancedJobs'
 import EligibilityChecker from '@/components/werkstudent/EligibilityChecker'
 import type { StudentProfile } from '@/lib/types/studentProfile'
@@ -326,7 +327,10 @@ const mockJobs: JobWithCompany[] = [
 export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserProps) {
   const router = useRouter()
   const [jobs, setJobs] = React.useState<JobWithCompany[]>([])
-  const [loading, setLoading] = React.useState(false)
+  const [loading, setLoading] = React.useState(true) // Start with loading=true
+  const [loadingMore, setLoadingMore] = React.useState(false) // For pagination
+  const [hasMore, setHasMore] = React.useState(true) // More jobs available
+  const [currentPage, setCurrentPage] = React.useState(0) // Track pagination
   const [showPlaceholderNotice, setShowPlaceholderNotice] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [selectedTab, setSelectedTab] = React.useState('all')
@@ -347,6 +351,9 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
     soft: boolean;
     design: boolean;
   }>({ technical: false, soft: false, design: false })
+
+  // Reference for infinite scroll
+  const jobsContainerRef = React.useRef<HTMLDivElement>(null)
 
   // Extract user location from profile or location search for geo-enhanced matching
   const userLocation = React.useMemo(() => {
@@ -409,10 +416,21 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
   const fetchTailoredJobs = async () => {
     try {
+      // Get auth token from supabase
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+
+      if (!token) {
+        console.log('✨ No auth token, skipping tailored jobs fetch')
+        return
+      }
+
       const response = await fetch('/api/jobs/tailored-status', {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
       })
 
@@ -462,21 +480,82 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
     }
   }
 
-  const fetchJobs = async () => {
-    setLoading(true)
+  // LocalStorage helper functions
+  const JOBS_CACHE_KEY = 'jobs_cache'
+  const CACHE_EXPIRY_MS = 30 * 60 * 1000 // 30 minutes
+
+  const loadJobsFromCache = (): JobWithCompany[] | null => {
     try {
-      // Check if we should use API or mock data
+      const cached = localStorage.getItem(JOBS_CACHE_KEY)
+      if (!cached) return null
+
+      const { jobs: cachedJobs, timestamp } = JSON.parse(cached)
+      const now = Date.now()
+
+      // Check if cache is still valid
+      if (now - timestamp < CACHE_EXPIRY_MS) {
+        console.log('📦 Loaded', cachedJobs.length, 'jobs from cache')
+        return cachedJobs
+      } else {
+        console.log('📦 Cache expired, clearing...')
+        localStorage.removeItem(JOBS_CACHE_KEY)
+        return null
+      }
+    } catch (error) {
+      console.error('Error loading jobs from cache:', error)
+      return null
+    }
+  }
+
+  const saveJobsToCache = (jobs: JobWithCompany[]) => {
+    try {
+      localStorage.setItem(JOBS_CACHE_KEY, JSON.stringify({
+        jobs,
+        timestamp: Date.now()
+      }))
+      console.log('📦 Saved', jobs.length, 'jobs to cache')
+    } catch (error) {
+      console.error('Error saving jobs to cache:', error)
+    }
+  }
+
+  const fetchJobs = async (page: number = 0, append: boolean = false) => {
+    // Don't show main loader if appending
+    if (!append) {
+      setLoading(true)
+
+      // Try loading from cache first on initial load
+      if (page === 0) {
+        const cachedJobs = loadJobsFromCache()
+        if (cachedJobs && cachedJobs.length > 0) {
+          setJobs(cachedJobs)
+          if (cachedJobs.length > 0 && !selectedJob) {
+            setSelectedJob(cachedJobs[0])
+          }
+          setLoading(false)
+          setHasMore(cachedJobs.length >= 30) // Assume more if we got 30
+          return
+        }
+      }
+    } else {
+      setLoadingMore(true)
+    }
+
+    try {
       // Create AbortController for timeout handling
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout
-      
-      const response = await fetch('/api/jobs/fetch?limit=30', {
+
+      const limit = 30 // Fetch 30 jobs per page
+      const offset = page * limit
+
+      const response = await fetch(`/api/jobs/fetch?limit=${limit}&offset=${offset}`, {
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
       })
-      
+
       clearTimeout(timeoutId)
       
       if (response.ok) {
@@ -507,13 +586,43 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
           };
         })
 
+        // DEBUG: Check conditions BEFORE matching conditional
+        console.log('🔍 DEBUG: About to check matching conditions', {
+          hasUserProfile: !!userProfile,
+          userProfileType: typeof userProfile,
+          userProfileKeys: userProfile ? Object.keys(userProfile as any).slice(0, 10) : [],
+          transformedJobsLength: transformedJobs.length,
+          firstJob: transformedJobs[0]?.title,
+          firstJobSkills: transformedJobs[0]?.skills,
+          firstJobSkillsCount: Array.isArray(transformedJobs[0]?.skills) ? transformedJobs[0]?.skills.length : 'NOT AN ARRAY',
+          willRunMatching: !!(userProfile && transformedJobs.length > 0)
+        })
+
         // WEIGHTED MATCHING: Calculate real match scores if user profile is available
         if (userProfile && transformedJobs.length > 0) {
           console.log('🎯 User profile available, calculating weighted match scores...')
+          console.log('🎯 DEBUG: User profile structure:', {
+            hasSkills: !!userProfile.skills,
+            skillCategories: userProfile.skills ? Object.keys(userProfile.skills) : [],
+            sampleSkills: userProfile.skills ? Object.entries(userProfile.skills).slice(0, 2).map(([k, v]) => [k, Array.isArray(v) ? v.slice(0, 3) : v]) : [],
+            hasLanguages: !!userProfile.languages,
+            languagesCount: Array.isArray(userProfile.languages) ? userProfile.languages.length : 0
+          })
           try {
             const matchingController = new AbortController()
             const matchingTimeoutId = setTimeout(() => matchingController.abort(), 30000) // 30s timeout for matching
-            
+
+            // DEBUG: Log what we're about to send to matching API
+            console.log('🎯 POST BODY DEBUG - About to send to /api/jobs/match-scores:', {
+              jobsCount: transformedJobs.length,
+              firstJobId: transformedJobs[0]?.id,
+              firstJobTitle: transformedJobs[0]?.title,
+              firstJobHasSkills: !!transformedJobs[0]?.skills,
+              firstJobSkillsType: Array.isArray(transformedJobs[0]?.skills) ? 'array' : typeof transformedJobs[0]?.skills,
+              firstJobSkillsCount: Array.isArray(transformedJobs[0]?.skills) ? transformedJobs[0]?.skills.length : 'N/A',
+              firstJobSkillsSample: Array.isArray(transformedJobs[0]?.skills) ? transformedJobs[0]?.skills.slice(0, 3) : transformedJobs[0]?.skills
+            })
+
             const matchingResponse = await fetch('/api/jobs/match-scores', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -529,36 +638,83 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
             if (matchingResponse.ok) {
               const matchingData = await matchingResponse.json()
               console.log('🎯 Weighted matching successful:', matchingData.algorithm, '- Average score:', matchingData.averageScore)
-              
+
               // Use the matched jobs with calculated scores
               const matchedJobs = matchingData.matchedJobs || transformedJobs
-              setJobs(matchedJobs)
-              // Auto-select first job
-              if (matchedJobs.length > 0 && !selectedJob) {
+
+              // Append or replace based on mode
+              if (append) {
+                const updatedJobs = [...jobs, ...matchedJobs]
+                setJobs(updatedJobs)
+                saveJobsToCache(updatedJobs) // Update cache with appended jobs
+              } else {
+                setJobs(matchedJobs)
+                saveJobsToCache(matchedJobs) // Cache initial jobs
+              }
+
+              // Check if more jobs available
+              setHasMore(matchedJobs.length >= 30)
+              setCurrentPage(page)
+
+              // Auto-select first job only on initial load
+              if (!append && matchedJobs.length > 0 && !selectedJob) {
                 setSelectedJob(matchedJobs[0])
               }
             } else {
               console.warn('🎯 Matching API failed, showing jobs without scores')
               // NO PLACEHOLDER SCORES - just show jobs without match scores
-              setJobs(transformedJobs)
-              if (transformedJobs.length > 0 && !selectedJob) {
+              if (append) {
+                const updatedJobs = [...jobs, ...transformedJobs]
+                setJobs(updatedJobs)
+                saveJobsToCache(updatedJobs)
+              } else {
+                setJobs(transformedJobs)
+                saveJobsToCache(transformedJobs)
+              }
+
+              setHasMore(transformedJobs.length >= 30)
+              setCurrentPage(page)
+
+              if (!append && transformedJobs.length > 0 && !selectedJob) {
                 setSelectedJob(transformedJobs[0])
               }
             }
           } catch (matchingError) {
             console.warn('🎯 Matching error:', matchingError)
             // NO PLACEHOLDER SCORES - just show jobs without match scores
-            setJobs(transformedJobs)
-            if (transformedJobs.length > 0 && !selectedJob) {
+            if (append) {
+              const updatedJobs = [...jobs, ...transformedJobs]
+              setJobs(updatedJobs)
+              saveJobsToCache(updatedJobs)
+            } else {
+              setJobs(transformedJobs)
+              saveJobsToCache(transformedJobs)
+            }
+
+            setHasMore(transformedJobs.length >= 30)
+            setCurrentPage(page)
+
+            if (!append && transformedJobs.length > 0 && !selectedJob) {
               setSelectedJob(transformedJobs[0])
             }
           }
         } else {
           console.log('🎯 No user profile provided - showing jobs without match scores')
           // NO PROFILE = Show jobs WITHOUT match scores (no redirect to avoid loops)
-          setJobs(transformedJobs)
+          if (append) {
+            const updatedJobs = [...jobs, ...transformedJobs]
+            setJobs(updatedJobs)
+            saveJobsToCache(updatedJobs)
+          } else {
+            setJobs(transformedJobs)
+            saveJobsToCache(transformedJobs)
+          }
+
           setShowPlaceholderNotice(false) // Don't show placeholder notice
-          if (transformedJobs.length > 0 && !selectedJob) {
+          setHasMore(transformedJobs.length >= 30)
+          setCurrentPage(page)
+
+          if (!append && transformedJobs.length > 0 && !selectedJob) {
             setSelectedJob(transformedJobs[0])
           }
         }
@@ -575,8 +731,26 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
       // No fallback - show empty state as requested
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
+
+  // Load more jobs
+  const loadMoreJobs = () => {
+    if (!loadingMore && hasMore) {
+      fetchJobs(currentPage + 1, true)
+    }
+  }
+
+  // Poll for tailored job status updates every 30 seconds
+  React.useEffect(() => {
+    const pollInterval = setInterval(() => {
+      // Silently fetch tailored status in background
+      fetchTailoredJobs()
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [])
 
   const toggleSaveJob = (jobId: string) => {
     setSavedJobs(prev => {
@@ -1073,10 +1247,31 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
           <AnimatePresence mode="popLayout">
             {loading ? (
               <div className="flex items-center justify-center py-20">
-                <div className="space-y-3 text-center">
-                  <div className="w-12 h-12 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-gray-600 text-sm">Finding matches...</p>
-                </div>
+                <motion.div
+                  className="relative"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Outer spinning circle */}
+                  <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+
+                  {/* Inner pulsing dot */}
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-center"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <div className="w-4 h-4 bg-blue-600 rounded-full" />
+                  </motion.div>
+                </motion.div>
               </div>
             ) : filteredJobs.length === 0 ? (
               <div className="flex items-center justify-center py-20">
@@ -1142,45 +1337,19 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           {/* Title and Score - Same Line */}
                           <div className="flex items-start justify-between mb-0.5">
                             <h3 className="font-medium text-gray-900 text-xs truncate pr-1 leading-tight">{job.title}</h3>
-                            {(job.match_score || job.match_score === 0) && (() => {
-                              // Use enhanced score if available
-                              const displayScore = ('enhancedMatchScore' in job ? job.enhancedMatchScore : job.match_score) || job.match_score;
-                              const isEnhanced = 'enhancedMatchScore' in job && job.enhancedMatchScore !== job.match_score;
-                              
-                              return (
-                                <motion.div 
-                                  className={cn(
-                                    "px-1.5 py-0.5 rounded-full text-xs font-bold flex-shrink-0 flex items-center gap-0.5 border",
-                                    getMatchScoreColor(displayScore),
-                                    getMatchScoreTextColor(displayScore),
-                                    job.is_placeholder_score 
-                                      ? "border-white/30 border-dashed" 
-                                      : "border-white/20",
-                                    isEnhanced && "ring-1 ring-emerald-300" // Subtle indicator for enhanced scores
-                                  )}
-                                  initial={{ scale: 0.8, opacity: 0 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ duration: 0.2, delay: 0.1 }}
-                                  title={`${getMatchScoreTooltip(displayScore, job.is_placeholder_score, job.title)}${isEnhanced ? ' (Enhanced with real distance data)' : ''}`}
-                                >
-                                  {job.is_placeholder_score ? (
-                                    <Target className="w-2 h-2" />
-                                  ) : displayScore === 0 ? (
-                                    <X className="w-2 h-2" />
-                                  ) : isEnhanced ? (
-                                    <MapPin className="w-2 h-2" />
-                                  ) : (
-                                    <Sparkles className="w-2 h-2" />
-                                  )}
-                                  <>
-                                    {displayScore}%
-                                    {job.is_placeholder_score && (
-                                      <span className="text-xs opacity-75">*</span>
-                                    )}
-                                  </>
-                                </motion.div>
-                              );
-                            })()}
+                            {(job.match_score || job.match_score === 0) && (
+                              <MatchScore
+                                score={job.match_score}
+                                size="sm"
+                                showLabel={false}
+                                breakdown={job.matchCalculation ? {
+                                  skills: Math.round((job.matchCalculation.skillsOverlap?.score || 0) * 100),
+                                  tools: Math.round((job.matchCalculation.toolsOverlap?.score || 0) * 100),
+                                  language: Math.round((job.matchCalculation.languageFit?.score || 0) * 100),
+                                  location: Math.round((job.matchCalculation.locationFit?.score || 0) * 100)
+                                } : undefined}
+                              />
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-1 mb-0.5">
@@ -1323,6 +1492,31 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     </motion.div>
                   </motion.div>
                 ))}
+
+                {/* Load More Button */}
+                {hasMore && !loading && filteredJobs.length > 0 && (
+                  <div className="p-4 flex justify-center border-t border-gray-100">
+                    <Button
+                      onClick={loadMoreJobs}
+                      disabled={loadingMore}
+                      variant="outline"
+                      size="sm"
+                      className="w-full max-w-xs"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mr-2" />
+                          Loading more jobs...
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-4 h-4 mr-2" />
+                          Load More Jobs
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </AnimatePresence>
@@ -1394,34 +1588,17 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     {/* Compact Badges */}
                     <div className="flex flex-wrap gap-1">
                       {(selectedJob.match_score || selectedJob.match_score === 0) && (
-                        <motion.div 
-                          className={cn(
-                            "px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border",
-                            getMatchScoreColor(selectedJob.match_score),
-                            getMatchScoreTextColor(selectedJob.match_score),
-                            selectedJob.is_placeholder_score 
-                              ? "border-white/40 border-dashed" 
-                              : "border-white/30"
-                          )}
-                          initial={{ scale: 0.9, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ duration: 0.3 }}
-                          title={getMatchScoreTooltip(selectedJob.match_score, selectedJob.is_placeholder_score, selectedJob.title)}
-                        >
-                          {selectedJob.is_placeholder_score ? (
-                            <Target className="w-3 h-3" />
-                          ) : selectedJob.match_score === 0 ? (
-                            <X className="w-3 h-3" />
-                          ) : (
-                            <Sparkles className="w-3 h-3" />
-                          )}
-                          <>
-                            <span className="font-extrabold">{selectedJob.match_score}%</span>
-                            <span className="text-xs opacity-90">
-                              {getMatchScoreDescription(selectedJob.match_score, selectedJob.is_placeholder_score)}
-                            </span>
-                          </>
-                        </motion.div>
+                        <MatchScore
+                          score={selectedJob.match_score}
+                          size="md"
+                          showLabel={true}
+                          breakdown={selectedJob.matchCalculation ? {
+                            skills: Math.round((selectedJob.matchCalculation.skillsOverlap?.score || 0) * 100),
+                            tools: Math.round((selectedJob.matchCalculation.toolsOverlap?.score || 0) * 100),
+                            language: Math.round((selectedJob.matchCalculation.languageFit?.score || 0) * 100),
+                            location: Math.round((selectedJob.matchCalculation.locationFit?.score || 0) * 100)
+                          } : undefined}
+                        />
                       )}
                       {selectedJob.work_mode && selectedJob.work_mode !== 'Unknown' && (
                         <Badge variant="outline" className="gap-0.5 text-xs h-5 px-1.5">
@@ -1482,7 +1659,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                         </Button>
                       </Link>
                     ) : (
-                      <AITailorButton jobId={selectedJob.id} />
+                      <AITailorButton
+                        jobId={selectedJob.id}
+                        isTailored={tailoredJobs.has(selectedJob.id)}
+                        matchScore={tailoredJobs.get(selectedJob.id)?.match_score}
+                      />
                     )}
 
                     <Button
@@ -1636,7 +1817,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 const mc = (selectedJob as any).matchCalculation;
                                 if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
                                   if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
-                                    // eslint-disable-next-line no-console
+                                     
                                     console.debug('[match.debug] server overlap', {
                                       jobId: (selectedJob as any).id,
                                       skillsMatched: mc.skillsOverlap.matched.slice(0, 5),
@@ -1659,7 +1840,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 const jobSkills = Array.isArray(rawJobSkills) ? rawJobSkills.map((s: any) => String(s).toLowerCase().trim()) : [];
                                 const matchingSkills = jobSkills.filter(jobSkill => normalizedUserSkills.some(userSkill => userSkill === jobSkill || userSkill.includes(jobSkill) || jobSkill.includes(userSkill)));
                                 if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
-                                  // eslint-disable-next-line no-console
+                                   
                                   console.debug('[match.debug] fallback overlap', {
                                     jobId: (selectedJob as any).id,
                                     userSkills: normalizedUserSkills.slice(0, 5),

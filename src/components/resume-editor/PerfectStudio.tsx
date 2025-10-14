@@ -1182,7 +1182,8 @@ export function PerfectStudio({
     localData,
     activeTemplate,
     resumeData,
-    showSkillLevelsInResume
+    showSkillLevelsInResume,
+    variantId
   })
 
   // Add skill with enter key
@@ -1471,7 +1472,6 @@ export function PerfectStudio({
                 suggestions={suggestionsEnabled ? getSuggestionsForSection('skills') : []}
                 onAcceptSuggestion={acceptSuggestion}
                 onDeclineSuggestion={declineSuggestion}
-                mode={mode}
                 onLanguagesChange={(updatedLanguages) => {
                   console.log('🌍 Language change callback triggered:', updatedLanguages)
                   // Update localData to keep it in sync

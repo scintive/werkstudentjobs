@@ -195,11 +195,11 @@ class TailorAnalysisService {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      console.log(`🔄 Updating suggestion ${suggestionId} to status ${action}`)
+      console.log(`🔄 Updating suggestion ${suggestionId} to ${action}`)
       const { error } = await supabase
         .from('resume_suggestions')
-        .update({ 
-          status: action === 'accept' ? 'accepted' : 'declined',
+        .update({
+          accepted: action === 'accept' ? true : false,
           applied_at: new Date().toISOString()
         })
         .eq('id', suggestionId)

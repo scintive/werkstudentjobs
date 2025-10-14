@@ -59,7 +59,7 @@ class ResumeVariantService {
   ): Promise<ResumeVariant | null> {
     try {
       // First, try to get existing variant
-      let query = supabase
+      const query = supabase
         .from('resume_variants')
         .select('*')
         .eq('base_resume_id', baseResumeId)

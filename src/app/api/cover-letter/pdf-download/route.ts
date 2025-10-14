@@ -17,6 +17,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate filename: UserFullName_CompanyName_CoverLetter.pdf
+    const userName = (userProfile.personalInfo?.name || userProfile.name || 'User')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    const companyName = (job.companies?.name || job.company_name || 'Company')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    const filename = `${userName}_${companyName}_CoverLetter.pdf`;
+
+    console.log('📄 Cover letter filename:', filename);
+
     // Generate HTML from template
     const html = generateCoverLetterHTML(coverLetter, userProfile, job, template);
 
@@ -43,11 +56,11 @@ export async function POST(request: NextRequest) {
 
     await browser.close();
 
-    // Return PDF
+    // Return PDF with proper filename
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Cover_Letter_${job.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`
+        'Content-Disposition': `attachment; filename="${filename}"`
       }
     });
 
@@ -84,7 +97,7 @@ function generateProfessionalTemplate(coverLetter: any, userProfile: any, job: a
   // Extract user info from either personalInfo object or direct properties
   const userName = userProfile.personalInfo?.name || userProfile.name || 'Your Name';
   const userEmail = userProfile.personalInfo?.email || userProfile.email || 'email@example.com';
-  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '+49 XXX XXX XXXX';
+  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '';
   const userLocation = userProfile.personalInfo?.location || userProfile.location || 'Your City, Germany';
 
   return `
@@ -187,7 +200,7 @@ function generateProfessionalTemplate(coverLetter: any, userProfile: any, job: a
         <div class="sender">
           <h1>${userName}</h1>
           <div class="sender-details">
-            ${userEmail} • ${userPhone}<br>
+            ${userEmail}${userPhone ? ` • ${userPhone}` : ''}<br>
             ${userLocation}
           </div>
         </div>
@@ -230,7 +243,7 @@ function generateModernTemplate(coverLetter: any, userProfile: any, job: any): s
   // Extract user info from either personalInfo object or direct properties
   const userName = userProfile.personalInfo?.name || userProfile.name || 'Your Name';
   const userEmail = userProfile.personalInfo?.email || userProfile.email || 'email@example.com';
-  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '+49 XXX XXX XXXX';
+  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '';
   const userLocation = userProfile.personalInfo?.location || userProfile.location || 'Your City, Germany';
 
   return `
@@ -341,7 +354,7 @@ function generateModernTemplate(coverLetter: any, userProfile: any, job: any): s
         <h1>${userName}</h1>
         <div class="sidebar-details">
           <p>${userEmail}</p>
-          <p>${userPhone}</p>
+          ${userPhone ? `<p>${userPhone}</p>` : ''}
           <p>${userLocation}</p>
         </div>
       </div>
@@ -380,7 +393,7 @@ function generateElegantTemplate(coverLetter: any, userProfile: any, job: any): 
   // Extract user info from either personalInfo object or direct properties
   const userName = userProfile.personalInfo?.name || userProfile.name || 'Your Name';
   const userEmail = userProfile.personalInfo?.email || userProfile.email || 'email@example.com';
-  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '+49 XXX XXX XXXX';
+  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '';
   const userLocation = userProfile.personalInfo?.location || userProfile.location || 'Your City, Germany';
 
   return `
@@ -480,7 +493,7 @@ function generateElegantTemplate(coverLetter: any, userProfile: any, job: any): 
       <div class="header">
         <h1>${userName}</h1>
         <div class="header-details">
-          ${userEmail} • ${userPhone} • ${userLocation}
+          ${userEmail}${userPhone ? ` • ${userPhone}` : ''} • ${userLocation}
         </div>
       </div>
 
@@ -516,7 +529,7 @@ function generateMinimalTemplate(coverLetter: any, userProfile: any, job: any): 
   // Extract user info from either personalInfo object or direct properties
   const userName = userProfile.personalInfo?.name || userProfile.name || 'Your Name';
   const userEmail = userProfile.personalInfo?.email || userProfile.email || 'email@example.com';
-  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '+49 XXX XXX XXXX';
+  const userPhone = userProfile.personalInfo?.phone || userProfile.phone || '';
 
   return `
     <!DOCTYPE html>
@@ -578,7 +591,7 @@ function generateMinimalTemplate(coverLetter: any, userProfile: any, job: any): 
       <div class="header">
         <h1>${userName}</h1>
         <div class="header-details">
-          ${userEmail} • ${userPhone}
+          ${userEmail}${userPhone ? ` • ${userPhone}` : ''}
         </div>
       </div>
 
