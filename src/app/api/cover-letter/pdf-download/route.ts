@@ -1,11 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+
+// Lazy import puppeteer to avoid bundling issues
+let _puppeteer: any = null;
+let _chromium: any = null;
+
+async function getPuppeteer() {
+  if (_puppeteer) return _puppeteer;
+  try {
+    _puppeteer = (await import('puppeteer')).default;
+  } catch (e) {
+    console.error('🐛 Failed to import puppeteer (cover letter):', e);
+    throw new Error('Puppeteer not available');
+  }
+  return _puppeteer;
+}
+
+async function getChromium() {
+  if (_chromium) return _chromium;
+  try {
+    _chromium = await import('@sparticuz/chromium');
+  } catch (e) {
+    console.log('⚠️ @sparticuz/chromium not available, using default Chrome');
+    return null;
+  }
+  return _chromium;
+}
 
 /**
  * POST /api/cover-letter/pdf-download
  * Generate beautiful PDF from cover letter with professional templates
  */
 export async function POST(request: NextRequest) {
+  let browser;
+  
   try {
     const body = await request.json();
     const { coverLetter, userProfile, job, template = 'professional' } = body;
@@ -33,11 +60,31 @@ export async function POST(request: NextRequest) {
     // Generate HTML from template
     const html = generateCoverLetterHTML(coverLetter, userProfile, job, template);
 
-    // Launch headless browser
-    const browser = await puppeteer.launch({
+    // Launch Puppeteer with serverless Chrome if on Vercel
+    const puppeteer = await getPuppeteer();
+    const chromium = await getChromium();
+    
+    const launchOptions: any = {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+      args: chromium 
+        ? await chromium.args
+        : [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+          ]
+    };
+
+    // Use serverless Chrome executable on Vercel
+    if (chromium) {
+      launchOptions.executablePath = await chromium.executablePath();
+    }
+
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -54,8 +101,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    await browser.close();
-
     // Return PDF with proper filename
     return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {
@@ -70,6 +115,10 @@ export async function POST(request: NextRequest) {
       { error: 'PDF generation failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 

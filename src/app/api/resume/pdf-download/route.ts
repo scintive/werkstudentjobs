@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
 // Lazy import puppeteer to avoid bundling/runtime issues
 let _puppeteer: any = null;
+let _chromium: any = null;
+
 async function getPuppeteer() {
   if (_puppeteer) return _puppeteer;
   try {
@@ -14,6 +17,18 @@ async function getPuppeteer() {
   }
   return _puppeteer;
 }
+
+async function getChromium() {
+  if (_chromium) return _chromium;
+  try {
+    _chromium = await import('@sparticuz/chromium');
+  } catch (e) {
+    console.log('⚠️ @sparticuz/chromium not available, using default Chrome');
+    return null;
+  }
+  return _chromium;
+}
+
 import type { ResumeData } from '@/lib/types';
 
 /**
@@ -122,21 +137,32 @@ export async function GET(request: NextRequest) {
 
     const htmlContent = html as string;
 
-    // Launch Puppeteer
+    // Launch Puppeteer with serverless Chrome if on Vercel
     const puppeteer = await getPuppeteer();
-    browser = await puppeteer.launch({
+    const chromium = await getChromium();
+    
+    const launchOptions: any = {
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-features=VizDisplayCompositor'
-      ]
-    });
+      args: chromium 
+        ? await chromium.args
+        : [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--disable-features=VizDisplayCompositor'
+          ]
+    };
+
+    // Use serverless Chrome executable on Vercel
+    if (chromium) {
+      launchOptions.executablePath = await chromium.executablePath();
+    }
+
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, {
@@ -239,21 +265,32 @@ export async function POST(request: NextRequest) {
 
     console.log('PDF Generation: Generated HTML, length:', htmlContent.length);
 
-    // Launch Puppeteer with the same settings as prototype-cli
+    // Launch Puppeteer with serverless Chrome if on Vercel
     const puppeteer = await getPuppeteer();
-    browser = await puppeteer.launch({
+    const chromium = await getChromium();
+    
+    const launchOptions: any = {
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-features=VizDisplayCompositor'
-      ]
-    });
+      args: chromium 
+        ? await chromium.args
+        : [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--disable-features=VizDisplayCompositor'
+          ]
+    };
+
+    // Use serverless Chrome executable on Vercel
+    if (chromium) {
+      launchOptions.executablePath = await chromium.executablePath();
+    }
+
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     

@@ -139,7 +139,7 @@ else:
     console.log('🔄 Processing jobs through GPT pipeline...');
 
     // Call the import-jobspy endpoint
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTJS_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const importResponse = await fetch(`${baseUrl}/api/jobs/import-jobspy`, {
       method: 'POST',
       headers: {

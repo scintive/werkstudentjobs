@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
     if (!student_profile && user_profile_id) {
       if (user_profile_id === 'latest') {
         // Use the profile API to get the latest profile
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXTJS_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
         // Get auth header from request
         const authHeader = request.headers.get('authorization');
