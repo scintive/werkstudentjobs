@@ -31,21 +31,18 @@ export function generateImpactResumeHTML(data: any): string {
 
         /* Page break optimization */
         .section {
-            page-break-inside: auto;
-            break-inside: auto;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .experience-item, .project-item, .education-item, .certification-item, .custom-item {
             page-break-inside: avoid;
             break-inside: avoid;
-            margin-bottom: 4mm;
         }
 
         .section-header {
             page-break-after: avoid;
             break-after: avoid;
-            page-break-before: auto;
-            break-before: auto;
         }
 
         /* Prevent orphans and widows */
@@ -54,24 +51,20 @@ export function generateImpactResumeHTML(data: any): string {
             widows: 2;
         }
 
-        /* Allow natural page breaks */
+        /* Ensure columns don't split awkwardly on page breaks */
         .content-grid {
             page-break-inside: auto;
-            break-inside: auto;
         }
 
         .left-column, .right-column {
             page-break-inside: auto;
-            break-inside: auto;
         }
 
-        /* Reduce spacing at top of sections */
-        .section {
-            margin-bottom: 5mm;
-        }
-
-        .section:first-child {
-            margin-top: 0;
+        /* Add space at top of new pages */
+        @media print {
+            .section:first-child {
+                margin-top: 0;
+            }
         }
         
         body {
@@ -198,7 +191,7 @@ export function generateImpactResumeHTML(data: any): string {
         /* Ensure proper spacing when page breaks occur */
         @media print {
             .left-column, .right-column {
-                padding-top: 6mm;
+                padding-top: 0;
             }
 
             .content-grid {

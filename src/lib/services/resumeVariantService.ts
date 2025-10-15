@@ -150,7 +150,8 @@ class ResumeVariantService {
   async updateVariant(
     variantId: string,
     tailoredData: any,
-    appliedSuggestions?: string[]
+    appliedSuggestions?: string[],
+    template?: string
   ): Promise<boolean> {
     try {
       // Ensure we scope the update by the current user to satisfy RLS policies
@@ -167,6 +168,10 @@ class ResumeVariantService {
 
       if (appliedSuggestions) {
         updateData.applied_suggestions = appliedSuggestions;
+      }
+
+      if (template) {
+        updateData.template = template;
       }
 
       const { error } = await supabase

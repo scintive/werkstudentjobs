@@ -172,8 +172,8 @@ export function SupabaseResumeProvider({
             return name ? (level ? `${name} (${level})` : name) : ''
           }).filter(Boolean)
           normalized.skills = { ...(normalized.skills || {}), languages: skillsLanguages }
-          await resumeVariantService.updateVariant(variantId, normalized);
-          console.log(`✅ Tailored variant ${variantId} saved.`);
+          await resumeVariantService.updateVariant(variantId, normalized, undefined, template);
+          console.log(`✅ Tailored variant ${variantId} saved with template: ${template}`);
         } else {
           console.warn('⚠️ Skipped saving tailored resume: variantId not available yet.');
           // Do not save, as we don't want to overwrite the base resume.
