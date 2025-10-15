@@ -323,12 +323,12 @@ function TailorApplicationPage() {
     }
   }, [job, resumeData, resumeId]);
 
-  // Load existing cover letter when variant is ready (instant loading from Supabase)
+  // Load existing cover letter when variant is ready or when switching to cover-letter tab
   useEffect(() => {
-    if (variantId && !coverLetter && !loading.letter) {
+    if (variantId && !coverLetter && !loading.letter && activeTab === 'cover-letter') {
       loadExistingCoverLetter();
     }
-  }, [variantId]);
+  }, [variantId, activeTab]);
   
   const loadJobData = async () => {
     try {
