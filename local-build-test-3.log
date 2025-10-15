@@ -1,0 +1,107 @@
+
+> visual-app@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.0
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 7.7s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/57) ...
+   Generating static pages (14/57) 
+   Generating static pages (28/57) 
+   Generating static pages (42/57) 
+Failed to fetch stats: TypeError: Failed to parse URL from /api/jobs/geocode-existing
+    at <unknown> (.next/server/chunks/4586.js:22:54351)
+    at $ (.next/server/chunks/4586.js:1:9653)
+    at <unknown> (.next/server/chunks/4586.js:1:12182)
+    at async i (.next/server/app/admin/geocode/page.js:1:1097) {
+  [cause]: TypeError: Invalid URL
+      at <unknown> (.next/server/chunks/4586.js:22:54351)
+      at $ (.next/server/chunks/4586.js:1:9653)
+      at <unknown> (.next/server/chunks/4586.js:1:12182)
+      at async i (.next/server/app/admin/geocode/page.js:1:1097) {
+    code: 'ERR_INVALID_URL',
+    input: '/api/jobs/geocode-existing'
+  }
+}
+ ✓ Generating static pages (57/57)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    6.17 kB         194 kB
+├ ○ /_not-found                             1 kB         103 kB
+├ ○ /admin                               1.44 kB         107 kB
+├ ○ /admin/geocode                       2.15 kB         104 kB
+├ ƒ /api/application-kit                   250 B         102 kB
+├ ƒ /api/auth/admin/confirm                250 B         102 kB
+├ ƒ /api/auth/login                        250 B         102 kB
+├ ƒ /api/auth/register                     250 B         102 kB
+├ ƒ /api/auth/session                      250 B         102 kB
+├ ƒ /api/cover-letter/pdf-download         250 B         102 kB
+├ ƒ /api/cron/fetch-jobs                   250 B         102 kB
+├ ƒ /api/jobs/analyze                      250 B         102 kB
+├ ƒ /api/jobs/analyze-student              250 B         102 kB
+├ ƒ /api/jobs/analyze-with-tailoring       250 B         102 kB
+├ ƒ /api/jobs/applied-status               250 B         102 kB
+├ ƒ /api/jobs/cover-letter                 250 B         102 kB
+├ ƒ /api/jobs/details                      250 B         102 kB
+├ ƒ /api/jobs/fetch                        250 B         102 kB
+├ ƒ /api/jobs/geocode-existing             250 B         102 kB
+├ ƒ /api/jobs/import-apify                 250 B         102 kB
+├ ƒ /api/jobs/import-jobspy                250 B         102 kB
+├ ƒ /api/jobs/latest                       250 B         102 kB
+├ ƒ /api/jobs/match-scores                 250 B         102 kB
+├ ƒ /api/jobs/scrape-latest                250 B         102 kB
+├ ƒ /api/jobs/strategy                     250 B         102 kB
+├ ƒ /api/jobs/strategy-student             250 B         102 kB
+├ ƒ /api/jobs/tailored-status              250 B         102 kB
+├ ƒ /api/jobs/update-applied-status        250 B         102 kB
+├ ƒ /api/links/keywords                    250 B         102 kB
+├ ƒ /api/links/verify                      250 B         102 kB
+├ ƒ /api/location/geocode                  250 B         102 kB
+├ ƒ /api/profile/extract                   250 B         102 kB
+├ ƒ /api/profile/latest                    250 B         102 kB
+├ ƒ /api/profile/resolve                   250 B         102 kB
+├ ƒ /api/resume/pdf-download               250 B         102 kB
+├ ƒ /api/resume/preview                    250 B         102 kB
+├ ƒ /api/resume/rewrite-student-bullets    250 B         102 kB
+├ ƒ /api/share/[token]                     250 B         102 kB
+├ ƒ /api/share/create                      250 B         102 kB
+├ ƒ /api/skills/category-suggest           250 B         102 kB
+├ ƒ /api/skills/enhance                    250 B         102 kB
+├ ƒ /api/skills/organize                   250 B         102 kB
+├ ƒ /api/skills/suggest                    250 B         102 kB
+├ ƒ /api/universities/search               250 B         102 kB
+├ ƒ /api/version                           250 B         102 kB
+├ ○ /dashboard                           10.6 kB         188 kB
+├ ○ /datenschutz                           169 B         105 kB
+├ ○ /edit-resume                           743 B         257 kB
+├ ○ /help                                3.73 kB         113 kB
+├ ○ /impressum                             169 B         105 kB
+├ ○ /jobs                                27.4 kB         289 kB
+├ ƒ /jobs/[id]                             618 B         154 kB
+├ ƒ /jobs/[id]/tailor                    21.9 kB         285 kB
+├ ○ /login                               3.85 kB         156 kB
+├ ○ /logout                                748 B         142 kB
+├ ○ /onboarding                          15.3 kB         208 kB
+├ ○ /privacy                             4.36 kB         106 kB
+├ ○ /register                            4.13 kB         156 kB
+├ ○ /reset-password                      1.36 kB         142 kB
+├ ○ /settings                            8.45 kB         167 kB
+├ ƒ /share/[token]                       2.44 kB         104 kB
+├ ○ /terms                               4.65 kB         107 kB
+└ ○ /upload                              7.91 kB         192 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/1255-20045df290cc858c.js      45.7 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
+  └ other shared chunks (total)          2.02 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

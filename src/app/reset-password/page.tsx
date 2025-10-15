@@ -1,10 +1,14 @@
 'use client'
 
 import * as React from 'react'
+import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 
-export default function ResetPasswordPage() {
+// Force dynamic rendering to prevent build-time errors with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function ResetPasswordForm() {
   const [password, setPassword] = React.useState('')
   const [confirm, setConfirm] = React.useState('')
   const [message, setMessage] = React.useState<string | null>(null)
@@ -58,6 +62,18 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-50">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
 

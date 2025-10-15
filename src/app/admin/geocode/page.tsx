@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic';
+
 export default function GeocodePage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [stats, setStats] = useState<any>(null);
