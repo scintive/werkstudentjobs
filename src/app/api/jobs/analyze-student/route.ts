@@ -99,21 +99,21 @@ export async function POST(request: NextRequest) {
     // Create compact context for student-focused AI analysis
     const compactContext = {
       job: {
-        title: jobData.title,
-        company: jobData.company_name || 'Unknown',
+        title: (jobData as any).title,
+        company: (jobData as any).company_name || 'Unknown',
         must_haves: [
-          ...(jobData.skills || []),
-          ...(jobData.tools || []),
-          ...(jobData.responsibilities || [])
+          ...((jobData as any).skills || []),
+          ...((jobData as any).tools || []),
+          ...((jobData as any).responsibilities || [])
         ].slice(0, 8),
-        nice_to_haves: (jobData.nice_to_have || []).slice(0, 6),
-        work_mode: jobData.work_mode,
-        location: jobData.location_city,
-        language: jobData.language_required || jobData.german_required,
-        hours_per_week: jobData.hours_per_week || '15-20',
-        is_werkstudent: jobData.title?.toLowerCase().includes('werkstudent') || 
-                        jobData.title?.toLowerCase().includes('working student') ||
-                        jobData.title?.toLowerCase().includes('praktikum')
+        nice_to_haves: ((jobData as any).nice_to_have || []).slice(0, 6),
+        work_mode: (jobData as any).work_mode,
+        location: (jobData as any).location_city,
+        language: (jobData as any).language_required || (jobData as any).german_required,
+        hours_per_week: (jobData as any).hours_per_week || '15-20',
+        is_werkstudent: (jobData as any).title?.toLowerCase().includes('werkstudent') ||
+                        (jobData as any).title?.toLowerCase().includes('working student') ||
+                        (jobData as any).title?.toLowerCase().includes('praktikum')
       },
       student: {
         degree: profileData.degree_program || 'Computer Science',
@@ -236,8 +236,8 @@ OUTPUT SCHEMA:
       const strategyData = JSON.parse(aiResponse.choices?.[0]?.message?.content || '{}');
       
       // Add German keywords to ATS keywords if job is in Germany
-      if (jobData.location_country?.toLowerCase().includes('germany') || 
-          jobData.language_required?.includes('DE')) {
+      if ((jobData as any).location_country?.toLowerCase().includes('germany') ||
+          (jobData as any).language_required?.includes('DE')) {
         strategyData.ats_keywords = [
           ...(strategyData.ats_keywords || []),
           ...germanKeywords.slice(0, 5)
@@ -276,8 +276,8 @@ OUTPUT SCHEMA:
         strategy,
         cached: false,
         context: {
-          job_title: jobData.title,
-          company: jobData.company_name,
+          job_title: (jobData as any).title,
+          company: (jobData as any).company_name,
           is_werkstudent: compactContext.job.is_werkstudent,
           coursework_matches: strategy.coursework_alignment.length,
           project_matches: strategy.project_alignment.length,

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     await browser.close();
 
     // Return PDF with proper filename
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`

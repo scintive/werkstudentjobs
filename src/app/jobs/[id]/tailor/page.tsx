@@ -495,15 +495,24 @@ function TailorApplicationPage() {
       let existingVariantId: string | null = null;
       if (existingVariants && existingVariants.length > 0) {
         existingVariantId = existingVariants[0].id;
-        console.log('✅ UPFRONT ANALYSIS: Found existing variant, will refresh analysis:', existingVariantId);
+        console.log('✅ UPFRONT ANALYSIS: Found existing variant, loading from database:', existingVariantId);
         setVariantId(existingVariantId);
         setCurrentVariantId(existingVariantId);
-      } else {
-        console.log('🚀 UPFRONT ANALYSIS: No existing variant, creating new one...');
+
+        // Load existing job analysis if available
+        if (existingVariants[0].job_analysis) {
+          setJobAnalysis(existingVariants[0].job_analysis);
+          console.log('✅ Loaded job analysis from existing variant');
+        }
+
+        // Mark as complete immediately - no need to re-run GPT
+        setPreAnalysisComplete(true);
+        setLoading(prev => ({ ...prev, preAnalysis: false }));
+        return; // Exit early - variant already exists!
       }
 
-      // ALWAYS run fresh analysis to get latest GPT recommendations (including new course recommendations)
-      console.log('🎯 UPFRONT ANALYSIS: Running fresh GPT analysis...');
+      // Only run GPT analysis if NO variant exists
+      console.log('🚀 UPFRONT ANALYSIS: No existing variant, running fresh GPT analysis...');
 
       const analyzeResp = await fetch('/api/jobs/analyze-with-tailoring', {
         method: 'POST',

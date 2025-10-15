@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    const profile = profiles[0]
+    const profile = profiles[0] as any
     console.log('🔐 AUTH: Found profile for', profile.name, 'with session:', profile.session_id)
     
     // Create session response

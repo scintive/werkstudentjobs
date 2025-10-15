@@ -238,7 +238,7 @@ const applySkillsCategoryPlan = ({
         });
       }
 
-      if (normalizedStatus === 'remove' || normalizedStatus === 'retire') {
+      if (normalizedStatus === 'remove') {
         const canonicalForRemoval = baseEntry?.canonicalCategory || canonicalKey;
       removalsForSuggestions.push({
         canonicalKey: canonicalForRemoval,
@@ -438,7 +438,7 @@ ${JSON.stringify(resume.skills || {}, null, 2)}
       retries: 1
     });
 
-    if (!plan || !Array.isArray(plan?.categories) || plan.categories.length === 0) {
+    if (!plan || !Array.isArray((plan as any)?.categories) || (plan as any).categories.length === 0) {
       console.warn('⚠️ Skill plan fallback returned empty categories');
       return null;
     }
@@ -612,7 +612,7 @@ export async function POST(request: NextRequest) {
       .from('resume_data')
       .select('*')
       .eq('id', base_resume_id)
-      .eq('user_id', userId)
+      .eq('user_id', userId as any)
       .single();
     
     if (resumeError) {
@@ -667,18 +667,18 @@ export async function POST(request: NextRequest) {
       user_id: userId,
       session_id: null,
       tailored_data: {
-        personalInfo: baseResume.personal_info,
-        professionalTitle: baseResume.professional_title,
-        professionalSummary: baseResume.professional_summary,
-        enableProfessionalSummary: baseResume.enable_professional_summary,
-        skills: baseResume.skills || {},
-        experience: baseResume.experience || [],
-        education: baseResume.education || [],
-        projects: baseResume.projects || [],
-        certifications: baseResume.certifications || [],
-        customSections: baseResume.custom_sections || [],
+        personalInfo: (baseResume as any).personal_info,
+        professionalTitle: (baseResume as any).professional_title,
+        professionalSummary: (baseResume as any).professional_summary,
+        enableProfessionalSummary: (baseResume as any).enable_professional_summary,
+        skills: (baseResume as any).skills || {},
+        experience: (baseResume as any).experience || [],
+        education: (baseResume as any).education || [],
+        projects: (baseResume as any).projects || [],
+        certifications: (baseResume as any).certifications || [],
+        customSections: (baseResume as any).custom_sections || [],
         languages: (baseResume as any).languages || [],
-        photoUrl: baseResume.photo_url || null  // Copy photo from base resume to variant
+        photoUrl: (baseResume as any).photo_url || null  // Copy photo from base resume to variant
       },
       applied_suggestions: [],
       ats_keywords: [],
@@ -720,12 +720,12 @@ export async function POST(request: NextRequest) {
         .select('*')
         .eq('base_resume_id', base_resume_id)
         .eq('job_id', job_id)
-        .eq('user_id', userId)
+        .eq('user_id', userId as any)
         .single();
       
       if (existingVariant) {
-        console.log('🔄 Using existing variant after upsert failure:', existingVariant.id);
-        variant = existingVariant;
+        console.log('🔄 Using existing variant after upsert failure:', (existingVariant as any).id);
+        variant = existingVariant as any;
       } else {
         return NextResponse.json(
           {
@@ -736,11 +736,11 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      variant = upsertResult;
-      console.log('✅ Variant upserted successfully:', variant?.id);
+      variant = upsertResult as any;
+      console.log('✅ Variant upserted successfully:', (variant as any)?.id);
     }
-    
-    logContext.variant_id = variant.id;
+
+    logContext.variant_id = (variant as any).id;
     
     // 6a. CHECK IF VARIANT HAS EXISTING SUGGESTIONS (only pending ones, not accepted/declined)
     const { data: existingSuggestions, error: suggestionsError } = await db
@@ -828,19 +828,19 @@ export async function POST(request: NextRequest) {
       (Array.isArray(arr) ? arr.slice(0, max).map(v => trimText(v, maxItemLen)) : []);
 
     const trimmedJob = {
-      title: trimText(jobData.title, 140),
-      company: trimText(((jobData as any).companies?.name || jobData.company_name) || '', 140),
-      description: trimText(jobData.description, 1200),
-      responsibilities: trimArray(jobData.responsibilities_original, 10, 240),
-      requirements: trimArray(jobData.skills_original, 12, 120),
+      title: trimText((jobData as any).title, 140),
+      company: trimText(((jobData as any).companies?.name || (jobData as any).company_name) || '', 140),
+      description: trimText((jobData as any).description, 1200),
+      responsibilities: trimArray((jobData as any).responsibilities_original, 10, 240),
+      requirements: trimArray((jobData as any).skills_original, 12, 120),
       who_looking_for: trimArray((jobData as any).who_we_are_looking_for_original, 8, 200),
-      location: trimText(jobData.city, 80),
-      work_mode: jobData.work_mode,
-      is_werkstudent: !!(jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent'))
+      location: trimText((jobData as any).city, 80),
+      work_mode: (jobData as any).work_mode,
+      is_werkstudent: !!((jobData as any).is_werkstudent || (jobData as any).title?.toLowerCase().includes('werkstudent'))
     };
 
     // Include ALL experience roles (not just top 3)
-    const trimmedExperience = Array.isArray(baseResume.experience) ? baseResume.experience.map((e: any, idx: number) => ({
+    const trimmedExperience = Array.isArray((baseResume as any).experience) ? (baseResume as any).experience.map((e: any, idx: number) => ({
       company: trimText(e.company, 140),
       position: trimText(e.position, 140),
       duration: trimText(e.duration, 80),
@@ -854,23 +854,23 @@ export async function POST(request: NextRequest) {
       job: trimmedJob,
       resume: {
         personalInfo: {
-          name: trimText(baseResume.personal_info?.name, 140),
-          email: baseResume.personal_info?.email,
-          phone: baseResume.personal_info?.phone,
-          location: trimText(baseResume.personal_info?.location, 140),
-          linkedin: baseResume.personal_info?.linkedin,
-          website: baseResume.personal_info?.website
+          name: trimText((baseResume as any).personal_info?.name, 140),
+          email: (baseResume as any).personal_info?.email,
+          phone: (baseResume as any).personal_info?.phone,
+          location: trimText((baseResume as any).personal_info?.location, 140),
+          linkedin: (baseResume as any).personal_info?.linkedin,
+          website: (baseResume as any).personal_info?.website
         },
-        professionalTitle: trimText(baseResume.professional_title, 140),
-        professionalSummary: trimText(baseResume.professional_summary, 1000),
-        enableProfessionalSummary: baseResume.enable_professional_summary !== false, // Default to true
-        skills: baseResume.skills || {},
+        professionalTitle: trimText((baseResume as any).professional_title, 140),
+        professionalSummary: trimText((baseResume as any).professional_summary, 1000),
+        enableProfessionalSummary: (baseResume as any).enable_professional_summary !== false, // Default to true
+        skills: (baseResume as any).skills || {},
         experience: trimmedExperience,
-        education: Array.isArray(baseResume.education) ? baseResume.education : [],
-        projects: Array.isArray(baseResume.projects) ? baseResume.projects : [],
-        certifications: Array.isArray(baseResume.certifications) ? baseResume.certifications : [],
+        education: Array.isArray((baseResume as any).education) ? (baseResume as any).education : [],
+        projects: Array.isArray((baseResume as any).projects) ? (baseResume as any).projects : [],
+        certifications: Array.isArray((baseResume as any).certifications) ? (baseResume as any).certifications : [],
         languages: (baseResume as any).languages || [],
-        customSections: baseResume.custom_sections || []
+        customSections: (baseResume as any).custom_sections || []
       }
     };
     
@@ -1509,10 +1509,10 @@ Return your response as a valid JSON object only. Do not include any additional 
         // Quick non-GPT fallback: Use existing skill categories instead of expensive GPT call
         // This saves 2-3 seconds on first load
         console.log('⚡ Using fast skills plan fallback (no GPT)');
-        const existingCategories = Object.keys(baseResume.skills || {}).filter(cat => cat !== 'languages');
+        const existingCategories = Object.keys((baseResume as any).skills || {}).filter(cat => cat !== 'languages');
         analysisData.skills_category_plan = {
           categories: existingCategories.map((cat, idx) => {
-            const categorySkills = baseResume.skills[cat] || [];
+            const categorySkills = (baseResume as any).skills[cat] || [];
             return {
               canonical_key: cat.toLowerCase().replace(/\s+/g, '_'),
               display_name: cat,
@@ -1539,12 +1539,12 @@ Return your response as a valid JSON object only. Do not include any additional 
             recommendations: "Review job-specific skills"
           }
         };
-        console.log(`📊 Fallback created ${existingCategories.length} categories with ${existingCategories.reduce((sum, cat) => sum + (baseResume.skills[cat]?.length || 0), 0)} total skills`);
+        console.log(`📊 Fallback created ${existingCategories.length} categories with ${existingCategories.reduce((sum, cat) => sum + ((baseResume as any).skills[cat]?.length || 0), 0)} total skills`);
       }
 
       const planProcessingResult = applySkillsCategoryPlan({
         rawPlan: analysisData.skills_category_plan,
-        baseSkills: baseResume?.skills || {},
+        baseSkills: (baseResume as any)?.skills || {},
         modelSkills: analysisData.tailored_resume?.skills || {},
         existingSuggestionKeys: existingSkillSuggestionKeys
       });
@@ -1562,33 +1562,33 @@ Return your response as a valid JSON object only. Do not include any additional 
 
       // Safe merge with base resume - never drop populated base sections
       const tailoredResume = analysisData.tailored_resume;
-      const baseResumeData = baseResume; // baseResume is already the data object from Supabase
+      const baseResumeData = baseResume as any; // baseResume is already the data object from Supabase
       const finalTailored: any = {};
       
       // Personal info: merge if model's is empty/missing
       if (isEmptyObject(tailoredResume.personalInfo)) {
-        finalTailored.personalInfo = baseResumeData.personalInfo || {};
+        finalTailored.personalInfo = (baseResumeData as any).personalInfo || {};
       } else {
-        finalTailored.personalInfo = { ...baseResumeData.personalInfo, ...tailoredResume.personalInfo };
+        finalTailored.personalInfo = { ...(baseResumeData as any).personalInfo, ...tailoredResume.personalInfo };
       }
-      
+
       // Strings: use base if model returns empty (map DB field names)
-      finalTailored.professionalTitle = isEmptyString(tailoredResume.professionalTitle) ? 
-        (baseResumeData.professional_title || '') : tailoredResume.professionalTitle;
-      finalTailored.professionalSummary = isEmptyString(tailoredResume.professionalSummary) ? 
-        (baseResumeData.professional_summary || '') : tailoredResume.professionalSummary;
-      finalTailored.enableProfessionalSummary = tailoredResume.enableProfessionalSummary ?? 
-        baseResumeData.enable_professional_summary ?? true;
-      
+      finalTailored.professionalTitle = isEmptyString(tailoredResume.professionalTitle) ?
+        ((baseResumeData as any).professional_title || '') : tailoredResume.professionalTitle;
+      finalTailored.professionalSummary = isEmptyString(tailoredResume.professionalSummary) ?
+        ((baseResumeData as any).professional_summary || '') : tailoredResume.professionalSummary;
+      finalTailored.enableProfessionalSummary = tailoredResume.enableProfessionalSummary ??
+        (baseResumeData as any).enable_professional_summary ?? true;
+
       // Skills: merge with base, never drop categories, and normalize languages into array on top level too
       if (isEmptyObject(tailoredResume.skills)) {
-        finalTailored.skills = baseResumeData.skills || {};
+        finalTailored.skills = (baseResumeData as any).skills || {};
       } else if (hasCategoryPlan) {
         // When we have a category plan, start with base skills only
         // The plan will drive suggestions, not auto-populate skills
-        finalTailored.skills = baseResumeData.skills || {};
+        finalTailored.skills = (baseResumeData as any).skills || {};
       } else {
-        const baseSkills = baseResumeData.skills || {};
+        const baseSkills = (baseResumeData as any).skills || {};
         const modelSkills = tailoredResume.skills || {};
         finalTailored.skills = {};
 

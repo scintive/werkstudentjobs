@@ -1,0 +1,42 @@
+Welcome to WerkStudentJobs!
+=================================
+
+Hi there,
+
+Thank you for signing up with WerkStudentJobs! We're excited to help you find the perfect Werkstudent position and tailor your resume for success.
+
+To get started, please confirm your email address by visiting this link:
+
+{{ .ConfirmationURL }}
+
+🔒 SECURITY NOTICE:
+This link will expire in 24 hours. If you didn't create an account with us, you can safely ignore this email.
+
+---
+
+Once confirmed, you'll be able to:
+• 📄 Upload and extract your resume automatically
+• 🎯 Browse curated Werkstudent positions
+• ✨ Get AI-powered resume tailoring suggestions
+• 📊 Track your job applications
+• 💼 Export professional PDFs
+
+---
+
+Need help? Our support team is here for you at support@werkstudentjobs.com
+
+Best regards,
+The WerkStudentJobs Team
+
+---
+
+WerkStudentJobs - Your AI-Powered Job Application Assistant
+Website: https://werkstudentjobs.com
+Help Center: https://werkstudentjobs.com/help
+Privacy: https://werkstudentjobs.com/datenschutz
+Impressum: https://werkstudentjobs.com/impressum
+
+© 2025 WerkStudentJobs. All rights reserved.
+
+You're receiving this email because you signed up for WerkStudentJobs.
+This is an automated confirmation email. Please do not reply.

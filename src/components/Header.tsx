@@ -34,7 +34,21 @@ export default function Header() {
     <header className="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="font-bold text-gray-900">ResumeCraft AI</Link>
+          <Link href="/" className="flex items-center gap-3 group">
+            <img
+              src="/werkstudentjobslogo.png"
+              alt="WerkStudentJobs"
+              className="h-10 w-auto transition-transform duration-200 group-hover:scale-105"
+            />
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-2xl font-semibold tracking-normal text-blue-600">
+                WerkStudentJobs
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50/50 text-blue-600/60 border border-blue-200/30">
+                Free Preview
+              </span>
+            </div>
+          </Link>
           {email && (
             <nav className="hidden md:flex items-center gap-1">
               <NavLink href="/dashboard" label="Dashboard" />

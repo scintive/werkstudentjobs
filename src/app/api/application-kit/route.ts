@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     const zipBlob = await zip.generateAsync({ type: 'nodebuffer' });
 
-    return new NextResponse(zipBlob, {
+    return new NextResponse(zipBlob as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${userNameSanitized}_${jobTitleSanitized}_${companyNameSanitized}_ApplicationKit.zip"`,

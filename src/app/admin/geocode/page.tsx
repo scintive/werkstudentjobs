@@ -39,7 +39,7 @@ export default function GeocodePage() {
       }
     } catch (error) {
       setStatus('error');
-      setResults({ error: 'Network error', details: error.message });
+      setResults({ error: 'Network error', details: error instanceof Error ? error.message : String(error) });
     }
   };
 

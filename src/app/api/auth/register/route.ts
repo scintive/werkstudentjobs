@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         session_id: sessionId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      })
+      } as any)
       .select()
       .single()
     
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
       success: true,
       sessionId: sessionId,
       user: {
-        id: newProfile.id,
-        name: newProfile.name,
-        email: newProfile.email
+        id: (newProfile as any).id,
+        name: (newProfile as any).name,
+        email: (newProfile as any).email
       }
     })
     

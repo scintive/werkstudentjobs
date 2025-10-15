@@ -2,14 +2,17 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { Cookie } from 'lucide-react'
+import { useCookieConsent } from '@/lib/contexts/CookieConsentContext'
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear()
+  const { openSettings } = useCookieConsent()
 
   return (
     <footer className="mt-auto border-t bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
             <h3 className="font-semibold text-gray-900">WerkStudentJobs</h3>
@@ -45,7 +48,7 @@ export const Footer = () => {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Legal - English */}
           <div className="space-y-4">
             <h3 className="font-semibold text-gray-900">Legal</h3>
             <ul className="space-y-2">
@@ -58,6 +61,41 @@ export const Footer = () => {
                 <Link href="/terms" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
                   Terms of Service
                 </Link>
+              </li>
+              <li>
+                <button
+                  onClick={openSettings}
+                  className="text-sm text-gray-600 hover:text-blue-600 transition-colors flex items-center gap-1.5"
+                >
+                  <Cookie className="w-3.5 h-3.5" />
+                  Cookie Settings
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal - German */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-gray-900">Rechtliches</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/impressum" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                  Impressum
+                </Link>
+              </li>
+              <li>
+                <Link href="/datenschutz" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                  Datenschutzerklärung
+                </Link>
+              </li>
+              <li>
+                <button
+                  onClick={openSettings}
+                  className="text-sm text-gray-600 hover:text-blue-600 transition-colors flex items-center gap-1.5"
+                >
+                  <Cookie className="w-3.5 h-3.5" />
+                  Cookie-Einstellungen
+                </button>
               </li>
             </ul>
           </div>

@@ -158,12 +158,19 @@ export default function AppHeader() {
           {/* Logo and Desktop Navigation */}
           <div className="flex items-center">
             <Link href={email ? "/dashboard" : "/"} className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-lg">W</span>
+              <img
+                src="/werkstudentjobslogo.png"
+                alt="WerkStudentJobs"
+                className="h-12 w-auto transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="text-2xl font-semibold tracking-normal leading-none text-blue-600">
+                  WerkStudentJobs
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50/50 text-blue-600/60 border border-blue-200/30">
+                  Free Preview
+                </span>
               </div>
-              <span className="font-bold text-xl hidden sm:block bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
-                WerkStudentJobs
-              </span>
             </Link>
 
             {/* Desktop Navigation - Only show when authenticated */}
