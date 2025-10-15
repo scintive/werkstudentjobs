@@ -76,6 +76,10 @@ export async function GET(request: NextRequest) {
       ...(baseResume as any),
       ...(variantData.tailored_data || {}),
     };
+    
+    // Get template from variant column or from tailored_data as fallback
+    const selectedTemplate = variantData.template || (variantData.tailored_data as any)?._template || 'swiss';
+    console.log('📋 PDF Export: Using template:', selectedTemplate);
 
     // Generate filename: UserFullName_CompanyName_Resume.pdf
     const userName = (resumeData.personal_info?.name || resumeData.personalInfo?.name || 'User')
@@ -99,7 +103,7 @@ export async function GET(request: NextRequest) {
       },
       body: JSON.stringify({
         resumeData,
-        template: variantData.template || 'swiss',
+        template: selectedTemplate,
         userProfile: resumeData,
         showSkillLevelsInResume: false
       })

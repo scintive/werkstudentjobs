@@ -172,6 +172,8 @@ export function SupabaseResumeProvider({
             return name ? (level ? `${name} (${level})` : name) : ''
           }).filter(Boolean)
           normalized.skills = { ...(normalized.skills || {}), languages: skillsLanguages }
+          // Store template in tailored_data as well for backwards compatibility
+          normalized._template = template;
           await resumeVariantService.updateVariant(variantId, normalized, undefined, template);
           console.log(`✅ Tailored variant ${variantId} saved with template: ${template}`);
         } else {
