@@ -359,7 +359,6 @@ export function SimpleTailoredPreview({
                   declinedSuggestions={suggestionManager.declinedSuggestions}
                   onAccept={suggestionManager.acceptSuggestion}
                   onDecline={suggestionManager.declineSuggestion}
-                  loading={suggestionManager.loading}
                 />
               </>
             ) : loading ? (

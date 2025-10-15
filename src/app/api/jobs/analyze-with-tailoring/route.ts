@@ -578,7 +578,11 @@ export async function POST(request: NextRequest) {
       `)
       .eq('id', job_id)
       .single();
-    
+
+    // Type assertion for jobData to fix Vercel build issues
+    // Using 'as any' because Supabase's type inference doesn't handle nested select fields properly
+    const jobDataTyped = jobData as any;
+
     if (jobError) {
       if (jobError.code === 'PGRST116') {
         console.error("UNIFIED_ANALYSIS_ERROR", {
@@ -790,7 +794,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. CHECK FINGERPRINT-BASED CACHE (after fetching data)
-    const currentFingerprint = generateFingerprint(jobData, baseResume);
+    const currentFingerprint = generateFingerprint(jobDataTyped, baseResume);
     console.log('🔐 FINGERPRINT CHECK:', {
       cacheKey,
       currentFingerprint,
@@ -828,15 +832,15 @@ export async function POST(request: NextRequest) {
       (Array.isArray(arr) ? arr.slice(0, max).map(v => trimText(v, maxItemLen)) : []);
 
     const trimmedJob = {
-      title: trimText((jobData as any).title, 140),
-      company: trimText(((jobData as any).companies?.name || (jobData as any).company_name) || '', 140),
-      description: trimText((jobData as any).description, 1200),
-      responsibilities: trimArray((jobData as any).responsibilities_original, 10, 240),
-      requirements: trimArray((jobData as any).skills_original, 12, 120),
-      who_looking_for: trimArray((jobData as any).who_we_are_looking_for_original, 8, 200),
-      location: trimText((jobData as any).city, 80),
-      work_mode: (jobData as any).work_mode,
-      is_werkstudent: !!((jobData as any).is_werkstudent || (jobData as any).title?.toLowerCase().includes('werkstudent'))
+      title: trimText(jobDataTyped.title, 140),
+      company: trimText((jobDataTyped.companies?.name || jobDataTyped.company_name) || '', 140),
+      description: trimText(jobDataTyped.description, 1200),
+      responsibilities: trimArray(jobDataTyped.responsibilities_original, 10, 240),
+      requirements: trimArray(jobDataTyped.skills_original, 12, 120),
+      who_looking_for: trimArray(jobDataTyped.who_we_are_looking_for_original, 8, 200),
+      location: trimText(jobDataTyped.city, 80),
+      work_mode: jobDataTyped.work_mode,
+      is_werkstudent: !!(jobDataTyped.is_werkstudent || jobDataTyped.title?.toLowerCase().includes('werkstudent'))
     };
 
     // Include ALL experience roles (not just top 3)
@@ -1690,7 +1694,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       // Process skills_suggestions and explicit add/remove lists
       if (analysisData.skills_suggestions && Array.isArray(analysisData.skills_suggestions)) {
         console.log(`📊 Processing ${analysisData.skills_suggestions.length} skills suggestions`)
-        const jobTextForFilter = (JSON.stringify(trimmedJob || {}) + ' ' + (jobData?.description || '')).toLowerCase()
+        const jobTextForFilter = (JSON.stringify(trimmedJob || {}) + ' ' + (jobDataTyped?.description || '')).toLowerCase()
         
         // Helpers for category mapping
         const normKey = (s: string) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_')
@@ -1812,8 +1816,8 @@ Return your response as a valid JSON object only. Do not include any additional 
           const category = mapCategory(item.category)
           const target = `skills.${category}`
           const skillLower = String(item.skill || '').toLowerCase()
-          const jobTextLocal = (JSON.stringify(trimmedJob || {}) + ' ' + (jobData?.description || '')).toLowerCase()
-          if (!item?.skill || baseSkillsFlat2.includes(skillLower) || (jobTextLocal && !jobTextLocal.includes(skillLower.split(' ')[0]))) return
+          const jobTextLocal = (JSON.stringify(trimmedJob || {}) + ' ' + (jobDataTyped?.description || '')).toLowerCase()
+          if (!item?.skill || baseSkillsFlat.includes(skillLower) || (jobTextLocal && !jobTextLocal.includes(skillLower.split(' ')[0]))) return
           analysisData.atomic_suggestions = analysisData.atomic_suggestions || []
           analysisData.atomic_suggestions.push({
             section: 'skills',
@@ -1879,7 +1883,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       const tailoredProfessionalTitle = analysisData.tailored_resume?.professionalTitle || ''
 
       // Check if title suggestion already exists
-      const hasTitleSuggestion = analysisData.atomic_suggestions.some(s =>
+      const hasTitleSuggestion = analysisData.atomic_suggestions.some((s: any) =>
         s.section === 'title' || s.target_path === 'professionalTitle'
       )
 
@@ -1906,7 +1910,7 @@ Return your response as a valid JSON object only. Do not include any additional 
       const tailoredProfessionalSummary = analysisData.tailored_resume?.professionalSummary || ''
 
       // Check if summary suggestion already exists
-      const hasSummarySuggestion = analysisData.atomic_suggestions.some(s =>
+      const hasSummarySuggestion = analysisData.atomic_suggestions.some((s: any) =>
         s.section === 'summary' || s.target_path === 'professionalSummary'
       )
 
@@ -2064,8 +2068,8 @@ Return your response as a valid JSON object only. Do not include any additional 
             }
 
             const rolesNeedingTopUp = baseResumeData.experience
-              .map((_, idx: number) => ({ idx, have: countByRole[idx] || 0 }))
-              .filter(({ have }) => have < MIN_BULLETS)
+              .map((_: any, idx: number) => ({ idx, have: countByRole[idx] || 0 }))
+              .filter(({ have }: any) => have < MIN_BULLETS)
 
             for (const { idx, have } of rolesNeedingTopUp) {
               const role = baseResumeData.experience[idx] || {}
@@ -2301,14 +2305,14 @@ Return your response as a valid JSON object only. Do not include any additional 
           const makeSig = (s: { section: string | null; target_id: string | null; original_content?: string | null; suggested_content?: string | null; }) =>
             `${s.section || ''}|${s.target_id || ''}|${(s.original_content || '').trim()}|${(s.suggested_content || '').trim()}`;
           const existingMap = new Map(
-            (existingSuggestions || []).map(s => [makeSig(s as any), s.id])
+            (existingSuggestions || []).map((s: any) => [makeSig(s as any), s.id])
           );
           
           // Separate new and existing suggestions
           const toInsert: any[] = [];
           const toUpdate: any[] = [];
-          
-          deduplicatedSuggestions.forEach(suggestion => {
+
+          deduplicatedSuggestions.forEach((suggestion: any) => {
             const key = `${suggestion.section || ''}|${suggestion.target_id || ''}|${(suggestion.original_content || '').trim()}|${(suggestion.suggested_content || '').trim()}`;
             const existingId = existingMap.get(key);
             if (existingId) {
@@ -2345,7 +2349,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           
           // Clean up orphaned suggestions (ones not in current batch)
           const currentKeys = new Set(
-            deduplicatedSuggestions.map(s => `${s.section || ''}|${s.target_id || ''}|${(s.original_content || '').trim()}|${(s.suggested_content || '').trim()}`)
+            deduplicatedSuggestions.map((s: any) => `${s.section || ''}|${s.target_id || ''}|${(s.original_content || '').trim()}|${(s.suggested_content || '').trim()}`)
           );
           const toDelete = Array.from(existingMap.entries())
             .filter(([key]) => !currentKeys.has(key))
@@ -2388,13 +2392,13 @@ Return your response as a valid JSON object only. Do not include any additional 
         console.log('📝 Using base resume for new variant')
         tailoredDataWithOriginalInfo = {
           ...analysisContext.resume, // Always use BASE resume
-          personalInfo: baseResume.personal_info, // Force original personal info (includes website/portfolio)
-          photoUrl: baseResume.photo_url || null, // Force original photo URL
-          customSections: baseResume.custom_sections || [] // Force original custom sections
+          personalInfo: (baseResume as any).personal_info, // Force original personal info (includes website/portfolio)
+          photoUrl: (baseResume as any).photo_url || null, // Force original photo URL
+          customSections: (baseResume as any).custom_sections || [] // Force original custom sections
         }
         // Only add the skills category plan (not title/summary suggestions)
         if (analysisData.skills_category_plan) {
-          tailoredDataWithOriginalInfo.skillsCategoryPlan = analysisData.skills_category_plan
+          (tailoredDataWithOriginalInfo as any).skillsCategoryPlan = analysisData.skills_category_plan
         }
       }
 
@@ -2405,7 +2409,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           ats_keywords: analysisData.strategy?.ats_keywords || [],
           match_score: analysisData.strategy?.fit_score || null,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', variant.id);
 
       if (variantUpdateError) {
@@ -2420,13 +2424,13 @@ Return your response as a valid JSON object only. Do not include any additional 
         console.log('🎯 ==========================================');
         console.log('🎯 STARTING INTELLIGENT JOB ANALYSIS');
         console.log('🎯 ==========================================');
-        console.log('🎯 Job:', jobData.title, 'at', jobData.companies?.name || jobData.company_name);
-        console.log('🎯 User:', baseResume.personal_info?.name);
+        console.log('🎯 Job:', jobDataTyped.title, 'at', jobDataTyped.companies?.name || jobDataTyped.company_name);
+        console.log('🎯 User:', (baseResume as any).personal_info?.name);
 
         // Prepare user skills from baseResume
         const userSkills: Record<string, string[]> = {};
-        if (baseResume.skills && typeof baseResume.skills === 'object') {
-          Object.entries(baseResume.skills).forEach(([category, skills]) => {
+        if ((baseResume as any).skills && typeof (baseResume as any).skills === 'object') {
+          Object.entries((baseResume as any).skills).forEach(([category, skills]) => {
             if (Array.isArray(skills)) {
               userSkills[category] = skills;
             }
@@ -2434,19 +2438,19 @@ Return your response as a valid JSON object only. Do not include any additional 
         }
 
         console.log('🎯 User Skills Categories:', Object.keys(userSkills).length);
-        console.log('🎯 User Experience Entries:', baseResume.experience?.length || 0);
+        console.log('🎯 User Experience Entries:', (baseResume as any).experience?.length || 0);
         console.log('🎯 Calling intelligentJobAnalysisService.analyzeJobCompatibility...');
 
         jobAnalysis = await intelligentJobAnalysisService.analyzeJobCompatibility({
-          job: jobData,
+          job: jobDataTyped,
           userProfile: {
-            name: baseResume.personal_info?.name || 'Candidate',
-            education: baseResume.education || [],
-            certifications: baseResume.certifications || [],
-            custom_sections: baseResume.custom_sections || {}
+            name: (baseResume as any).personal_info?.name || 'Candidate',
+            education: (baseResume as any).education || [],
+            certifications: (baseResume as any).certifications || [],
+            custom_sections: (baseResume as any).custom_sections || {}
           },
-          userExperience: baseResume.experience || [],
-          userProjects: baseResume.projects || [],
+          userExperience: (baseResume as any).experience || [],
+          userProjects: (baseResume as any).projects || [],
           userSkills
         });
 
@@ -2466,7 +2470,7 @@ Return your response as a valid JSON object only. Do not include any additional 
           .update({
             match_score: jobAnalysis.overall_match_score,
             job_analysis: jobAnalysis
-          })
+          } as any)
           .eq('id', variant.id);
 
         if (saveError) {
@@ -2481,7 +2485,7 @@ Return your response as a valid JSON object only. Do not include any additional 
         console.error('❌ Error:', analysisError);
         console.error('🎯 ==========================================');
         // Don't fail the entire request, just log the error
-        logContext.analysis_error = (analysisError as Error).message;
+        (logContext as any).analysis_error = (analysisError as Error).message;
       }
 
       // 12. PREPARE RESPONSE

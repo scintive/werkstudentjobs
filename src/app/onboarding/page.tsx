@@ -30,7 +30,10 @@ export default function OnboardingPage() {
         .eq('user_id', session.user.id)
         .single()
 
-      if (profileData?.onboarding_completed) {
+      // Type assertion to handle Supabase's partial select inference
+      const typedProfile = profileData as { onboarding_completed: boolean } | null
+
+      if (typedProfile?.onboarding_completed) {
         router.push('/dashboard')
         return
       }

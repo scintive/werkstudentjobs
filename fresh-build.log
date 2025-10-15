@@ -1,0 +1,29 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 813ms
+ ✓ Compiled successfully in 12.7s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/app/api/jobs/update-applied-status/route.ts:49:10
+Type error: No overload matches this call.
+  Overload 1 of 2, '(values: (Omit<Database, "__InternalSupabase">[SchemaNameOrClientOptions extends string & Exclude<keyof Database, "__InternalSupabase"> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] extends GenericSchema ? Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] : never)["Tables"]["user_job_interactions"] extends { ...; } ? (Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] extends GenericSchema ? Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] : never)["Tables"]["user_job_interactions"]["Insert"] : never, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ user_profile_id: any; job_id: any; interaction_type: string; interaction_data: { applied_at: string; via: string; }; source: string; }' is not assignable to parameter of type '(Omit<Database, "__InternalSupabase">[SchemaNameOrClientOptions extends string & Exclude<keyof Database, "__InternalSupabase"> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] extends GenericSchema ? Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? Sc...'.
+  Overload 2 of 2, '(values: ((Omit<Database, "__InternalSupabase">[SchemaNameOrClientOptions extends string & Exclude<keyof Database, "__InternalSupabase"> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] extends GenericSchema ? Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] : never)["Tables"]["user_job_interactions"] extends { ...; } ? (Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] extends GenericSchema ? Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] : never)["Tables"]["user_job_interactions"]["Insert"] : never)[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'user_profile_id' does not exist in type '((Omit<Database, "__InternalSupabase">[SchemaNameOrClientOptions extends string & Exclude<keyof Database, "__InternalSupabase"> ? SchemaNameOrClientOptions : "public" extends Exclude<...> ? "public" : string & Exclude<...>] extends GenericSchema ? Omit<...>[SchemaNameOrClientOptions extends string & Exclude<...> ? S...'.
+
+[0m [90m 47 |[39m       [36mconst[39m { error[33m:[39m insertError } [33m=[39m [36mawait[39m supabase
+ [90m 48 |[39m         [33m.[39m[36mfrom[39m([32m'user_job_interactions'[39m)
+[31m[1m>[22m[39m[90m 49 |[39m         [33m.[39minsert({
+ [90m    |[39m          [31m[1m^[22m[39m
+ [90m 50 |[39m           user_profile_id[33m:[39m userProfile[33m.[39mid[33m,[39m
+ [90m 51 |[39m           job_id[33m,[39m
+ [90m 52 |[39m           interaction_type[33m:[39m [32m'apply'[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

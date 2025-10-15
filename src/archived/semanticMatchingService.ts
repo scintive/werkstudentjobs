@@ -4,8 +4,8 @@
  */
 
 import OpenAI from 'openai';
-import type { JobWithCompany, MatchCalculation, LanguageSkill } from '../supabase/types';
-import type { UserProfile as LegacyUserProfile } from '../types';
+import type { JobWithCompany, MatchCalculation, LanguageSkill } from '@/lib/supabase/types';
+import type { UserProfile as LegacyUserProfile } from '@/lib/types';
 
 // Matching weights configuration - rebalanced for better UX
 const MATCH_WEIGHTS = {
@@ -318,6 +318,10 @@ export class SemanticMatchingService {
   ): Promise<MatchCalculation & { semanticMatch: boolean }> {
     console.log('🎯 STARTING SEMANTIC MATCH for job:', job.title);
 
+    // Type assertions needed for archived code that expects additional properties
+    const jobTyped = job as any;
+    const personalDetails = userProfile.personal_details as any;
+
     // Extract user skills from profile
     const userSkills: string[] = [];
     if (userProfile.skills) {
@@ -329,19 +333,24 @@ export class SemanticMatchingService {
     }
 
     // Extract job skills
-    const jobSkills = job.skills_original || [];
+    const jobSkills = jobTyped.skills_original || [];
 
     // Extract user location
-    const userLocation = userProfile.personal_details?.city || 
-                        userProfile.personal_details?.location || 
-                        userProfile.personal_details?.address ||
-                        userProfile.personal_details?.contact?.address ||
+    const userLocation = personalDetails?.city ||
+                        personalDetails?.location ||
+                        personalDetails?.address ||
+                        personalDetails?.contact?.address ||
                         null;
 
     // Extract user languages
     const userLanguages: string[] = [];
     if (userProfile.languages && Array.isArray(userProfile.languages)) {
-      userLanguages.push(...userProfile.languages);
+      // Map Language objects to strings (archived code compatibility)
+      const langStrings = (userProfile.languages as any[]).map(lang => {
+        if (typeof lang === 'string') return lang;
+        return lang.language || lang.name || String(lang);
+      });
+      userLanguages.push(...langStrings);
     }
 
     console.log('🎯 MATCH INPUT:', {
@@ -359,14 +368,14 @@ export class SemanticMatchingService {
     
     // Calculate language fit
     const languageFit = this.calculateLanguageFit(
-      job.german_required || job.language_required,
+      jobTyped.german_required || jobTyped.language_required,
       userLanguages
     );
 
     // Calculate location fit
     const locationFit = this.calculateLocationFit(
-      job.location_city || job.city,
-      job.is_remote || job.remote_allowed || job.work_mode === 'remote',
+      jobTyped.location_city || jobTyped.city,
+      jobTyped.is_remote || jobTyped.remote_allowed || jobTyped.work_mode === 'remote',
       userLocation
     );
 
@@ -407,18 +416,18 @@ export class SemanticMatchingService {
       languageFit: {
         score: languageFit.score,
         explanation: languageFit.explanation,
-        required: job.german_required || 'Not specified',
+        required: jobTyped.german_required || 'Not specified',
         userHas: userLanguages
       },
       locationFit: {
         score: locationFit.score,
         explanation: locationFit.explanation,
-        jobLocation: job.location_city || 'Unknown',
+        jobLocation: jobTyped.location_city || 'Unknown',
         userLocation: userLocation || 'Unknown',
-        remoteAllowed: job.is_remote || job.remote_allowed || false
+        remoteAllowed: jobTyped.is_remote || jobTyped.remote_allowed || false
       },
       totalScore: finalScore,
-      weights: MATCH_WEIGHTS,
+      weights: MATCH_WEIGHTS as any,  // Type assertion for legacy weight structure
       semanticMatch: true
     };
   }

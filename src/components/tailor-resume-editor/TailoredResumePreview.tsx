@@ -127,19 +127,19 @@ export function TailoredResumePreview({
           }
 
           if (variantData) {
-            setVariantId(variantData.id)
+            setVariantId((variantData as any).id)
             console.log('🔍 Loaded variant data skills check:', {
-              hasSkills: !!variantData.tailored_data?.skills,
-              skillsKeys: variantData.tailored_data?.skills ? Object.keys(variantData.tailored_data.skills) : [],
-              skillsCount: variantData.tailored_data?.skills ? Object.values(variantData.tailored_data.skills).flat().length : 0
+              hasSkills: !!(variantData as any).tailored_data?.skills,
+              skillsKeys: (variantData as any).tailored_data?.skills ? Object.keys((variantData as any).tailored_data.skills) : [],
+              skillsCount: (variantData as any).tailored_data?.skills ? Object.values((variantData as any).tailored_data.skills).flat().length : 0
             })
-            setTailoredData(variantData.tailored_data)
+            setTailoredData((variantData as any).tailored_data)
 
             // Load existing suggestions
-            const savedSuggestions = await resumeVariantService.getSuggestions(variantData.id)
+            const savedSuggestions = await resumeVariantService.getSuggestions((variantData as any).id)
             setSuggestions(savedSuggestions)
 
-            console.log('✅ Loaded existing variant:', variantData.id)
+            console.log('✅ Loaded existing variant:', (variantData as any).id)
             console.log(`📋 Loaded ${savedSuggestions.length} suggestions from existing variant`)
           }
         } catch (error) {
@@ -163,15 +163,19 @@ export function TailoredResumePreview({
       if (jobData && baseResumeData && baseResumeId && !currentVariantId) {
         // Check if variant exists before triggering new analysis
         try {
-          const { resumeVariantService } = await import('@/lib/services/resumeVariantService')
-          const existingVariant = await resumeVariantService.getVariant(baseResumeId, jobData.id)
-          
+          const { data: existingVariant } = await supabase
+            .from('resume_variants')
+            .select('*')
+            .eq('base_resume_id', baseResumeId)
+            .eq('job_id', jobData.id)
+            .maybeSingle()
+
           if (existingVariant) {
             console.log('🔄 Found existing variant, loading instead of re-analyzing')
-            setTailoredData(existingVariant.tailored_data)
-            const savedSuggestions = await resumeVariantService.getSuggestions(existingVariant.id)
+            setTailoredData((existingVariant as any).tailored_data)
+            const savedSuggestions = await resumeVariantService.getSuggestions((existingVariant as any).id)
             setSuggestions(savedSuggestions)
-            console.log(`✅ Loaded existing variant: ${existingVariant.id} with ${savedSuggestions.length} suggestions`)
+            console.log(`✅ Loaded existing variant: ${(existingVariant as any).id} with ${savedSuggestions.length} suggestions`)
             return
           }
         } catch (error) {
@@ -724,7 +728,7 @@ export function TailoredResumePreview({
         const lastKey = lastPart.startsWith('[') ? parseInt(lastPart.slice(1, -1)) : lastPart
         const newValue = suggestion.suggested_content || suggestion.after
 
-        if ((suggestion.section === 'skills') && (suggestion.suggestion_type === 'skill_removal' || suggestion.suggestion_type === 'remove')) {
+        if ((suggestion.section === 'skills') && suggestion.suggestion_type === 'skill_removal') {
           const toRemove = (suggestion.original_content || suggestion.before || '').toString().trim()
           if (typeof lastKey === 'string' && Array.isArray(current[lastKey])) {
             current[lastKey] = current[lastKey].filter((s: any) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
@@ -741,7 +745,7 @@ export function TailoredResumePreview({
               })
             }
           }
-        } else if ((suggestion.section === 'skills') && (suggestion.suggestion_type === 'skill_addition' || suggestion.suggestion_type === 'addition' || suggestion.suggestion_type === 'text')) {
+        } else if ((suggestion.section === 'skills') && (suggestion.suggestion_type === 'skill_addition' || suggestion.suggestion_type === 'text')) {
           // Ensure additions get appended to the category array, not overwrite
           if (typeof lastKey === 'string') {
             if (!Array.isArray(current[lastKey])) current[lastKey] = Array.isArray(current[lastKey]) ? current[lastKey] : []
@@ -759,7 +763,7 @@ export function TailoredResumePreview({
             if (!Array.isArray(updatedData.skills[category])) updatedData.skills[category] = []
             if (newValue && !updatedData.skills[category].includes(newValue)) updatedData.skills[category].push(newValue)
           }
-        } else if (suggestion.suggestion_type === 'skill_removal' || suggestion.suggestion_type === 'remove') {
+        } else if (suggestion.suggestion_type === 'skill_removal') {
           // Non-skills remove: keep previous behavior
           if (Array.isArray(current) && typeof lastKey === 'number') {
             current.splice(lastKey, 1)
@@ -1339,7 +1343,9 @@ function SuggestionCard({
               <span className="text-xs text-gray-500">
                 {suggestion.confidence}% confidence
               </span>
-              <Database className="w-3 h-3 text-gray-400" title="Stored in Supabase" />
+              <span title="Stored in Supabase">
+                <Database className="w-3 h-3 text-gray-400" />
+              </span>
             </div>
             
             <p className="text-sm text-gray-700 mb-3">{suggestion.rationale}</p>

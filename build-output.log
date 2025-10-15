@@ -1,0 +1,294 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 795ms
+ ✓ Compiled successfully in 9.4s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedRichText.tsx:51:34
+Type error: Expected 1 arguments, but got 0.
+
+[0m [90m 49 |[39m   [36mconst[39m [redoStack[33m,[39m setRedoStack] [33m=[39m [33mReact[39m[33m.[39museState[33m<[39m[33mstring[39m[][33m>[39m([])
+ [90m 50 |[39m   [36mconst[39m [lastSavedValue[33m,[39m setLastSavedValue] [33m=[39m [33mReact[39m[33m.[39museState(value)
+[31m[1m>[22m[39m[90m 51 |[39m   [36mconst[39m debounceTimerRef [33m=[39m [33mReact[39m[33m.[39museRef[33m<[39m[33mNodeJS[39m[33m.[39m[33mTimeout[39m[33m>[39m()
+ [90m    |[39m                                  [31m[1m^[22m[39m
+ [90m 52 |[39m   [36mconst[39m [selectedText[33m,[39m setSelectedText] [33m=[39m [33mReact[39m[33m.[39museState([32m''[39m)
+ [90m 53 |[39m   [36mconst[39m [keywordHighlights[33m,[39m setKeywordHighlights] [33m=[39m [33mReact[39m[33m.[39museState[33m<[39m[33mstring[39m[][33m>[39m([])
+ [90m 54 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 808ms
+ ✓ Compiled successfully in 8.7s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:252:31
+Type error: 'category' is of type 'unknown'.
+
+[0m [90m 250 |[39m         [36mconst[39m autoExpanded[33m:[39m [33mRecord[39m[33m<[39m[33mstring[39m[33m,[39m boolean[33m>[39m [33m=[39m {}
+ [90m 251 |[39m         [33mObject[39m[33m.[39mentries(enhancedData[33m.[39morganized_categories)[33m.[39mforEach(([key[33m,[39m category]) [33m=>[39m {
+[31m[1m>[22m[39m[90m 252 |[39m           autoExpanded[key] [33m=[39m category[33m.[39mjobRelevance [33m===[39m [32m'high'[39m [33m||[39m [36mtrue[39m [90m// Default to expanded[39m
+ [90m     |[39m                               [31m[1m^[22m[39m
+ [90m 253 |[39m         })
+ [90m 254 |[39m         [90m// Always include languages in expanded categories[39m
+ [90m 255 |[39m         autoExpanded[[32m'languages'[39m] [33m=[39m [36mtrue[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ⚠ Slow filesystem detected. The benchmark took 102ms. If /Users/varunmishra/Documents/Projects/WerkstudentJobs2/visual-app-backup-c26614e9/.next is a network drive, consider moving it to a local folder. If you have an antivirus enabled, consider excluding your project directory.
+ ✓ Finished writing to disk in 1311ms
+ ✓ Compiled successfully in 20.4s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:251:67
+Type error: Argument of type '([key, category]: [string, OrganizedCategory]) => void' is not assignable to parameter of type '(value: [string, unknown], index: number, array: [string, unknown][]) => void'.
+  Types of parameters '__0' and 'value' are incompatible.
+    Type '[string, unknown]' is not assignable to type '[string, OrganizedCategory]'.
+      Type at position 1 in source is not compatible with type at position 1 in target.
+        Type 'unknown' is not assignable to type 'OrganizedCategory'.
+
+[0m [90m 249 |[39m         [90m// Auto-expand high relevance categories[39m
+ [90m 250 |[39m         [36mconst[39m autoExpanded[33m:[39m [33mRecord[39m[33m<[39m[33mstring[39m[33m,[39m boolean[33m>[39m [33m=[39m {}
+[31m[1m>[22m[39m[90m 251 |[39m         [33mObject[39m[33m.[39mentries(enhancedData[33m.[39morganized_categories)[33m.[39mforEach(([key[33m,[39m category][33m:[39m [string[33m,[39m [33mOrganizedCategory[39m]) [33m=>[39m {
+ [90m     |[39m                                                                   [31m[1m^[22m[39m
+ [90m 252 |[39m           autoExpanded[key] [33m=[39m category[33m.[39mjobRelevance [33m===[39m [32m'high'[39m [33m||[39m [36mtrue[39m [90m// Default to expanded[39m
+ [90m 253 |[39m         })
+ [90m 254 |[39m         [90m// Always include languages in expanded categories[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 508ms
+ ✓ Compiled successfully in 9.6s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:250:55
+Type error: This expression is not callable.
+  Type '{}' has no call signatures.
+
+[0m [90m 248 |[39m
+ [90m 249 |[39m         [90m// Auto-expand high relevance categories[39m
+[31m[1m>[22m[39m[90m 250 |[39m         [36mconst[39m autoExpanded[33m:[39m [33mRecord[39m[33m<[39m[33mstring[39m[33m,[39m boolean[33m>[39m [33m=[39m {}
+ [90m     |[39m                                                       [31m[1m^[22m[39m
+ [90m 251 |[39m         ([33mObject[39m[33m.[39mentries(enhancedData[33m.[39morganized_categories) [36mas[39m [string[33m,[39m [33mOrganizedCategory[39m][])[33m.[39mforEach(([key[33m,[39m category]) [33m=>[39m {
+ [90m 252 |[39m           autoExpanded[key] [33m=[39m category[33m.[39mjobRelevance [33m===[39m [32m'high'[39m [33m||[39m [36mtrue[39m [90m// Default to expanded[39m
+ [90m 253 |[39m         })[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 379ms
+ ✓ Compiled successfully in 8.4s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:626:93
+Type error: 'total' is of type 'unknown'.
+
+[0m [90m 624 |[39m     console[33m.[39mlog([32m'📤 CALLING onSkillsChange with COMPLETE skills object:'[39m[33m,[39m {
+ [90m 625 |[39m       categories[33m:[39m [33mObject[39m[33m.[39mkeys(skillsObject)[33m,[39m
+[31m[1m>[22m[39m[90m 626 |[39m       totalSkillsAcrossAllCategories[33m:[39m [33mObject[39m[33m.[39mvalues(skillsObject)[33m.[39mreduce((total[33m,[39m skills) [33m=>[39m total [33m+[39m (skills [36mas[39m string[])[33m.[39mlength[33m,[39m [35m0[39m)[33m,[39m
+ [90m     |[39m                                                                                             [31m[1m^[22m[39m
+ [90m 627 |[39m       completeSkillsObject[33m:[39m skillsObject
+ [90m 628 |[39m     })
+ [90m 629 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 608ms
+ ✓ Compiled successfully in 8.7s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:732:26
+Type error: This condition will always return true since this function is always defined. Did you mean to call it instead?
+
+[0m [90m 730 |[39m   [36mconst[39m updatePreview [33m=[39m () [33m=>[39m {
+ [90m 731 |[39m     console[33m.[39mlog([32m'🔄 Updating preview with current organized skills'[39m)
+[31m[1m>[22m[39m[90m 732 |[39m     [36mif[39m (organizedData [33m&&[39m onSkillsChange) {
+ [90m     |[39m                          [31m[1m^[22m[39m
+ [90m 733 |[39m       [90m// Convert organized data back to skills object format and trigger update[39m
+ [90m 734 |[39m       syncWithSkillsObject(organizedData)
+ [90m 735 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 514ms
+ ✓ Compiled successfully in 9.1s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:758:48
+Type error: Object literal may only specify known properties, and 'displayName' does not exist in type 'OrganizedCategory'.
+
+[0m [90m 756 |[39m     [36mconst[39m categoryData [33m=[39m newCategories[oldKey]
+ [90m 757 |[39m     [36mdelete[39m newCategories[oldKey]
+[31m[1m>[22m[39m[90m 758 |[39m     newCategories[newKey] [33m=[39m { [33m...[39mcategoryData[33m,[39m displayName[33m:[39m newName }
+ [90m     |[39m                                                [31m[1m^[22m[39m
+ [90m 759 |[39m
+ [90m 760 |[39m     setOrganizedData({
+ [90m 761 |[39m       [33m...[39morganizedData[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 513ms
+ ✓ Compiled successfully in 8.2s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:1141:44
+Type error: 'organizedData' is possibly 'null'.
+
+[0m [90m 1139 |[39m         [90m// Debug logging[39m
+ [90m 1140 |[39m         console[33m.[39mlog([32m'🔍 Looking for languages in:'[39m[33m,[39m {
+[31m[1m>[22m[39m[90m 1141 |[39m           organizedCategories[33m:[39m [33mObject[39m[33m.[39mkeys(organizedData[33m.[39morganized_categories)[33m,[39m
+ [90m      |[39m                                            [31m[1m^[22m[39m
+ [90m 1142 |[39m           skills[33m:[39m [33mObject[39m[33m.[39mkeys(skills)
+ [90m 1143 |[39m         })
+ [90m 1144 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 342ms
+ ✓ Compiled successfully in 9.8s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:1160:28
+Type error: 'languageEntry' is possibly 'undefined'.
+
+[0m [90m 1158 |[39m
+ [90m 1159 |[39m         [36mif[39m (languageEntry) {
+[31m[1m>[22m[39m[90m 1160 |[39m           languageSkills [33m=[39m languageEntry[[35m1[39m][33m.[39mskills [33m||[39m []
+ [90m      |[39m                            [31m[1m^[22m[39m
+ [90m 1161 |[39m           languageCategoryKey [33m=[39m languageEntry[[35m0[39m]
+ [90m 1162 |[39m           console[33m.[39mlog([32m'✅ Found languages in organized data:'[39m[33m,[39m languageSkills)
+ [90m 1163 |[39m         } [36melse[39m [36mif[39m (skills[33m.[39mlanguages) {[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 746ms
+ ✓ Compiled successfully in 13.9s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:1160:28
+Type error: 'languageEntry' is possibly 'undefined'.
+
+[0m [90m 1158 |[39m
+ [90m 1159 |[39m         [36mif[39m (languageEntry) {
+[31m[1m>[22m[39m[90m 1160 |[39m           languageSkills [33m=[39m languageEntry[[35m1[39m][33m?[39m[33m.[39mskills [33m||[39m []
+ [90m      |[39m                            [31m[1m^[22m[39m
+ [90m 1161 |[39m           languageCategoryKey [33m=[39m languageEntry[[35m0[39m] [33m||[39m [32m'languages'[39m
+ [90m 1162 |[39m           console[33m.[39mlog([32m'✅ Found languages in organized data:'[39m[33m,[39m languageSkills)
+ [90m 1163 |[39m         } [36melse[39m [36mif[39m (skills[33m.[39mlanguages) {[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 1198ms
+ ✓ Compiled successfully in 14.2s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/tailor-resume-editor/TailorEnhancedSkillsManager.tsx:1160:17
+Type error: Type '[string, OrganizedCategory] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+
+[0m [90m 1158 |[39m
+ [90m 1159 |[39m         [36mif[39m (languageEntry) {
+[31m[1m>[22m[39m[90m 1160 |[39m           [36mconst[39m [key[33m,[39m category] [33m=[39m languageEntry
+ [90m      |[39m                 [31m[1m^[22m[39m
+ [90m 1161 |[39m           languageSkills [33m=[39m category[33m?[39m[33m.[39mskills [33m||[39m []
+ [90m 1162 |[39m           languageCategoryKey [33m=[39m key [33m||[39m [32m'languages'[39m
+ [90m 1163 |[39m           console[33m.[39mlog([32m'✅ Found languages in organized data:'[39m[33m,[39m languageSkills)[0m
+Next.js build worker exited with code: 1 and signal: null
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ⚠ Slow filesystem detected. The benchmark took 108ms. If /Users/varunmishra/Documents/Projects/WerkstudentJobs2/visual-app-backup-c26614e9/.next is a network drive, consider moving it to a local folder. If you have an antivirus enabled, consider excluding your project directory.
+ ✓ Finished writing to disk in 822ms
+ ✓ Compiled successfully in 16.1s
+   Skipping linting
+   Checking validity of types ...

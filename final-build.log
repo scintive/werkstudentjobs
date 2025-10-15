@@ -1,0 +1,26 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 1023ms
+ ✓ Compiled successfully in 17.2s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/TailorStudio.tsx:1658:17
+Type error: Type '{ skills: any; onSkillsChange: (updatedSkills: any) => void; userProfile: any; organizedSkills: { organized_categories: any; success: boolean; message: string; } | null; languages: any; onLanguagesChange: (updatedLanguages: Language[]) => void; showSkillLevelsInResume: boolean; onShowSkillLevelsChange: Dispatch<...>...' is not assignable to type 'IntrinsicAttributes & TailorEnhancedSkillsManagerProps'.
+  Property 'showSkillLevelsInResume' does not exist on type 'IntrinsicAttributes & TailorEnhancedSkillsManagerProps'.
+
+[0m [90m 1656 |[39m                   }
+ [90m 1657 |[39m                 }}
+[31m[1m>[22m[39m[90m 1658 |[39m                 showSkillLevelsInResume[33m=[39m{showSkillLevelsInResume}
+ [90m      |[39m                 [31m[1m^[22m[39m
+ [90m 1659 |[39m                 onShowSkillLevelsChange[33m=[39m{setShowSkillLevelsInResume}
+ [90m 1660 |[39m               [33m/[39m[33m>[39m
+ [90m 1661 |[39m             [33m<[39m[33m/[39m[33mSectionCard[39m[33m>[39m[0m
+Next.js build worker exited with code: 1 and signal: null

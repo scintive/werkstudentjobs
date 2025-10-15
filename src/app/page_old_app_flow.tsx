@@ -108,7 +108,10 @@ function MainApp() {
           .eq('user_id', currentUserId)
           .single()
 
-        if (!profileData?.onboarding_completed) {
+        // Type assertion to handle Supabase's partial select inference
+        const typedProfile = profileData as { onboarding_completed: boolean } | null
+
+        if (!typedProfile?.onboarding_completed) {
           console.log('Onboarding not completed, showing onboarding flow')
           setShowOnboarding(true)
           setIsCheckingProfile(false)
@@ -402,7 +405,7 @@ function MainApp() {
       case 'editor':
         return (
           <div className="space-y-6">
-            <PerfectStudio userProfile={userProfile} organizedSkills={organizedSkills} />
+            <PerfectStudio userProfile={userProfile} />
             <div className="flex justify-center">
               <Button 
                 size="lg" 

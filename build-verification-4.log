@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 563ms
+ ✓ Compiled successfully in 9.2s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/jobMatchingService.ts:252:57
+Type error: Property 'id' does not exist on type 'never'.
+
+[0m [90m 250 |[39m     
+ [90m 251 |[39m     [90m// Create a map for quick lookup[39m
+[31m[1m>[22m[39m[90m 252 |[39m     [36mconst[39m jobMap [33m=[39m [36mnew[39m [33mMap[39m((jobs [33m||[39m [])[33m.[39mmap(job [33m=>[39m [job[33m.[39mid[33m,[39m job]))
+ [90m     |[39m                                                         [31m[1m^[22m[39m
+ [90m 253 |[39m     
+ [90m 254 |[39m     [90m// Enhance matches[39m
+ [90m 255 |[39m     [36mreturn[39m matches[33m.[39mmap(match [33m=>[39m {[0m
+Next.js build worker exited with code: 1 and signal: null

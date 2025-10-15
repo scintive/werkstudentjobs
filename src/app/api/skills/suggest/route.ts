@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client
-    llmService.client = llmService.initializeClient();
+    (llmService as any).client = llmService.initializeClient();
     
     console.log('💡 Generating GPT-powered skill suggestions...');
     const suggestions = await llmService.generateSkillSuggestions(profileData, currentSkills);

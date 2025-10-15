@@ -18,7 +18,7 @@ export interface Suggestion {
 }
 
 interface InlineSuggestionRendererProps {
-  iframeRef: React.RefObject<HTMLIFrameElement>
+  iframeRef: React.RefObject<HTMLIFrameElement | null>
   suggestions: Suggestion[]
   appliedSuggestions: Set<string>
   declinedSuggestions: Set<string>

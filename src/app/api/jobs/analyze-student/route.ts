@@ -54,7 +54,11 @@ export async function POST(request: NextRequest) {
       `)
       .eq('id', job_id)
       .single();
-    
+
+    // Type assertion for jobData to fix Vercel build issues
+    // Using 'as any' because Supabase's type inference doesn't handle nested select fields properly
+    const jobDataTyped = jobData as any;
+
     if (jobError || !jobData) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -99,21 +103,21 @@ export async function POST(request: NextRequest) {
     // Create compact context for student-focused AI analysis
     const compactContext = {
       job: {
-        title: (jobData as any).title,
-        company: (jobData as any).company_name || 'Unknown',
+        title: jobDataTyped.title,
+        company: jobDataTyped.company_name || 'Unknown',
         must_haves: [
-          ...((jobData as any).skills || []),
-          ...((jobData as any).tools || []),
-          ...((jobData as any).responsibilities || [])
+          ...(jobDataTyped.skills || []),
+          ...(jobDataTyped.tools || []),
+          ...(jobDataTyped.responsibilities || [])
         ].slice(0, 8),
-        nice_to_haves: ((jobData as any).nice_to_have || []).slice(0, 6),
-        work_mode: (jobData as any).work_mode,
-        location: (jobData as any).location_city,
-        language: (jobData as any).language_required || (jobData as any).german_required,
-        hours_per_week: (jobData as any).hours_per_week || '15-20',
-        is_werkstudent: (jobData as any).title?.toLowerCase().includes('werkstudent') ||
-                        (jobData as any).title?.toLowerCase().includes('working student') ||
-                        (jobData as any).title?.toLowerCase().includes('praktikum')
+        nice_to_haves: (jobDataTyped.nice_to_have || []).slice(0, 6),
+        work_mode: jobDataTyped.work_mode,
+        location: jobDataTyped.location_city,
+        language: jobDataTyped.language_required || jobDataTyped.german_required,
+        hours_per_week: jobDataTyped.hours_per_week || '15-20',
+        is_werkstudent: jobDataTyped.title?.toLowerCase().includes('werkstudent') ||
+                        jobDataTyped.title?.toLowerCase().includes('working student') ||
+                        jobDataTyped.title?.toLowerCase().includes('praktikum')
       },
       student: {
         degree: profileData.degree_program || 'Computer Science',
@@ -236,8 +240,8 @@ OUTPUT SCHEMA:
       const strategyData = JSON.parse(aiResponse.choices?.[0]?.message?.content || '{}');
       
       // Add German keywords to ATS keywords if job is in Germany
-      if ((jobData as any).location_country?.toLowerCase().includes('germany') ||
-          (jobData as any).language_required?.includes('DE')) {
+      if (jobDataTyped.location_country?.toLowerCase().includes('germany') ||
+          jobDataTyped.language_required?.includes('DE')) {
         strategyData.ats_keywords = [
           ...(strategyData.ats_keywords || []),
           ...germanKeywords.slice(0, 5)
@@ -276,8 +280,8 @@ OUTPUT SCHEMA:
         strategy,
         cached: false,
         context: {
-          job_title: (jobData as any).title,
-          company: (jobData as any).company_name,
+          job_title: jobDataTyped.title,
+          company: jobDataTyped.company_name,
           is_werkstudent: compactContext.job.is_werkstudent,
           coursework_matches: strategy.coursework_alignment.length,
           project_matches: strategy.project_alignment.length,

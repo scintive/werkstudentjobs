@@ -89,23 +89,23 @@ export async function POST(request: NextRequest) {
         const validationErrors: string[] = [];
 
         // Check responsibilities/tasks
-        if (!extractedJob.tasks_responsibilities || extractedJob.tasks_responsibilities.length === 0) {
+        if (!(extractedJob as any).tasks_responsibilities || (extractedJob as any).tasks_responsibilities.length === 0) {
           validationErrors.push('Missing tasks/responsibilities');
         }
 
         // Check skills
-        if (!extractedJob.named_skills_tools || extractedJob.named_skills_tools.length === 0) {
+        if (!(extractedJob as any).named_skills_tools || (extractedJob as any).named_skills_tools.length === 0) {
           validationErrors.push('Missing skills/tools');
         }
 
         // Check benefits (can be flexible, some jobs may not list benefits)
         // But log if missing for transparency
-        if (!extractedJob.benefits || extractedJob.benefits.length === 0) {
+        if (!(extractedJob as any).benefits || (extractedJob as any).benefits.length === 0) {
           console.warn(`⚠️  Job ${job.title} at ${jobData.companyName} has no benefits listed`);
         }
 
         // Check "who we are looking for"
-        if (!extractedJob.who_we_are_looking_for || extractedJob.who_we_are_looking_for.length === 0) {
+        if (!(extractedJob as any).who_we_are_looking_for || (extractedJob as any).who_we_are_looking_for.length === 0) {
           validationErrors.push('Missing "who we are looking for" requirements');
         }
 
@@ -122,9 +122,9 @@ export async function POST(request: NextRequest) {
           console.error(`   Job: ${job.title} at ${jobData.companyName}`);
           console.error(`   Errors: ${errorMessage}`);
           console.error(`   Description length: ${jobData.description?.length || 0} chars`);
-          console.error(`   Skills parsed: ${extractedJob.named_skills_tools?.length || 0}`);
-          console.error(`   Responsibilities parsed: ${extractedJob.tasks_responsibilities?.length || 0}`);
-          console.error(`   Requirements parsed: ${extractedJob.who_we_are_looking_for?.length || 0}`);
+          console.error(`   Skills parsed: ${(extractedJob as any).named_skills_tools?.length || 0}`);
+          console.error(`   Responsibilities parsed: ${(extractedJob as any).tasks_responsibilities?.length || 0}`);
+          console.error(`   Requirements parsed: ${(extractedJob as any).who_we_are_looking_for?.length || 0}`);
           console.error('═'.repeat(80));
 
           failedJobs.push({
@@ -132,10 +132,10 @@ export async function POST(request: NextRequest) {
             error: `Data quality validation failed: ${errorMessage}`,
             errorDetails: {
               descriptionLength: jobData.description?.length || 0,
-              skillsCount: extractedJob.named_skills_tools?.length || 0,
-              responsibilitiesCount: extractedJob.tasks_responsibilities?.length || 0,
-              requirementsCount: extractedJob.who_we_are_looking_for?.length || 0,
-              benefitsCount: extractedJob.benefits?.length || 0,
+              skillsCount: (extractedJob as any).named_skills_tools?.length || 0,
+              responsibilitiesCount: (extractedJob as any).tasks_responsibilities?.length || 0,
+              requirementsCount: (extractedJob as any).who_we_are_looking_for?.length || 0,
+              benefitsCount: (extractedJob as any).benefits?.length || 0,
             }
           });
           continue; // Skip this job
@@ -351,22 +351,22 @@ export async function POST(request: NextRequest) {
             posted_at: extractedJob.date_posted || (jobData.postedAt ? new Date(jobData.postedAt).toISOString() : new Date().toISOString()),
 
             // Tasks & Responsibilities
-            responsibilities: extractedJob.tasks_responsibilities || [],
+            responsibilities: (extractedJob as any).tasks_responsibilities || [],
 
             // Nice to Have
-            nice_to_have: extractedJob.nice_to_have || [],
+            nice_to_have: (extractedJob as any).nice_to_have || [],
 
             // Benefits
-            benefits: extractedJob.benefits || [],
+            benefits: (extractedJob as any).benefits || [],
 
             // Skills and Tools
-            skills: extractedJob.named_skills_tools || [],
+            skills: (extractedJob as any).named_skills_tools || [],
 
             // Who we are looking for
-            who_we_are_looking_for: extractedJob.who_we_are_looking_for || [],
+            who_we_are_looking_for: (extractedJob as any).who_we_are_looking_for || [],
 
             // Application requirements
-            application_requirements: extractedJob.application_requirements || [],
+            application_requirements: (extractedJob as any).application_requirements || [],
 
             // Status
             is_active: true,

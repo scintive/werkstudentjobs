@@ -106,17 +106,17 @@ export function TailorLayout({ jobData, userProfile, onDataChange }: TailorLayou
   const handleSuggestionAccept = (suggestionId: string) => {
     const suggestion = aiSuggestions.find(s => s.id === suggestionId)
     if (suggestion && suggestion.section === 'summary') {
-      setResumeData(prev => ({
+      setResumeData((prev: any) => ({
         ...prev,
         professionalSummary: suggestion.suggestion
       }))
       // Remove accepted suggestion
-      setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+      setAiSuggestions((prev: any[]) => prev.filter(s => s.id !== suggestionId))
     }
   }
 
   const handleSuggestionReject = (suggestionId: string) => {
-    setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+    setAiSuggestions((prev: any[]) => prev.filter(s => s.id !== suggestionId))
   }
 
   const handleDataChange = (newData: any) => {

@@ -21,8 +21,8 @@ export interface ResumeSuggestion {
   id: string;
   variant_id: string;
   job_id: string;
-  section: 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications' | 'languages' | 'custom';
-  suggestion_type: 'text' | 'bullet' | 'skill_addition' | 'skill_removal' | 'reorder' | 'language_addition';
+  section: 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications' | 'languages' | 'custom' | 'title';
+  suggestion_type: 'text' | 'bullet' | 'skill_addition' | 'skill_removal' | 'reorder' | 'language_addition' | 'skill_edit' | 'alias';
   target_id?: string;
   original_content: string;
   suggested_content: string;
@@ -34,6 +34,13 @@ export interface ResumeSuggestion {
   accepted?: boolean;
   applied_at?: string;
   created_at: string;
+  diff_html?: string;
+  before?: string;
+  after?: string;
+  resume_evidence?: string;
+  job_requirement?: string;
+  ats_keywords?: string[];
+  target_path?: string;
 }
 
 class ResumeVariantService {

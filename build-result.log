@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 1058ms
+ ✓ Compiled successfully in 15.6s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/TailorStudio.tsx:1564:63
+Type error: Property 'value' does not exist on type 'EventTarget'.
+
+[0m [90m 1562 |[39m                           className[33m=[39m[32m"flex-1 px-3 py-1 border border-gray-200 rounded-lg text-xs"[39m
+ [90m 1563 |[39m                           onKeyPress[33m=[39m{(e) [33m=>[39m {
+[31m[1m>[22m[39m[90m 1564 |[39m                             [36mif[39m (e[33m.[39mkey [33m===[39m [32m'Enter'[39m [33m&&[39m e[33m.[39mtarget[33m.[39mvalue[33m.[39mtrim()) {
+ [90m      |[39m                                                               [31m[1m^[22m[39m
+ [90m 1565 |[39m                               [36mconst[39m newProjects [33m=[39m [[33m...[39m(localData[33m.[39mprojects [33m||[39m [])]
+ [90m 1566 |[39m                               newProjects[index][33m.[39mtechnologies [33m=[39m [[33m...[39m(newProjects[index][33m.[39mtechnologies [33m||[39m [])[33m,[39m e[33m.[39mtarget[33m.[39mvalue[33m.[39mtrim()]
+ [90m 1567 |[39m                               setLocalData({ [33m...[39mlocalData[33m,[39m projects[33m:[39m newProjects })[0m
+Next.js build worker exited with code: 1 and signal: null

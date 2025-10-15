@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 460ms
+ ✓ Compiled successfully in 8.6s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/matchingService.ts:570:56
+Type error: Property 'city' does not exist on type 'PersonalDetails'.
+
+[0m [90m 568 |[39m
+ [90m 569 |[39m     [90m// Try multiple possible location fields from user profile[39m
+[31m[1m>[22m[39m[90m 570 |[39m     [36mconst[39m userLocation [33m=[39m userProfile[33m.[39mpersonal_details[33m?[39m[33m.[39mcity [33m||[39m
+ [90m     |[39m                                                        [31m[1m^[22m[39m
+ [90m 571 |[39m                         userProfile[33m.[39mpersonal_details[33m?[39m[33m.[39mlocation [33m||[39m
+ [90m 572 |[39m                         userProfile[33m.[39mpersonal_details[33m?[39m[33m.[39maddress [33m||[39m
+ [90m 573 |[39m                         userProfile[33m.[39mpersonal_details[33m?[39m[33m.[39mcontact[33m?[39m[33m.[39maddress [33m||[39m[0m
+Next.js build worker exited with code: 1 and signal: null

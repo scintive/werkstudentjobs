@@ -41,9 +41,9 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { EnhancedRichText } from '../resume-editor/enhanced-rich-text'
-import { SimpleTemplateDropdown } from '../resume-editor/SimpleTemplateDropdown'
-import { EnhancedSkillsManager } from '../resume-editor/EnhancedSkillsManager'
+import { TailorEnhancedRichText } from '@/components/tailor-resume-editor/TailorEnhancedRichText'
+import { TailorSimpleTemplateDropdown } from '@/components/tailor-resume-editor/TailorSimpleTemplateDropdown'
+import { TailorEnhancedSkillsManager } from '@/components/tailor-resume-editor/TailorEnhancedSkillsManager'
 
 // Custom Section Templates
 const CUSTOM_SECTION_TEMPLATES = {
@@ -292,7 +292,7 @@ const InlineSuggestion = ({ suggestion, onAccept, onReject, position }: InlineSu
                   <div>
                     <div className="text-xs font-medium text-purple-600 mb-1">KEYWORDS USED</div>
                     <div className="flex flex-wrap gap-1">
-                      {suggestion.keywords.map((keyword, i) => (
+                      {suggestion.keywords.map((keyword: string, i: number) => (
                         <span key={i} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
                           {keyword}
                         </span>
@@ -381,11 +381,11 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
     soft_skills: '',
     languages: ''
   })
-  const debounceTimer = React.useRef<NodeJS.Timeout>()
+  const debounceTimer = React.useRef<NodeJS.Timeout | undefined>(undefined)
   const iframeRef = React.useRef<HTMLIFrameElement>(null)
   const savedScrollPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 })
 
-  // Convert skills to organized format for EnhancedSkillsManager
+  // Convert skills to organized format for TailorEnhancedSkillsManager
   const convertSkillsToOrganizedFormat = React.useCallback((skills: any) => {
     if (!skills) return null
     
@@ -401,10 +401,10 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
     
     Object.entries(skills).forEach(([categoryKey, skillArray]: [string, any]) => {
       if (!Array.isArray(skillArray)) return
-      
+
       const displayName = categoryMapping[categoryKey] || categoryKey
         .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
       
       organized_categories[displayName] = {
@@ -859,16 +859,18 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
       
       // Add click listeners to suggestion markers
       const suggestionElements = iframeDoc.querySelectorAll('.has-suggestion')
-      
-      suggestionElements.forEach(element => {
-        element.addEventListener('click', (e) => {
-          const suggestionId = element.getAttribute('data-suggestion-id')
-          const suggestion = aiSuggestions.find(s => s.id === suggestionId)
-          
+
+      suggestionElements.forEach((element: any) => {
+        const htmlElement = element as HTMLElement
+
+        htmlElement.addEventListener('click', (e: any) => {
+          const suggestionId = htmlElement.getAttribute('data-suggestion-id')
+          const suggestion = aiSuggestions.find((s: any) => s.id === suggestionId)
+
           if (suggestion) {
-            const rect = element.getBoundingClientRect()
+            const rect = htmlElement.getBoundingClientRect()
             const iframeRect = iframe.getBoundingClientRect()
-            
+
             setSuggestionPosition({
               top: iframeRect.top + rect.top + rect.height + 5,
               left: iframeRect.left + rect.left
@@ -876,13 +878,13 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
             setSelectedSuggestion(suggestion)
           }
         })
-        
+
         // Add visual styling
-        element.style.cursor = 'pointer'
-        element.style.backgroundColor = '#dbeafe'
-        element.style.borderBottom = '2px solid #3b82f6'
-        element.style.padding = '2px 4px'
-        element.style.borderRadius = '3px'
+        htmlElement.style.cursor = 'pointer'
+        htmlElement.style.backgroundColor = '#dbeafe'
+        htmlElement.style.borderBottom = '2px solid #3b82f6'
+        htmlElement.style.padding = '2px 4px'
+        htmlElement.style.borderRadius = '3px'
       })
     }
     
@@ -940,7 +942,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
   const handleRemoveEducation = (index: number) => {
     setLocalData({
       ...localData,
-      education: localData.education.filter((_, i) => i !== index)
+      education: localData.education.filter((_: any, i: number) => i !== index)
     })
   }
 
@@ -974,11 +976,11 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
     const current = localData.skills as Record<string, any[]>
     const result: { added: Record<string, string[]>; removed: Record<string, string[]> } = { added: {}, removed: {} }
     const allCats = new Set([...Object.keys(proposed || {}), ...Object.keys(current || {})])
-    allCats.forEach(cat => {
-      const p = (proposed[cat] || []).map((x:any) => (typeof x === 'string' ? x : x.skill)).filter(Boolean)
-      const c = (current[cat] || []).map((x:any) => (typeof x === 'string' ? x : x.skill)).filter(Boolean)
-      const add = p.filter(x => !c.includes(x))
-      const rem = c.filter(x => !p.includes(x))
+    allCats.forEach((cat: any) => {
+      const p = (proposed[cat] || []).map((x: any) => (typeof x === 'string' ? x : x.skill)).filter(Boolean)
+      const c = (current[cat] || []).map((x: any) => (typeof x === 'string' ? x : x.skill)).filter(Boolean)
+      const add = p.filter((x: any) => !c.includes(x))
+      const rem = c.filter((x: any) => !p.includes(x))
       if (add.length) result.added[cat] = add
       if (rem.length) result.removed[cat] = rem
     })
@@ -988,13 +990,13 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
   const applySkillsSuggestion = () => {
     if (!skillsSuggestion?.suggestion) return
     const proposed = skillsSuggestion.suggestion
-    setLocalData(prev => ({ ...prev, skills: proposed }))
+    setLocalData((prev: any) => ({ ...prev, skills: proposed }))
   }
 
   const addSkill = (category: string, skill: string) => {
-    setLocalData(prev => {
+    setLocalData((prev: any) => {
       const prevCat = (prev.skills as any)?.[category] || []
-      const exists = prevCat.some((x:any) => (typeof x === 'string' ? x : x.skill) === skill)
+      const exists = prevCat.some((x: any) => (typeof x === 'string' ? x : x.skill) === skill)
       if (exists) return prev
       const updated = Array.isArray(prevCat) ? [...prevCat, skill] : [skill]
       return { ...prev, skills: { ...prev.skills, [category]: updated } }
@@ -1002,19 +1004,19 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
   }
 
   const removeSkill = (category: string, skill: string) => {
-    setLocalData(prev => {
+    setLocalData((prev: any) => {
       const prevCat = (prev.skills as any)?.[category] || []
-      const updated = prevCat.filter((x:any) => (typeof x === 'string' ? x : x.skill) !== skill)
+      const updated = prevCat.filter((x: any) => (typeof x === 'string' ? x : x.skill) !== skill)
       return { ...prev, skills: { ...prev.skills, [category]: updated } }
     })
   }
 
   const addCategorySkills = (category: string, skills: string[]) => {
     if (!skills || skills.length === 0) return
-    setLocalData(prev => {
+    setLocalData((prev: any) => {
       const prevCat = (prev.skills as any)?.[category] || []
-      const prevNames = prevCat.map((x:any) => (typeof x === 'string' ? x : x.skill))
-      const toAdd = skills.filter(s => !prevNames.includes(s))
+      const prevNames = prevCat.map((x: any) => (typeof x === 'string' ? x : x.skill))
+      const toAdd = skills.filter((s: any) => !prevNames.includes(s))
       if (toAdd.length === 0) return prev
       const updated = Array.isArray(prevCat) ? [...prevCat, ...toAdd] : [...toAdd]
       return { ...prev, skills: { ...prev.skills, [category]: updated } }
@@ -1023,9 +1025,9 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
 
   const removeCategorySkills = (category: string, skills: string[]) => {
     if (!skills || skills.length === 0) return
-    setLocalData(prev => {
+    setLocalData((prev: any) => {
       const prevCat = (prev.skills as any)?.[category] || []
-      const updated = prevCat.filter((x:any) => !skills.includes(typeof x === 'string' ? x : x.skill))
+      const updated = prevCat.filter((x: any) => !skills.includes(typeof x === 'string' ? x : x.skill))
       return { ...prev, skills: { ...prev.skills, [category]: updated } }
     })
   }
@@ -1038,14 +1040,14 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
 
     switch (suggestion.section) {
       case 'summary':
-        setLocalData(prev => ({
+        setLocalData((prev: any) => ({
           ...prev,
           professionalSummary: suggestion.suggestion
         }))
         break
 
       case 'title':
-        setLocalData(prev => ({
+        setLocalData((prev: any) => ({
           ...prev,
           professionalTitle: suggestion.suggestion
         }))
@@ -1053,7 +1055,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
 
       case 'experience':
         if (suggestion.experience_index !== undefined && suggestion.achievement_index !== undefined) {
-          setLocalData(prev => {
+          setLocalData((prev: any) => {
             const newExp = [...(prev.experience || [])]
             if (newExp[suggestion.experience_index] && newExp[suggestion.experience_index].achievements) {
               newExp[suggestion.experience_index].achievements[suggestion.achievement_index] = suggestion.suggestion
@@ -1065,7 +1067,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
 
       case 'skills':
         if (suggestion.suggestion && typeof suggestion.suggestion === 'object') {
-          setLocalData(prev => ({
+          setLocalData((prev: any) => ({
             ...prev,
             skills: { ...prev.skills, ...suggestion.suggestion }
           }))
@@ -1074,7 +1076,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
 
       case 'projects':
         if (suggestion.project_index !== undefined) {
-          setLocalData(prev => {
+          setLocalData((prev: any) => {
             const newProjects = [...(prev.projects || [])]
             if (newProjects[suggestion.project_index]) {
               newProjects[suggestion.project_index].description = suggestion.suggestion
@@ -1090,12 +1092,12 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
     }
 
     // Remove accepted suggestion and close suggestion panel
-    setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+    setAiSuggestions((prev: any) => prev.filter((s: any) => s.id !== suggestionId))
     setSelectedSuggestion(null)
   }
 
   const handleSuggestionReject = (suggestionId: string) => {
-    setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+    setAiSuggestions((prev: any) => prev.filter((s: any) => s.id !== suggestionId))
     setSelectedSuggestion(null)
   }
 
@@ -1156,7 +1158,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
             </div>
             
             <div className="flex items-center gap-3">
-              <SimpleTemplateDropdown
+              <TailorSimpleTemplateDropdown
                 activeTemplate={activeTemplate}
                 onChange={setActiveTemplate}
               />
@@ -1213,7 +1215,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                 </div>
                 {/* Compact list of suggestions with accept/decline */}
                 <div className="mt-3 max-h-40 overflow-auto space-y-2">
-                  {aiSuggestions.map(s => (
+                  {aiSuggestions.map((s: any) => (
                     <div key={s.id} className="flex items-start justify-between gap-2 bg-white/60 rounded border border-blue-100 p-2">
                       <div className="min-w-0">
                         <div className="text-[11px] text-gray-600">{s.section}</div>
@@ -1327,7 +1329,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                   </button>
                 </div>
                 {localData.enableProfessionalSummary && (
-                  <EnhancedRichText
+                  <TailorEnhancedRichText
                     value={localData.professionalSummary}
                     onChange={(value) => setLocalData({
                       ...localData,
@@ -1368,13 +1370,13 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
               }}
             >
               <div className="space-y-4">
-                {localData.experience?.map((exp, index) => (
+                {localData.experience?.map((exp: any, index: number) => (
                   <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
                     <button
                       onClick={() => {
                         setLocalData({
                           ...localData,
-                          experience: localData.experience.filter((_, i) => i !== index)
+                          experience: localData.experience.filter((_: any, i: number) => i !== index)
                         })
                       }}
                       className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
@@ -1418,10 +1420,10 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                       <label className="block text-xs font-medium text-gray-600 uppercase tracking-wider mb-2">
                         Responsibilities & Achievements
                       </label>
-                      {exp.achievements?.map((achievement, achIndex) => (
+                      {exp.achievements?.map((achievement: any, achIndex: number) => (
                         <div key={achIndex} className="flex items-start gap-2 mb-2">
                           <span className="text-purple-500 mt-1">•</span>
-                          <EnhancedRichText
+                          <TailorEnhancedRichText
                             value={achievement}
                             onChange={(value) => {
                               const newExp = [...localData.experience]
@@ -1435,7 +1437,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                           <button
                             onClick={() => {
                               const newExp = [...localData.experience]
-                              newExp[index].achievements = newExp[index].achievements.filter((_, i) => i !== achIndex)
+                              newExp[index].achievements = newExp[index].achievements.filter((_: any, i: number) => i !== achIndex)
                               setLocalData({ ...localData, experience: newExp })
                             }}
                             className="text-red-500 hover:text-red-700 p-1"
@@ -1482,13 +1484,13 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
               }}
             >
               <div className="space-y-4">
-                {localData.projects?.map((project, index) => (
+                {localData.projects?.map((project: any, index: number) => (
                   <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
                     <button
                       onClick={() => {
                         setLocalData({
                           ...localData,
-                          projects: localData.projects?.filter((_, i) => i !== index) || []
+                          projects: localData.projects?.filter((_: any, i: number) => i !== index) || []
                         })
                       }}
                       className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
@@ -1537,13 +1539,13 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                         Technologies Used
                       </label>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {project.technologies?.map((tech, techIndex) => (
+                        {project.technologies?.map((tech: any, techIndex: number) => (
                           <span key={techIndex} className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 px-2 py-1 rounded-lg text-xs">
                             {tech}
                             <button
                               onClick={() => {
                                 const newProjects = [...(localData.projects || [])]
-                                newProjects[index].technologies = newProjects[index].technologies?.filter((_, i) => i !== techIndex) || []
+                                newProjects[index].technologies = newProjects[index].technologies?.filter((_: any, i: number) => i !== techIndex) || []
                                 setLocalData({ ...localData, projects: newProjects })
                               }}
                               className="text-orange-600 hover:text-orange-800"
@@ -1558,7 +1560,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                           type="text"
                           placeholder="Add technology (press Enter)"
                           className="flex-1 px-3 py-1 border border-gray-200 rounded-lg text-xs"
-                          onKeyPress={(e) => {
+                          onKeyPress={(e: any) => {
                             if (e.key === 'Enter' && e.target.value.trim()) {
                               const newProjects = [...(localData.projects || [])]
                               newProjects[index].technologies = [...(newProjects[index].technologies || []), e.target.value.trim()]
@@ -1592,14 +1594,14 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                     {Object.keys(skillDiff.added).length > 0 && (
                       <div>
                         <div className="text-xs font-medium text-green-700">Add</div>
-                        {Object.entries(skillDiff.added).map(([cat, arr]) => (
+                        {Object.entries(skillDiff.added).map(([cat, arr]: [string, any]) => (
                           <div key={cat} className="mt-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="text-[11px] text-gray-600">{cat}</div>
                               <button onClick={() => addCategorySkills(cat, arr as string[])} className="px-2 py-0.5 bg-green-600 text-white rounded text-[10px]">Apply category</button>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {arr.map((s:string) => (
+                              {arr.map((s: string) => (
                                 <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[11px]">
                                   {s}
                                   <button onClick={() => addSkill(cat, s)} className="px-1.5 py-0.5 bg-green-600 text-white rounded text-[10px]">+</button>
@@ -1613,14 +1615,14 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                     {Object.keys(skillDiff.removed).length > 0 && (
                       <div>
                         <div className="text-xs font-medium text-red-700">Remove (not relevant)</div>
-                        {Object.entries(skillDiff.removed).map(([cat, arr]) => (
+                        {Object.entries(skillDiff.removed).map(([cat, arr]: [string, any]) => (
                           <div key={cat} className="mt-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="text-[11px] text-gray-600">{cat}</div>
                               <button onClick={() => removeCategorySkills(cat, arr as string[])} className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px]">Remove category</button>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {arr.map((s:string) => (
+                              {arr.map((s: string) => (
                                 <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[11px]">
                                   {s}
                                   <button onClick={() => removeSkill(cat, s)} className="px-1.5 py-0.5 bg-red-600 text-white rounded text-[10px]">–</button>
@@ -1634,9 +1636,9 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                   </div>
                 </div>
               )}
-              <EnhancedSkillsManager
+              <TailorEnhancedSkillsManager
                 skills={localData.skills}
-                onSkillsChange={(updatedSkills) => {
+                onSkillsChange={(updatedSkills: any) => {
                   setLocalData({
                     ...localData,
                     skills: updatedSkills
@@ -1645,7 +1647,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                 userProfile={userProfile}
                 organizedSkills={localData?.skills ? convertSkillsToOrganizedFormat(localData.skills) : null}
                 languages={userProfile?.languages || []}
-                onLanguagesChange={(updatedLanguages) => {
+                onLanguagesChange={(updatedLanguages: any) => {
                   console.log('🌍 Language change callback triggered:', updatedLanguages)
                   if (userProfile) {
                     const newUserProfile = { ...userProfile, languages: updatedLanguages }
@@ -1653,8 +1655,6 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                     console.log('🌍 Updated userProfile with new languages:', newUserProfile.languages)
                   }
                 }}
-                showSkillLevelsInResume={showSkillLevelsInResume}
-                onShowSkillLevelsChange={setShowSkillLevelsInResume}
               />
             </SectionCard>
 
@@ -1678,13 +1678,13 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
               }}
             >
               <div className="space-y-3">
-                {localData.certifications?.map((cert, index) => (
+                {localData.certifications?.map((cert: any, index: number) => (
                   <div key={index} className="p-4 bg-gray-50 rounded-lg relative">
                     <button
                       onClick={() => {
                         setLocalData({
                           ...localData,
-                          certifications: localData.certifications?.filter((_, i) => i !== index) || []
+                          certifications: localData.certifications?.filter((_: any, i: number) => i !== index) || []
                         })
                       }}
                       className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
@@ -1752,7 +1752,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
             >
               <div className="space-y-4">
                 {localData.education?.length > 0 ? (
-                  localData.education.map((edu, index) => (
+                  localData.education.map((edu: any, index: number) => (
                     <div key={index} className="p-4 bg-gray-50 rounded-lg relative group">
                       <button
                         onClick={() => handleRemoveEducation(index)}
@@ -1905,7 +1905,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                     
                     <div className="p-4">
                       <div className="grid grid-cols-1 gap-2">
-                        {Object.entries(CUSTOM_SECTION_TEMPLATES).map(([name, template]) => (
+                        {Object.entries(CUSTOM_SECTION_TEMPLATES).map(([name, template]: [string, any]) => (
                           <motion.button
                             key={name}
                             whileHover={{ scale: 1.01 }}
@@ -1938,7 +1938,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
             </div>
 
             {/* Render Custom Sections */}
-            {localData.customSections?.map((section, sectionIndex) => {
+            {localData.customSections?.map((section: any, sectionIndex: number) => {
               const template = CUSTOM_SECTION_TEMPLATES[section.title as keyof typeof CUSTOM_SECTION_TEMPLATES]
               return (
                 <SectionCard
@@ -1959,23 +1959,23 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                   }}
                 >
                   <div className="space-y-3">
-                    {section.items?.map((item, itemIndex) => {
+                    {section.items?.map((item: any, itemIndex: number) => {
                       const fields = template?.fields || ['Field 1', 'Field 2', 'Field 3', 'Field 4']
                       return (
                         <div key={itemIndex} className="p-4 bg-gray-50 rounded-lg relative">
                           <button
                             onClick={() => {
                               const newSections = [...localData.customSections]
-                              newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_, i) => i !== itemIndex)
+                              newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_: any, i: number) => i !== itemIndex)
                               setLocalData({ ...localData, customSections: newSections })
                             }}
                             className="absolute top-2 right-2 p-1 hover:bg-red-50 rounded text-red-500"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                          
+
                           <div className="grid grid-cols-2 gap-3">
-                            {fields.map((fieldName, fieldIndex) => (
+                            {fields.map((fieldName: any, fieldIndex: number) => (
                               <CleanInput
                                 key={fieldIndex}
                                 label={fieldName}
@@ -1998,7 +1998,7 @@ export function TailorStudio({ jobData, userProfile: initialUserProfile, organiz
                       onClick={() => {
                         setLocalData({
                           ...localData,
-                          customSections: localData.customSections.filter((_, i) => i !== sectionIndex)
+                          customSections: localData.customSections.filter((_: any, i: number) => i !== sectionIndex)
                         })
                       }}
                       className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 border border-red-200 transition-all flex items-center gap-1"

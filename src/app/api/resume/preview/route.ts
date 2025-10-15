@@ -374,18 +374,24 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
     professionalSummary: resumeData.professionalSummary,
     enableProfessionalSummary: resumeData.enableProfessionalSummary !== undefined ? resumeData.enableProfessionalSummary : false,
     skills,
-    experience: (resumeData.experience || []).map(exp => ({
-      position: exp.position,
-      company: exp.company,
-      duration: exp.duration || (exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || ''),
-      achievements: exp.achievements || []
-    })),
-    education: (resumeData.education || []).map(edu => ({
-      degree: edu.degree || '',
-      field_of_study: edu.field_of_study || edu.field || '',
-      institution: edu.institution || '',
-      year: edu.year || edu.duration || ''
-    })),
+    experience: (resumeData.experience || []).map(exp => {
+      const item = exp as any;
+      return {
+        position: item.position,
+        company: item.company,
+        duration: item.duration || (item.startDate && item.endDate ? `${item.startDate} - ${item.endDate}` : item.startDate || item.endDate || ''),
+        achievements: item.achievements || []
+      };
+    }),
+    education: (resumeData.education || []).map(edu => {
+      const item = edu as any;
+      return {
+        degree: item.degree || '',
+        field_of_study: item.field_of_study || item.field || '',
+        institution: item.institution || '',
+        year: item.year || item.duration || ''
+      };
+    }),
     projects: resumeData.projects?.map(project => ({
       name: project.name,
       description: project.description,
@@ -399,29 +405,52 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       issuer: cert.issuer,
       date: cert.date
     })) || [],
-    customSections: resumeData.customSections?.filter(section => 
-      section.title?.trim() && section.items?.some(item => 
-        item.field1?.trim() || item.field2?.trim() || item.field3?.trim() || item.field4?.trim() ||
-        item.title?.trim() || item.description?.trim() || item.subtitle?.trim()
-      )
-    ).map(section => ({
-      id: section.id,
-      title: section.title,
-      type: section.type,
-      items: section.items?.filter(item => 
-        item.field1?.trim() || item.field2?.trim() || item.field3?.trim() || item.field4?.trim() ||
-        item.title?.trim() || item.description?.trim() || item.subtitle?.trim()
-      ).map(item => ({
-        field1: item.field1 || item.title || '',
-        field2: item.field2 || item.subtitle || '',
-        field3: item.field3 || item.date || '',
-        field4: item.field4 || item.description || '',
-        title: item.title || item.field1 || '',
-        subtitle: item.subtitle || item.field2 || '',
-        date: item.date || item.field3 || '',
-        description: item.description || item.field4 || ''
-      })) || []
-    })) || [],
+    customSections: resumeData.customSections?.filter(rawSection => {
+      const section = rawSection as any;
+      return section.title?.trim() && section.items?.some((rawItem: any) => {
+        const item = rawItem as any;
+        return (
+          item.field1?.trim() ||
+          item.field2?.trim() ||
+          item.field3?.trim() ||
+          item.field4?.trim() ||
+          item.title?.trim() ||
+          item.description?.trim() ||
+          item.subtitle?.trim()
+        );
+      });
+    }).map(rawSection => {
+      const section = rawSection as any;
+      return {
+        id: section.id,
+        title: section.title,
+        type: section.type,
+        items: section.items?.filter((rawItem: any) => {
+          const item = rawItem as any;
+          return (
+            item.field1?.trim() ||
+            item.field2?.trim() ||
+            item.field3?.trim() ||
+            item.field4?.trim() ||
+            item.title?.trim() ||
+            item.description?.trim() ||
+            item.subtitle?.trim()
+          );
+        }).map((rawItem: any) => {
+          const item = rawItem as any;
+          return {
+            field1: item.field1 || item.title || '',
+            field2: item.field2 || item.subtitle || '',
+            field3: item.field3 || item.date || '',
+            field4: item.field4 || item.description || '',
+            title: item.title || item.field1 || '',
+            subtitle: item.subtitle || item.field2 || '',
+            date: item.date || item.field3 || '',
+            description: item.description || item.field4 || ''
+          };
+        }) || []
+      };
+    }) || [],
     // Languages come from the top-level languages field (NOT from skills)
     languages: (resumeData as any).languages || [],
     photoUrl: (resumeData as any).photoUrl || null,

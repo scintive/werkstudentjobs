@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 1038ms
+ ✓ Compiled successfully in 27.1s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/enhanced-strategy/StrategyOnePager.tsx:94:14
+Type error: Parameter 't' implicitly has an 'any' type.
+
+[0m [90m 92 |[39m     user_evidence[33m:[39m t[33m?[39m[33m.[39muser_evidence[33m,[39m
+ [90m 93 |[39m     learning_paths[33m:[39m t[33m?[39m[33m.[39mlearning_paths
+[31m[1m>[22m[39m[90m 94 |[39m   }))[33m.[39mfilter(t [33m=>[39m t[33m.[39mtask)[33m;[39m
+ [90m    |[39m              [31m[1m^[22m[39m
+ [90m 95 |[39m
+ [90m 96 |[39m   [36mconst[39m taskCards [33m=[39m (aiTasks[33m.[39mlength [33m>[39m [35m0[39m [33m?[39m aiTasks[33m.[39mmap(t [33m=>[39m t[33m.[39mtask) [33m:[39m tasks)[33m.[39mmap((task[33m,[39m idx) [33m=>[39m {
+ [90m 97 |[39m     [36mconst[39m taskNorm [33m=[39m norm(task)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

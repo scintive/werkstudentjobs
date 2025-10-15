@@ -54,7 +54,7 @@ export const ProjectsSection = React.memo(({
             />
             <CleanInput
               label="Date/Duration"
-              value={project.date}
+              value={project.date || ''}
               onChange={(value) => {
                 const newProjects = [...(localData.projects || [])]
                 newProjects[index].date = value

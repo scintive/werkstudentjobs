@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 809ms
+ ✓ Compiled successfully in 9.8s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/jobs/JobBrowser.tsx:1594:57
+Type error: Property 'hours_per_week' does not exist on type 'JobWithCompany'.
+
+[0m [90m 1592 |[39m                           studentProfile[33m=[39m{studentProfile}
+ [90m 1593 |[39m                           jobRequirements[33m=[39m{{
+[31m[1m>[22m[39m[90m 1594 |[39m                             hours_per_week[33m:[39m selectedJob[33m.[39mhours_per_week [33m||[39m [32m'15-20'[39m[33m,[39m
+ [90m      |[39m                                                         [31m[1m^[22m[39m
+ [90m 1595 |[39m                             language_required[33m:[39m selectedJob[33m.[39mgerman_required [33m||[39m selectedJob[33m.[39mlanguage_required[33m,[39m
+ [90m 1596 |[39m                             location[33m:[39m selectedJob[33m.[39mlocation_city[33m,[39m
+ [90m 1597 |[39m                             duration[33m:[39m selectedJob[33m.[39mduration_months[33m?[39m[33m.[39mtoString()[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

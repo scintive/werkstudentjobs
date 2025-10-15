@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client
-    llmService.client = llmService.initializeClient();
+    (llmService as any).client = llmService.initializeClient();
     
     console.log('🎯📂 Generating GPT category-specific suggestions...');
     const suggestions = await llmService.generateCategorySkillSuggestions(

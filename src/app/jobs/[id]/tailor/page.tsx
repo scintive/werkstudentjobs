@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import type { JobStrategy, CoverLetter, ResumePatch } from '@/lib/types/jobStrategy';
-import type { JobWithCompany } from '@/lib/supabase/types';
+import type { JobWithCompanyNested } from '@/lib/supabase/types';
 import type { StudentProfile, StudentJobStrategy } from '@/lib/types/studentProfile';
 import { ResumeDataService } from '@/lib/services/resumeDataService';
 import { resumeVariantService } from '@/lib/services/resumeVariantService';
@@ -241,7 +241,7 @@ function TailorApplicationPage() {
     url.searchParams.set('tab', newTab);
     window.history.pushState({}, '', url.toString());
   };
-  const [job, setJob] = useState<JobWithCompany | null>(null);
+  const [job, setJob] = useState<JobWithCompanyNested | null>(null);
   const [strategy, setStrategy] = useState<JobStrategy | null>(null);
   const [studentStrategy, setStudentStrategy] = useState<StudentJobStrategy | null>(null);
   const [jobAnalysis, setJobAnalysis] = useState<any>(null); // Store intelligent job analysis from GPT
@@ -368,7 +368,7 @@ function TailorApplicationPage() {
         work_mode: 'Unknown',
         match_score: 0,
         skills_original: [],
-      } as JobWithCompany);
+      } as any);
     }
   };
 
@@ -492,16 +492,19 @@ function TailorApplicationPage() {
         .order('updated_at', { ascending: false })
         .limit(1);
 
+      // Type assertion to help TypeScript understand the query result
+      const typedVariants = existingVariants as Array<{ id: string; updated_at: string; job_analysis: any }> | null;
+
       let existingVariantId: string | null = null;
-      if (existingVariants && existingVariants.length > 0) {
-        existingVariantId = existingVariants[0].id;
+      if (typedVariants && typedVariants.length > 0) {
+        existingVariantId = typedVariants[0].id;
         console.log('✅ UPFRONT ANALYSIS: Found existing variant, loading from database:', existingVariantId);
         setVariantId(existingVariantId);
         setCurrentVariantId(existingVariantId);
 
         // Load existing job analysis if available
-        if (existingVariants[0].job_analysis) {
-          setJobAnalysis(existingVariants[0].job_analysis);
+        if (typedVariants[0].job_analysis) {
+          setJobAnalysis(typedVariants[0].job_analysis);
           console.log('✅ Loaded job analysis from existing variant');
         }
 
@@ -725,7 +728,7 @@ function TailorApplicationPage() {
   // PDF Export for Cover Letters with Premium Templates
   const exportCoverLetterPDF = async (
     coverLetter: CoverLetter,
-    job: JobWithCompany,
+    job: JobWithCompanyNested,
     template: 'professional' | 'modern' | 'elegant' | 'minimal' = 'professional'
   ) => {
     try {
@@ -1066,10 +1069,9 @@ function StrategyTab({
   onRetryStrategy,
   handleMatchScoreCalculated
 }: {
-  job: JobWithCompany;
+  job: JobWithCompanyNested;
   strategy: JobStrategy | null;
   studentStrategy: StudentJobStrategy | null;
-  enhancedStrategy: any;
   userProfile: any;
   jobAnalysis: any;
   loading: boolean;
@@ -1188,11 +1190,11 @@ function StrategyTab({
             studentProfile={studentProfile}
             userProfile={userProfile}
             jobRequirements={{
-              hours_per_week: job.hours_per_week || '15-20',
-              language_required: job.german_required || job.language_required,
-              location: job.location_city,
-              duration: job.duration_months?.toString(),
-              start_date: job.start_date
+              hours_per_week: (job as any).hours_per_week || '15-20',
+              language_required: (job.german_required || job.language_required) ?? undefined,
+              location: job.location_city ?? undefined,
+              duration: (job as any).duration_months?.toString(),
+              start_date: (job as any).start_date
             }}
             compact={false}
           />
@@ -1628,8 +1630,11 @@ function ResumeStudioTab({
             .eq('id', cachedVariantId)
             .single();
 
-          if (variantRow?.tailored_data) {
-            const tailoredData = variantRow.tailored_data;
+          // Type assertion to help TypeScript
+          const typedVariantRow = variantRow as { tailored_data: any } | null;
+
+          if (typedVariantRow?.tailored_data) {
+            const tailoredData = typedVariantRow.tailored_data;
             // Merge student info into cached variant data
             if (studentInfoFromApi) {
               Object.assign(tailoredData, studentInfoFromApi);
@@ -1767,7 +1772,9 @@ function ResumeStudioTab({
             .select('*')
             .eq('id', variantId)
             .maybeSingle();
-          latestTailored = variantRow?.tailored_data || resumeData;
+          // Type assertion to help TypeScript
+          const typedVariantRow2 = variantRow as { tailored_data: any } | null;
+          latestTailored = typedVariantRow2?.tailored_data || resumeData;
           latestPlan = latestTailored?.skillsCategoryPlan || null;
 
           // Add photoUrl and student info from API to fallback variant
@@ -2005,7 +2012,7 @@ function CoverLetterStudioTab({
   setIncludeHours,
   variantId
 }: {
-  job: JobWithCompany;
+  job: JobWithCompanyNested;
   strategy: JobStrategy | null;
   coverLetter: CoverLetter | null;
   coverLetterMetadata: any;
@@ -2016,7 +2023,7 @@ function CoverLetterStudioTab({
   onCoverLetterChange: (letter: CoverLetter | null) => void;
   loading: boolean;
   userProfile: any;
-  exportPDF: (letter: CoverLetter, job: JobWithCompany, template?: string) => void;
+  exportPDF: (letter: CoverLetter, job: JobWithCompanyNested, template?: 'professional' | 'modern' | 'elegant' | 'minimal') => void;
   includeUniversity: boolean;
   setIncludeUniversity: (value: boolean) => void;
   includeSemester: boolean;
@@ -2110,18 +2117,20 @@ function CoverLetterStudioTab({
           .order('updated_at', { ascending: false })
           .limit(1);
 
-        if (variants && variants[0]) {
+        // Type assertion to help TypeScript
+        const typedVariants = variants as Array<{ id: string }> | null;
+
+        if (typedVariants && typedVariants[0]) {
           const versionedData = {
             versions: updatedVersions,
             current_version: currentVersion
           };
 
-          await supabase
-            .from('resume_variants')
+          await (supabase.from('resume_variants') as any)
             .update({
               cover_letter_content: JSON.stringify(versionedData)
             })
-            .eq('id', variants[0].id);
+            .eq('id', typedVariants[0].id);
 
           console.log('💾 Auto-saved cover letter edits');
           setSaveStatus('saved');
@@ -2642,10 +2651,10 @@ function CoverLetterStudioTab({
                     {/* Letter Header */}
                     <div className="mb-8">
                       <h4 className="font-bold text-gray-900 text-lg mb-2">
-                        {userProfile?.personal_details?.name || userProfile?.personalInfo?.name || userProfile?.name || 'Varun Mishra'}
+                        {userProfile?.personal_details?.name || userProfile?.personalInfo?.name || userProfile?.name || 'Your Name'}
                       </h4>
                       <p className="text-gray-600">
-                        {userProfile?.personal_details?.email || userProfile?.personalInfo?.email || userProfile?.email || 'varunmisra@gmail.com'}
+                        {userProfile?.personal_details?.email || userProfile?.personalInfo?.email || userProfile?.email || 'your.email@example.com'}
                         {(userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone) &&
                           ` | ${userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone}`
                         }
@@ -2726,7 +2735,7 @@ function CoverLetterStudioTab({
                         />
                         {/* User name after sign-off */}
                         <div className="mt-1 text-gray-800">
-                          {userProfile?.personalInfo?.name || userProfile?.personal_details?.name || userProfile?.name || 'Varun Mishra'}
+                          {userProfile?.personalInfo?.name || userProfile?.personal_details?.name || userProfile?.name || 'Your Name'}
                         </div>
                       </div>
                     </div>
@@ -2798,7 +2807,7 @@ function DownloadKitTab({
   strategy,
   studentStrategy
 }: {
-  job: JobWithCompany | null;
+  job: JobWithCompanyNested | null;
   userProfile: any;
   variantId: string | null;
   coverLetter: CoverLetter | null;
@@ -2818,7 +2827,7 @@ function DownloadKitTab({
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
-    const companyName = (job.company?.name || 'Company')
+    const companyName = (job.companies?.name || job.company_name || 'Company')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 

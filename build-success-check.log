@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 536ms
+ ✓ Compiled successfully in 8.1s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/matchingService.ts:626:7
+Type error: Type '{ readonly SKILLS: 0.55; readonly TOOLS: 0.2; readonly LANGUAGE: 0.15; readonly LOCATION: 0.1; }' is missing the following properties from type '{ skills: number; tools: number; language: number; location: number; }': skills, tools, language, location
+
+[0m [90m 624 |[39m       }[33m,[39m
+ [90m 625 |[39m       totalScore[33m:[39m [33mMath[39m[33m.[39mround(totalScore [33m*[39m [35m100[39m)[33m,[39m [90m// Convert to percentage[39m
+[31m[1m>[22m[39m[90m 626 |[39m       weights[33m:[39m [33mMATCH_WEIGHTS[39m
+ [90m     |[39m       [31m[1m^[22m[39m
+ [90m 627 |[39m     }[33m;[39m
+ [90m 628 |[39m   }
+ [90m 629 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null

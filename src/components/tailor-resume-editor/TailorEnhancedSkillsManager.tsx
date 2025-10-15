@@ -247,8 +247,8 @@ export function TailorEnhancedSkillsManager({
         }
 
         // Auto-expand high relevance categories
-        const autoExpanded: Record<string, boolean> = {}
-        Object.entries(enhancedData.organized_categories).forEach(([key, category]) => {
+        const autoExpanded: Record<string, boolean> = {};
+        (Object.entries(enhancedData.organized_categories) as [string, OrganizedCategory][]).forEach(([key, category]) => {
           autoExpanded[key] = category.jobRelevance === 'high' || true // Default to expanded
         })
         // Always include languages in expanded categories
@@ -623,7 +623,7 @@ export function TailorEnhancedSkillsManager({
 
     console.log('📤 CALLING onSkillsChange with COMPLETE skills object:', {
       categories: Object.keys(skillsObject),
-      totalSkillsAcrossAllCategories: Object.values(skillsObject).reduce((total, skills) => total + (skills as string[]).length, 0),
+      totalSkillsAcrossAllCategories: Object.values(skillsObject).reduce((total: number, skills) => total + (skills as string[]).length, 0),
       completeSkillsObject: skillsObject
     })
 
@@ -729,7 +729,7 @@ export function TailorEnhancedSkillsManager({
 
   const updatePreview = () => {
     console.log('🔄 Updating preview with current organized skills')
-    if (organizedData && onSkillsChange) {
+    if (organizedData) {
       // Convert organized data back to skills object format and trigger update
       syncWithSkillsObject(organizedData)
 
@@ -755,7 +755,7 @@ export function TailorEnhancedSkillsManager({
     const newCategories = { ...organizedData.organized_categories }
     const categoryData = newCategories[oldKey]
     delete newCategories[oldKey]
-    newCategories[newKey] = { ...categoryData, displayName: newName }
+    newCategories[newKey] = categoryData
 
     setOrganizedData({
       ...organizedData,
@@ -1138,12 +1138,12 @@ export function TailorEnhancedSkillsManager({
       {false && (() => {
         // Debug logging
         console.log('🔍 Looking for languages in:', {
-          organizedCategories: Object.keys(organizedData.organized_categories),
+          organizedCategories: Object.keys(organizedData?.organized_categories || {}),
           skills: Object.keys(skills)
         })
 
         // First try to find languages in organized data
-        const languageEntry = Object.entries(organizedData.organized_categories).find(([key]) => {
+        const languageEntry = Object.entries(organizedData?.organized_categories || {}).find(([key]) => {
           const displayName = key
             .replace(/___/g, ' & ')
             .split('_')
@@ -1157,8 +1157,9 @@ export function TailorEnhancedSkillsManager({
         let languageCategoryKey = 'languages'
 
         if (languageEntry) {
-          languageSkills = languageEntry[1].skills || []
-          languageCategoryKey = languageEntry[0]
+          const [key, category] = languageEntry as [string, OrganizedCategory]
+          languageSkills = category.skills || []
+          languageCategoryKey = key
           console.log('✅ Found languages in organized data:', languageSkills)
         } else if (skills.languages) {
           // Languages might be directly in skills object

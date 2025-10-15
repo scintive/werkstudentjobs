@@ -48,7 +48,7 @@ export const TailorEnhancedRichText = ({
   const [undoStack, setUndoStack] = React.useState<string[]>([])
   const [redoStack, setRedoStack] = React.useState<string[]>([])
   const [lastSavedValue, setLastSavedValue] = React.useState(value)
-  const debounceTimerRef = React.useRef<NodeJS.Timeout>()
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | undefined>(undefined)
   const [selectedText, setSelectedText] = React.useState('')
   const [keywordHighlights, setKeywordHighlights] = React.useState<string[]>([])
 

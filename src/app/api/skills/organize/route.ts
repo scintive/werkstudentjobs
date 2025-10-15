@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client
-    llmService.client = llmService.initializeClient();
+    (llmService as any).client = llmService.initializeClient();
     
     console.log('🧠🎯 Generating intelligent skill organization...');
     const organization = await llmService.organizeSkillsIntelligently(profileData, currentSkills);

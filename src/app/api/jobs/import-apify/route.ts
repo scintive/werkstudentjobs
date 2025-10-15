@@ -325,10 +325,10 @@ export async function POST(request: NextRequest) {
             skills: extractedJob.named_skills_tools || [],
 
             // Who we are looking for (qualifications, requirements)
-            who_we_are_looking_for: extractedJob.who_we_are_looking_for || [],
+            who_we_are_looking_for: (extractedJob as any).who_we_are_looking_for || [],
 
             // Application requirements (what to send)
-            application_requirements: extractedJob.application_requirements || [],
+            application_requirements: (extractedJob as any).application_requirements || [],
 
             // Status
             is_active: true,

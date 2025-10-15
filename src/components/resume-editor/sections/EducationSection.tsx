@@ -61,10 +61,10 @@ export const EducationSection = React.memo(({
               />
               <CleanInput
                 label="Duration"
-                value={edu.duration || (edu as any).year || ''}
+                value={edu.year || ''}
                 onChange={(value) => {
                   const newEdu = [...localData.education]
-                  newEdu[index].duration = value
+                  newEdu[index].year = value
                   setLocalData({ ...localData, education: newEdu })
                 }}
                 placeholder="e.g., 2020-2024"
@@ -87,7 +87,7 @@ export const EducationSection = React.memo(({
                   degree: '',
                   field_of_study: '',
                   institution: '',
-                  duration: ''
+                  year: ''
                 }]
               })
             }}

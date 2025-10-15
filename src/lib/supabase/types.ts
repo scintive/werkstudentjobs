@@ -74,14 +74,20 @@ export interface Database {
           company_id: string | null
           title: string
           description: string | null
+          description_html: string | null
+          description_text: string | null
           portal: string | null
           portal_link: string | null
           job_description_link: string | null
           application_link: string | null
+          application_url: string | null
           werkstudent: boolean | null
           work_mode: 'Remote' | 'Hybrid' | 'Onsite' | 'Unknown' | null
           contract_type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship' | 'Werkstudent' | 'Unknown' | null
           location_raw: string | null
+          location_city: string | null
+          location_country: string | null
+          location_full: string | null
           city: string | null
           country: string | null
           is_remote: boolean | null
@@ -120,6 +126,10 @@ export interface Database {
           benefits: string[] | null
           application_requirements: string[] | null
           who_we_are_looking_for: string[] | null
+          tasks_responsibilities: string[] | null
+          hiring_manager: string | null
+          additional_insights: string[] | null
+          research_confidence: string | null
           remote_allowed: boolean | null
           hybrid_allowed: boolean | null
           onsite_required: boolean | null
@@ -264,26 +274,29 @@ export interface Database {
       user_job_interactions: {
         Row: {
           id: string
-          user_id: string
+          user_profile_id: string
           job_id: string
-          interaction_type: 'viewed' | 'saved' | 'applied' | 'rejected'
+          interaction_type: 'viewed' | 'saved' | 'apply' | 'applied' | 'rejected' | 'shared'
           interaction_data: Json | null
+          source: string | null
           created_at: string
         }
         Insert: {
           id?: string
-          user_id: string
+          user_profile_id: string
           job_id: string
-          interaction_type: 'viewed' | 'saved' | 'applied' | 'rejected'
+          interaction_type: 'viewed' | 'saved' | 'apply' | 'applied' | 'rejected' | 'shared'
           interaction_data?: Json | null
+          source?: string | null
           created_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
+          user_profile_id?: string
           job_id?: string
-          interaction_type?: 'viewed' | 'saved' | 'applied' | 'rejected'
+          interaction_type?: 'viewed' | 'saved' | 'apply' | 'applied' | 'rejected' | 'shared'
           interaction_data?: Json | null
+          source?: string | null
           created_at?: string
         }
       }
@@ -291,6 +304,7 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          session_id: string | null
           profile_data: Json
           skills_canonical: string[] | null
           tools_canonical: string[] | null
@@ -300,12 +314,20 @@ export interface Database {
           willing_hybrid: boolean | null
           education_level: string | null
           years_experience: number | null
+          photo_url: string | null
+          onboarding_completed: boolean | null
+          hours_available: number | null
+          current_semester: number | null
+          start_preference: string | null
+          onboarding_completed_at: string | null
+          university_name: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
+          session_id?: string | null
           profile_data: Json
           skills_canonical?: string[] | null
           tools_canonical?: string[] | null
@@ -315,12 +337,20 @@ export interface Database {
           willing_hybrid?: boolean | null
           education_level?: string | null
           years_experience?: number | null
+          photo_url?: string | null
+          onboarding_completed?: boolean | null
+          hours_available?: number | null
+          current_semester?: number | null
+          start_preference?: string | null
+          onboarding_completed_at?: string | null
+          university_name?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
+          session_id?: string | null
           profile_data?: Json
           skills_canonical?: string[] | null
           tools_canonical?: string[] | null
@@ -330,6 +360,13 @@ export interface Database {
           willing_hybrid?: boolean | null
           education_level?: string | null
           years_experience?: number | null
+          photo_url?: string | null
+          onboarding_completed?: boolean | null
+          hours_available?: number | null
+          current_semester?: number | null
+          start_preference?: string | null
+          onboarding_completed_at?: string | null
+          university_name?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -355,6 +392,7 @@ export interface Database {
           created_at: string
           updated_at: string
           last_accessed_at: string
+          photo_url: string | null
         }
         Insert: {
           id?: string
@@ -376,6 +414,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           last_accessed_at?: string
+          photo_url?: string | null
         }
         Update: {
           id?: string
@@ -397,6 +436,48 @@ export interface Database {
           created_at?: string
           updated_at?: string
           last_accessed_at?: string
+          photo_url?: string | null
+        }
+      }
+      job_analysis_cache: {
+        Row: {
+          id: string
+          job_id: string
+          user_session_id: string | null
+          user_email: string | null
+          user_id: string | null
+          analysis_type: string
+          strategy_data: Json
+          profile_hash: string | null
+          created_at: string
+          updated_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          user_session_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          analysis_type?: string
+          strategy_data: Json
+          profile_hash?: string | null
+          created_at?: string
+          updated_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          user_session_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          analysis_type?: string
+          strategy_data?: Json
+          profile_hash?: string | null
+          created_at?: string
+          updated_at?: string
+          expires_at?: string
         }
       }
       job_match_results: {
@@ -490,6 +571,18 @@ export interface JobWithCompany extends Job {
   requirements?: JobRequirement[]
   skills?: JobSkill[]
   matchResult?: JobMatchResult
+}
+
+// Type helper for Job queries with nested company data (common pattern in API routes)
+// This matches the structure returned by: .select('*, companies (name, description, industry, logo_url)')
+export interface JobWithCompanyNested extends Job {
+  company_name?: string | null; // Legacy field, use companies.name when available
+  companies: {
+    name: string
+    description: string | null
+    industry: string | null
+    logo_url: string | null
+  } | null
 }
 
 // Extended user profile with match capabilities

@@ -1,0 +1,26 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 630ms
+ ✓ Compiled successfully in 12.3s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/jobMatchingService.ts:127:7
+Type error: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+
+[0m [90m 125 |[39m   [36masync[39m saveMatchResults(userProfileId[33m?[39m[33m:[39m string)[33m:[39m [33mPromise[39m[33m<[39m[36mvoid[39m[33m>[39m {
+ [90m 126 |[39m     [36mif[39m ([33m![39muserProfileId) {
+[31m[1m>[22m[39m[90m 127 |[39m       userProfileId [33m=[39m [36mthis[39m[33m.[39mresumeService[33m.[39mgetUserProfileId()
+ [90m     |[39m       [31m[1m^[22m[39m
+ [90m 128 |[39m     }
+ [90m 129 |[39m     
+ [90m 130 |[39m     [36mif[39m ([33m![39muserProfileId) {[0m
+Next.js build worker exited with code: 1 and signal: null

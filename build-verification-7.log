@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 491ms
+ ✓ Compiled successfully in 7.9s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/matchingService.ts:502:37
+Type error: Property 'match' does not exist on type 'never'.
+
+[0m [90m 500 |[39m             [90m// Enhanced regex to handle multiple formats:[39m
+ [90m 501 |[39m             [90m// "English (C1)", "German (C2)", "English C1", "German - Native", etc.[39m
+[31m[1m>[22m[39m[90m 502 |[39m             [36mconst[39m levelMatch [33m=[39m lang[33m.[39mmatch([35m/^(.+?)[\s\-\(]*([A-C][12]|native|fluent|advanced|intermediate|basic)[\s\)]*$/i[39m)[33m;[39m
+ [90m     |[39m                                     [31m[1m^[22m[39m
+ [90m 503 |[39m             [36mif[39m (levelMatch) {
+ [90m 504 |[39m               [36mconst[39m languageName [33m=[39m levelMatch[[35m1[39m][33m.[39mtrim()[33m.[39mtoLowerCase()[33m;[39m
+ [90m 505 |[39m               [36mlet[39m level [33m=[39m levelMatch[[35m2[39m][33m.[39mtoUpperCase()[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

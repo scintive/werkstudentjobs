@@ -128,19 +128,19 @@ export async function POST(request: NextRequest) {
             company_name: job.company,
             description: job.description,
             description_original: job.description,
-            location: extractedJob.location || job.location,
-            location_city: extractedJob.city || '',
-            work_mode: job.workMode || extractedJob.work_mode || 'Unknown',
+            location: (extractedJob as any).location || job.location,
+            location_city: (extractedJob as any).city || '',
+            work_mode: job.workMode || (extractedJob as any).work_mode || 'Unknown',
             url: job.url,
-            salary_range: job.salary || extractedJob.salary_range || '',
-            employment_type: extractedJob.employment_type || 'Werkstudent',
+            salary_range: job.salary || (extractedJob as any).salary_range || '',
+            employment_type: (extractedJob as any).employment_type || 'Werkstudent',
             posted_at: job.postedDate ? new Date(job.postedDate).toISOString() : new Date().toISOString(),
 
             // Normalized arrays
-            requirements_original: extractedJob.requirements || [],
-            responsibilities_original: extractedJob.responsibilities || [],
-            qualifications_original: extractedJob.qualifications || [],
-            skills_original: extractedJob.skills || [],
+            requirements_original: (extractedJob as any).requirements || [],
+            responsibilities_original: (extractedJob as any).responsibilities || [],
+            qualifications_original: (extractedJob as any).qualifications || [],
+            skills_original: (extractedJob as any).skills || [],
 
             // Source tracking
             source: job.source,

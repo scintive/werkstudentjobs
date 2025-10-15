@@ -145,7 +145,7 @@ export const CleanInput = ({
       <div className="relative group">
         {icon && (
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gray-600 transition-colors">
-            {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
+            {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-4 h-4' })}
           </div>
         )}
         <Component
@@ -346,11 +346,11 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
   )
 
   if (categoryIndex === -1) {
-    const inferredDisplay = suggestion?.metadata?.categoryDisplayName || suggestion?.category || humanizePlanKey(canonicalTarget)
+    const inferredDisplay = (suggestion as any)?.metadata?.categoryDisplayName || (suggestion as any)?.category || humanizePlanKey(canonicalTarget)
     clonedCategories.push({
       canonical_key: canonicalTarget,
       display_name: resolvePlanDisplayName({ display_name: inferredDisplay }, canonicalTarget),
-      priority: typeof suggestion?.metadata?.categoryPriority === 'number' ? suggestion.metadata.categoryPriority : undefined,
+      priority: typeof (suggestion as any)?.metadata?.categoryPriority === 'number' ? (suggestion as any).metadata.categoryPriority : undefined,
       job_alignment: suggestion?.rationale || '',
       skills: []
     })
@@ -359,7 +359,7 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
 
   const category = clonedCategories[categoryIndex]
 
-  if (suggestion.type === 'skill_add' || suggestion.type === 'skill_addition') {
+  if ((suggestion as any).type === 'skill_add' || (suggestion as any).type === 'skill_addition') {
     const skillName = suggestion.suggested || ''
     if (!skillName) return plan
     const skillKey = normalizePlanSkillName(skillName)
@@ -389,8 +389,8 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
         confidence: suggestion.confidence ?? 85
       })
     }
-  } else if (suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal') {
-    const removeKey = normalizePlanSkillName(suggestion.original || suggestion.before || '')
+  } else if ((suggestion as any).type === 'skill_remove' || (suggestion as any).type === 'skill_removal') {
+    const removeKey = normalizePlanSkillName(suggestion.original || (suggestion as any).before || '')
     if (removeKey) {
       category.skills = category.skills.filter((skill: any) => {
         const candidate = normalizePlanSkillName(skill?.name || skill?.skill || skill)
@@ -633,30 +633,31 @@ export function PerfectStudio({
 
       // SECOND: If not in resumeData, fetch from database
       console.log('🔍 No cached skillsCategoryPlan, fetching from database...')
-      supabase
-        .from('resume_variants')
-        .select('tailored_data')
-        .eq('id', variantId)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('❌ Failed to load variant tailored_data:', error)
-            return
-          }
+      Promise.resolve(
+        supabase
+          .from('resume_variants')
+          .select('tailored_data')
+          .eq('id', variantId)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('❌ Failed to load variant tailored_data:', error)
+              return
+            }
 
-          const dbSkillsCategoryPlan = data?.tailored_data?.skillsCategoryPlan
-          if (dbSkillsCategoryPlan?.categories) {
-            console.log('✅ Found skillsCategoryPlan in database:', dbSkillsCategoryPlan.categories.length)
-            const organizedData = extractSkillsFromPlan(dbSkillsCategoryPlan)
-            console.log('🎯 Converted database skillsCategoryPlan to organized skills:', Object.keys(organizedData.organized_categories))
-            setOrganizedSkills(organizedData)
-          } else {
-            console.log('⚠️ No skillsCategoryPlan found in variant data')
-          }
-        })
-        .finally(() => {
-          setLoadingOrganizedSkills(false)
-        })
+            const dbSkillsCategoryPlan = (data as any)?.tailored_data?.skillsCategoryPlan
+            if (dbSkillsCategoryPlan?.categories) {
+              console.log('✅ Found skillsCategoryPlan in database:', dbSkillsCategoryPlan.categories.length)
+              const organizedData = extractSkillsFromPlan(dbSkillsCategoryPlan)
+              console.log('🎯 Converted database skillsCategoryPlan to organized skills:', Object.keys(organizedData.organized_categories))
+              setOrganizedSkills(organizedData)
+            } else {
+              console.log('⚠️ No skillsCategoryPlan found in variant data')
+            }
+          })
+      ).finally(() => {
+        setLoadingOrganizedSkills(false)
+      })
     }
   }, [mode, variantId, organizedSkills, loadingOrganizedSkills])
 
@@ -726,7 +727,7 @@ export function PerfectStudio({
     soft_skills: '',
     languages: ''
   })
-  const debounceTimer = React.useRef<NodeJS.Timeout>()
+  const debounceTimer = React.useRef<NodeJS.Timeout | undefined>(undefined)
   const iframeRef = React.useRef<HTMLIFrameElement>(null)
   const savedScrollPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 })
 
@@ -1081,7 +1082,7 @@ export function PerfectStudio({
       // Update global context only when data changed to avoid feedback loops
       try {
         const currentContextJson = JSON.stringify(resumeData || {})
-        if (currentContextJson !== snapshotJson) {
+        if (currentContextJson !== snapshotKey) {
           Object.keys(localData).forEach(key => {
             if (key === 'personalInfo') {
               updatePersonalInfo(localData.personalInfo)
@@ -1222,7 +1223,7 @@ export function PerfectStudio({
         date: '',
         description: ''
       }]
-    }
+    } as any
 
     setLocalData({
       ...localData,
@@ -1238,7 +1239,7 @@ export function PerfectStudio({
         activeTemplate={activeTemplate}
         onChange={(tpl) => setActiveTemplate(tpl)}
         onExport={exportToPDF}
-        resumeId={resumeData?.id}
+        resumeId={(resumeData as any)?.id}
         variantId={variantId}
       />
 
@@ -1418,7 +1419,7 @@ export function PerfectStudio({
                   }))
 
                   // Update the actual resumeData in context and save to database
-                  if (mode !== 'tailor') {
+                  if (mode === 'base') {
                     updateField('skills', updatedSkills || {})
                     saveNow()
                   }
@@ -1467,7 +1468,7 @@ export function PerfectStudio({
                   }
                 }}
                 userProfile={resumeData} // Use resumeData from context
-                languages={localData.languages || []}
+                languages={(localData.languages as any) || []}
                 // Pass suggestion props for tailor mode
                 suggestions={suggestionsEnabled ? getSuggestionsForSection('skills') : []}
                 onAcceptSuggestion={acceptSuggestion}
@@ -1478,11 +1479,9 @@ export function PerfectStudio({
                   setLocalData(prevData => ({
                     ...prevData,
                     languages: updatedLanguages
-                  }))
+                  } as any))
                   console.log('🌍 Updated localData languages to prevent reset')
                 }}
-                  showSkillLevelsInResume={showSkillLevelsInResume}
-                  onShowSkillLevelsChange={setShowSkillLevelsInResume}
                 />
               )}
             </SectionCard>
@@ -1510,7 +1509,7 @@ export function PerfectStudio({
                 const newData = {
                   ...localData,
                   languages: updatedLanguages
-                }
+                } as any
                 setLocalData(newData)
 
                 // Auto-save in base mode
@@ -1519,7 +1518,7 @@ export function PerfectStudio({
                   const updatedResumeData = {
                     ...resumeData,
                     languages: updatedLanguages
-                  }
+                  } as any
                   updateField('languages', updatedLanguages)
                   import('@/lib/services/resumeDataService').then(({ ResumeDataService }) => {
                     const service = ResumeDataService.getInstance()
@@ -1576,7 +1575,7 @@ export function PerfectStudio({
                     field_of_study: '',
                     institution: '',
                     duration: ''
-                  }]
+                  } as any]
                 })
               }}
             >
@@ -1662,7 +1661,7 @@ export function PerfectStudio({
                   isExpanded={expandedSections.custom}
                   onToggle={() => toggleSection('custom')}
                   onAdd={() => {
-                    const newSections = [...localData.customSections]
+                    const newSections = [...(localData.customSections || [])]
                     newSections[sectionIndex].items = [
                       ...(newSections[sectionIndex].items || []),
                       { title: '', subtitle: '', date: '', description: '' }
@@ -1702,7 +1701,7 @@ export function PerfectStudio({
                         <div key={itemIndex} className="p-4 bg-gray-50 rounded-lg relative group">
                           <button
                             onClick={() => {
-                              const newSections = [...localData.customSections]
+                              const newSections = [...(localData.customSections || [])]
                               newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_, i) => i !== itemIndex)
                               setLocalData({ ...localData, customSections: newSections })
                             }}
@@ -1716,7 +1715,7 @@ export function PerfectStudio({
                               label={fieldNames[0]}
                               value={item.title || ''}
                               onChange={(value) => {
-                                const newSections = [...localData.customSections]
+                                const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].title = value
                                 setLocalData({ ...localData, customSections: newSections })
                               }}
@@ -1726,7 +1725,7 @@ export function PerfectStudio({
                               label={fieldNames[1]}
                               value={item.subtitle || ''}
                               onChange={(value) => {
-                                const newSections = [...localData.customSections]
+                                const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].subtitle = value
                                 setLocalData({ ...localData, customSections: newSections })
                               }}
@@ -1736,7 +1735,7 @@ export function PerfectStudio({
                               label={fieldNames[2]}
                               value={item.date || ''}
                               onChange={(value) => {
-                                const newSections = [...localData.customSections]
+                                const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].date = value
                                 setLocalData({ ...localData, customSections: newSections })
                               }}
@@ -1747,7 +1746,7 @@ export function PerfectStudio({
                               label={fieldNames[3]}
                               value={item.description || ''}
                               onChange={(value) => {
-                                const newSections = [...localData.customSections]
+                                const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].description = value
                                 setLocalData({ ...localData, customSections: newSections })
                               }}
@@ -1764,7 +1763,7 @@ export function PerfectStudio({
                       onClick={() => {
                         setLocalData({
                           ...localData,
-                          customSections: localData.customSections.filter((_, i) => i !== sectionIndex)
+                          customSections: (localData.customSections || []).filter((_, i) => i !== sectionIndex)
                         })
                       }}
                       className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 border border-red-200 transition-all flex items-center gap-1"

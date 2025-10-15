@@ -135,6 +135,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const extractedSalary = extractSalaryFromBenefits(job.benefits);
+  const variantData = tailoredVariant as any;
 
   return (
     <div className="min-h-screen bg-white">
@@ -232,7 +233,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Tailored Resume Banner */}
-      {tailoredVariant && (
+      {variantData && (
         <div className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 border-y border-emerald-200">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
@@ -243,14 +244,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 <div>
                   <h3 className="text-lg font-semibold text-emerald-900 flex items-center gap-2">
                     You have a tailored resume for this job
-                    {tailoredVariant.match_score && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600 text-white">
-                        {tailoredVariant.match_score}% match
+                    {variantData.match_score && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600 text-white">
+                        {variantData.match_score}% match
                       </span>
                     )}
                   </h3>
                   <p className="text-sm text-emerald-700">
-                    Last updated {new Date(tailoredVariant.updated_at).toLocaleDateString()}
+                    Last updated {new Date(variantData.updated_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -360,9 +361,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             {/* Who We Are Looking For */}
             {job.who_we_are_looking_for && (() => {
               try {
-                // Try to parse as JSON first (legacy format)
-                const whoWeAreLookingFor = JSON.parse(job.who_we_are_looking_for);
-                const content = Array.isArray(whoWeAreLookingFor) && whoWeAreLookingFor.length > 0 ? whoWeAreLookingFor : null;
+                const rawLookingFor = job.who_we_are_looking_for;
+                const parsedLookingFor = typeof rawLookingFor === 'string'
+                  ? JSON.parse(rawLookingFor)
+                  : rawLookingFor;
+                const content = Array.isArray(parsedLookingFor) && parsedLookingFor.length > 0 ? parsedLookingFor : null;
 
                 if (content) {
                   return (
@@ -384,7 +387,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 }
               } catch (e) {
                 // If JSON parsing fails, treat as markdown string (new format)
-                if (typeof job.who_we_are_looking_for === 'string' && job.who_we_are_looking_for.trim()) {
+                if (typeof job.who_we_are_looking_for === 'string' && (job.who_we_are_looking_for as unknown as string).trim()) {
                   return (
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                       <div className="p-6 bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-gray-100">

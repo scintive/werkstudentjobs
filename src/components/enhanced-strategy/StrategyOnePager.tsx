@@ -91,18 +91,18 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
     compatibility_score: typeof t?.compatibility_score === 'number' ? t.compatibility_score : undefined,
     user_evidence: t?.user_evidence,
     learning_paths: t?.learning_paths
-  })).filter(t => t.task);
+  })).filter((t: any) => t.task);
 
-  const taskCards = (aiTasks.length > 0 ? aiTasks.map(t => t.task) : tasks).map((task, idx) => {
+  const taskCards = (aiTasks.length > 0 ? aiTasks.map((t: any) => t.task) : tasks).map((task: any, idx: number) => {
     const taskNorm = norm(task);
-    const taskTokens = new Set(taskNorm.split(' ').filter(w => w.length > 3));
-    const resumeTokens = new Set(normAll.flatMap(s => s.split(' ').filter(w => w.length > 3)));
+    const taskTokens = new Set(taskNorm.split(' ').filter((w: any) => w.length > 3));
+    const resumeTokens = new Set(normAll.flatMap((s: any) => s.split(' ').filter((w: any) => w.length > 3)));
 
     // Token overlap score
     const tokScore = jaccard(taskTokens, resumeTokens);
 
     // Skill hit bonus
-    const skillHit = skills.some(s => {
+    const skillHit = skills.some((s: any) => {
       const n = norm(String(s));
       return n && (taskNorm.includes(n) || n.includes(taskNorm));
     }) ? 0.15 : 0;
@@ -127,7 +127,7 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
       findEv(exp, 'Experience'),
       findEv(projects, 'Project'),
       findEv(certs, 'Cert')
-    ].filter(Boolean) as string[];
+    ].filter((x: any) => Boolean(x)) as string[];
 
     // ONLY use Claude-generated learning paths - NO FALLBACKS
     const learningPaths = aiTasks[idx]?.learning_paths || {};
@@ -149,9 +149,9 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
       .map((t: any) => typeof t?.compatibility_score === 'number' ? t.compatibility_score : null)
       .filter((v: number | null) => typeof v === 'number') as number[];
     if (!vals.length) return NaN;
-    return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
   })();
-  const cardPctAvg = taskCards.length ? Math.round(taskCards.reduce((a, b) => a + (b.pct || 0), 0) / taskCards.length) : NaN;
+  const cardPctAvg = taskCards.length ? Math.round(taskCards.reduce((a: number, b: any) => a + (b.pct || 0), 0) / taskCards.length) : NaN;
   const matchScore = Number.isFinite(serverScore) && serverScore > 0
     ? Math.round(serverScore)
     : Number.isFinite(aiCompatAvg)
@@ -171,7 +171,7 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Tasks grid (spans two columns on xl) */}
         <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {taskCards.map((c, i) => (
+          {taskCards.map((c: any, i: number) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 6 }}
@@ -199,7 +199,7 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
                     QUICK LEARNING PATH
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {c.learn.slice(0, 2).map((l, idx2) => (
+                    {c.learn.slice(0, 2).map((l: any, idx2: number) => (
                       <a
                         key={`${l.url}-${i}-${idx2}`}
                         href={l.url}
@@ -241,8 +241,8 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
             <ul className="space-y-4">
               {(userProfile?.experience || []).slice(0, 3).map((e: any, idx: number) => {
                 const first = stripTags(e?.achievements?.[0] || e?.description || '');
-                const maybe = bestRelatedTask(first || `${e?.position} ${e?.company}`, taskCards.map(t => t.task));
-                const related = maybe && jaccard(new Set(norm(maybe).split(' ').filter(w => w.length > 3)), new Set((first ? norm(first) : '').split(' ').filter(w => w.length > 3))) > 0.5 ? maybe : null;
+                const maybe = bestRelatedTask(first || `${e?.position} ${e?.company}`, taskCards.map((t: any) => t.task));
+                const related = maybe && jaccard(new Set(norm(maybe).split(' ').filter((w: any) => w.length > 3)), new Set((first ? norm(first) : '').split(' ').filter((w: any) => w.length > 3))) > 0.5 ? maybe : null;
                 return (
                   <li key={idx} className="text-body-small leading-relaxed">
                     <div className="text-label">{e?.position}</div>
@@ -272,7 +272,7 @@ export default function StrategyOnePager({ userProfile, jobData, strategy, onTai
             <ul className="space-y-4">
               {(userProfile?.projects || []).slice(0, 3).map((p: any, idx: number) => {
                 const desc = stripTags(p?.description || '');
-                const related = bestRelatedTask(desc || p?.name || '', taskCards.map(t => t.task));
+                const related = bestRelatedTask(desc || p?.name || '', taskCards.map((t: any) => t.task));
                 return (
                   <li key={idx} className="text-body-small leading-relaxed">
                     <div className="text-label">{p?.name}</div>

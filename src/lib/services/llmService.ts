@@ -104,7 +104,7 @@ const ProfileExtractionSchema = {
           institution: { type: "string" },
           date: { type: "string" }
         },
-        required: ["title", "institution", "date"]
+        required: ["title", "institution"]  // date is optional
       }
     },
     experience: {

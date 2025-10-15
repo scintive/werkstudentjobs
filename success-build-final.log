@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 786ms
+ ✓ Compiled successfully in 18.0s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/jobs/JobBrowser.tsx:239:3
+Type error: Type '{ id: string; company_id: string; external_id: string; title: string; description_html: string; description_text: string; location_city: string; location_country: string; location_full: string; ... 18 more ...; company: { ...; }; }' is missing the following properties from type 'JobWithCompany': description, portal, portal_link, job_description_link, and 31 more.
+
+[0m [90m 237 |[39m [90m// Mock data for demonstration[39m
+ [90m 238 |[39m [36mconst[39m mockJobs[33m:[39m [33mJobWithCompany[39m[] [33m=[39m [
+[31m[1m>[22m[39m[90m 239 |[39m   {
+ [90m     |[39m   [31m[1m^[22m[39m
+ [90m 240 |[39m     id[33m:[39m [32m'1'[39m[33m,[39m
+ [90m 241 |[39m     company_id[33m:[39m [32m'1'[39m[33m,[39m
+ [90m 242 |[39m     external_id[33m:[39m [32m'12345'[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

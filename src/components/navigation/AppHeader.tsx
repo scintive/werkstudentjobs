@@ -80,17 +80,17 @@ export default function AppHeader() {
           }
 
           if (resumeData) {
-            setUserName(resumeData.personal_info?.name || '')
-            setPhotoUrl(resumeData.photo_url || null)
+            setUserName((resumeData as any).personal_info?.name || '')
+            setPhotoUrl((resumeData as any).photo_url || null)
           }
 
           // If no name from resume_data, fallback to auth metadata
-          if (!resumeData?.personal_info?.name && user.user_metadata?.name) {
+          if (!(resumeData as any)?.personal_info?.name && user.user_metadata?.name) {
             setUserName(user.user_metadata.name)
           }
 
           // If no photo in resume_data, check user_profiles - MUST match user_id
-          if (!resumeData?.photo_url) {
+          if (!(resumeData as any)?.photo_url) {
             const { data: profileData, error: profileError } = await supabase
               .from('user_profiles')
               .select('photo_url')
@@ -101,8 +101,8 @@ export default function AppHeader() {
               console.error('Error fetching profile data:', profileError)
             }
 
-            if (profileData?.photo_url) {
-              setPhotoUrl(profileData.photo_url)
+            if ((profileData as any)?.photo_url) {
+              setPhotoUrl((profileData as any).photo_url)
             }
           }
         } catch (error) {

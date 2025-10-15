@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('id', variantId)
+      .eq('id', variantId as any)
       .single();
 
     if (variantError || !variant) {
@@ -57,11 +57,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
     }
 
+    const variantData = variant as any;
+
     // Fetch base resume data
     const { data: baseResume, error: resumeError } = await supabase
       .from('resume_data')
       .select('*')
-      .eq('id', variant.base_resume_id)
+      .eq('id', variantData.base_resume_id as any)
       .single();
 
     if (resumeError || !baseResume) {
@@ -71,8 +73,8 @@ export async function GET(request: NextRequest) {
 
     // Merge base resume with variant data
     const resumeData = {
-      ...baseResume,
-      ...variant.tailored_data,
+      ...(baseResume as any),
+      ...(variantData.tailored_data || {}),
     };
 
     // Generate filename: UserFullName_CompanyName_Resume.pdf
@@ -80,7 +82,7 @@ export async function GET(request: NextRequest) {
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
-    const companyName = (variant.jobs?.companies?.name || 'Company')
+    const companyName = (variantData.jobs?.companies?.name || 'Company')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
@@ -97,7 +99,7 @@ export async function GET(request: NextRequest) {
       },
       body: JSON.stringify({
         resumeData,
-        template: variant.template || 'swiss',
+        template: variantData.template || 'swiss',
         userProfile: resumeData,
         showSkillLevelsInResume: false
       })
@@ -108,7 +110,13 @@ export async function GET(request: NextRequest) {
     }
 
     const previewData = await previewResponse.json();
-    const html = previewData.html;
+    const html = (previewData as any)?.html;
+
+    if (typeof html !== 'string') {
+      throw new Error('Preview response missing HTML payload');
+    }
+
+    const htmlContent = html as string;
 
     // Launch Puppeteer
     const puppeteer = await getPuppeteer();
@@ -127,7 +135,7 @@ export async function GET(request: NextRequest) {
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, {
+    await page.setContent(htmlContent, {
       waitUntil: ['networkidle0', 'load', 'domcontentloaded']
     });
     await page.evaluateHandle('document.fonts.ready');
@@ -219,7 +227,13 @@ export async function POST(request: NextRequest) {
       html = previewData.html;
     }
     
-    console.log('PDF Generation: Generated HTML, length:', html.length);
+    if (typeof html !== 'string') {
+      throw new Error('Preview response missing HTML payload');
+    }
+
+    const htmlContent = html;
+
+    console.log('PDF Generation: Generated HTML, length:', htmlContent.length);
 
     // Launch Puppeteer with the same settings as prototype-cli
     const puppeteer = await getPuppeteer();
@@ -240,7 +254,7 @@ export async function POST(request: NextRequest) {
     const page = await browser.newPage();
     
     // Set content and wait for fonts
-    await page.setContent(html, {
+    await page.setContent(htmlContent, {
       waitUntil: ['networkidle0', 'load', 'domcontentloaded']
     });
 

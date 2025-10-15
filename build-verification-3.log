@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 818ms
+ ✓ Compiled successfully in 8.6s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/jobMatchingService.ts:186:22
+Type error: Property 'job_id' does not exist on type 'never'.
+
+[0m [90m 184 |[39m     [90m// Transform to our format[39m
+ [90m 185 |[39m     [36mreturn[39m (data [33m||[39m [])[33m.[39mmap(result [33m=>[39m ({
+[31m[1m>[22m[39m[90m 186 |[39m       job_id[33m:[39m result[33m.[39mjob_id[33m,[39m
+ [90m     |[39m                      [31m[1m^[22m[39m
+ [90m 187 |[39m       company_id[33m:[39m result[33m.[39mjobs[33m.[39mcompany_id[33m,[39m
+ [90m 188 |[39m       title[33m:[39m result[33m.[39mjobs[33m.[39mtitle[33m,[39m
+ [90m 189 |[39m       overall_score[33m:[39m result[33m.[39moverall_score[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

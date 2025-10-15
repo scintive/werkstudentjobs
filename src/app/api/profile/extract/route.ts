@@ -7,7 +7,6 @@ let _puppeteer: any = null;
 async function getPuppeteer() {
   if (_puppeteer) return _puppeteer;
   try {
-    // @ts-expect-error - Dynamic import of puppeteer
     _puppeteer = (await import('puppeteer')).default;
   } catch (e) {
     console.error('🐛 Failed to import puppeteer:', e);
@@ -43,12 +42,13 @@ async function extractTextFromPDF(file: File): Promise<string> {
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
       <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     </head><body></body></html>`, { waitUntil: 'load' });
-    const text = await page.evaluate(async (b64) => {
+    const text = await page.evaluate(async (b64: string) => {
       const raw = atob(b64);
       const len = raw.length;
       const bytes = new Uint8Array(len);
       for (let i = 0; i < len; i++) bytes[i] = raw.charCodeAt(i);
-      const task = window.pdfjsLib.getDocument({ data: bytes });
+      const pdfjsLib = (window as typeof window & { pdfjsLib: any }).pdfjsLib;
+      const task = pdfjsLib.getDocument({ data: bytes });
       const pdf = await task.promise;
       let all = '';
       for (let p = 1; p <= pdf.numPages; p++) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize LLM client
     try {
-      llmService.client = llmService.initializeClient();
+      (llmService as any).client = llmService.initializeClient();
     } catch (e) {
       console.error('🔐 OpenAI client init failed:', e);
       return NextResponse.json({ error: 'AI unavailable', details: e instanceof Error ? e.message : 'Init failed' }, { status: 500 });
@@ -102,13 +102,33 @@ export async function POST(request: NextRequest) {
     let profile: any;
     try {
       profile = await llmService.extractProfileFromText(extractedText);
-      
+
+      // DEBUG: Log what GPT extracted for experience and certifications
+      console.log('🔍 === GPT EXTRACTION DEBUG ===');
+      console.log('🔍 Experience count:', (profile.experience || []).length);
+      if (profile.experience && profile.experience.length > 0) {
+        profile.experience.forEach((exp: any, idx: number) => {
+          console.log(`🔍 Experience ${idx + 1}:`, {
+            company: exp.company,
+            position: exp.position,
+            duration: exp.duration,
+            responsibilities_count: (exp.responsibilities || []).length,
+            responsibilities: exp.responsibilities
+          });
+        });
+      }
+      console.log('🔍 Certifications count:', (profile.certifications || []).length);
+      if (profile.certifications && profile.certifications.length > 0) {
+        console.log('🔍 Certifications:', JSON.stringify(profile.certifications, null, 2));
+      }
+      console.log('🔍 === END DEBUG ===');
+
       // Validate that we got a proper profile back
       if (!profile || typeof profile !== 'object' || Object.keys(profile).length === 0) {
         console.error('🧠 Profile extraction returned empty or invalid object:', profile);
         throw new Error('Profile extraction returned empty or invalid data');
       }
-      
+
       // Check for required fields
       if (!profile.personal_details) {
         console.error('🧠 Profile missing personal_details:', profile);

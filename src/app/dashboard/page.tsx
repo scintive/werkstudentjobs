@@ -109,7 +109,9 @@ export default function DashboardPage() {
         .eq('user_id', userId)
         .single()
 
-      if (!profileData?.onboarding_completed) {
+      const onboardingProfile = profileData as any;
+
+      if (!onboardingProfile?.onboarding_completed) {
         router.push('/onboarding')
         return
       }
@@ -135,16 +137,17 @@ export default function DashboardPage() {
         .limit(1)
 
       if (resumeData && resumeData[0]) {
-        const firstName = resumeData[0].personal_info?.name?.split(' ')[0] || 'there'
+        const latestResume = resumeData[0] as any;
+        const firstName = latestResume.personal_info?.name?.split(' ')[0] || 'there'
         setUserName(firstName)
 
         // Calculate profile completion
         let completion = 0
-        if (resumeData[0].personal_info?.name) completion += 20
-        if (resumeData[0].personal_info?.email) completion += 20
-        if (resumeData[0].professional_title) completion += 20
-        if (resumeData[0].skills && Object.keys(resumeData[0].skills).length > 0) completion += 20
-        if (resumeData[0].personal_info?.phone) completion += 20
+        if (latestResume.personal_info?.name) completion += 20
+        if (latestResume.personal_info?.email) completion += 20
+        if (latestResume.professional_title) completion += 20
+        if (latestResume.skills && Object.keys(latestResume.skills).length > 0) completion += 20
+        if (latestResume.personal_info?.phone) completion += 20
 
         setStats(prev => ({ ...prev, profileCompletion: completion }))
       }
@@ -171,9 +174,11 @@ export default function DashboardPage() {
         .order('updated_at', { ascending: false })
         .limit(5)
 
-      if (variants) {
-        setTailoredResumes(variants as TailoredResume[])
-        setStats(prev => ({ ...prev, activeApplications: variants.length }))
+      const variantRows = (variants as any[]) || [];
+
+      if (variantRows.length > 0) {
+        setTailoredResumes(variantRows as TailoredResume[])
+        setStats(prev => ({ ...prev, activeApplications: variantRows.length }))
       }
 
       // Load job matches count from resume_variants (tailored resumes from last 7 days)
@@ -195,7 +200,8 @@ export default function DashboardPage() {
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
 
       if (allVariants && allVariants.length > 0) {
-        const avgScore = allVariants.reduce((acc, v) => acc + (v.match_score || 0), 0) / allVariants.length
+        const variantScores = allVariants as any[];
+        const avgScore = variantScores.reduce((acc, v) => acc + (v.match_score || 0), 0) / variantScores.length
         setStats(prev => ({ ...prev, avgMatchScore: Math.round(avgScore) }))
       }
 
@@ -220,7 +226,8 @@ export default function DashboardPage() {
         .limit(5)
 
       if (highMatches) {
-        const formattedHighMatches: HighMatchJob[] = highMatches.map(m => ({
+        const highMatchRows = highMatches as any[];
+        const formattedHighMatches: HighMatchJob[] = highMatchRows.map(m => ({
           id: m.jobs?.id || '',
           title: m.jobs?.title || '',
           company: m.jobs?.companies?.name || '',
@@ -234,8 +241,8 @@ export default function DashboardPage() {
       const recentActivities: Activity[] = []
 
       // Add tailored resume activities
-      if (variants && variants.length > 0) {
-        variants.slice(0, 5).forEach(v => {
+      if (variantRows.length > 0) {
+        variantRows.slice(0, 5).forEach((v: any) => {
           recentActivities.push({
             id: v.id,
             type: 'tailor',

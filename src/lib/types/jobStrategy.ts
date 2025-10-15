@@ -3,12 +3,14 @@
  * Compact, structured data for AI-powered job application tailoring
  */
 
+import type { MatchCalculation } from '@/lib/supabase/types';
+
 export interface JobStrategy {
   job_id: string;
   user_profile_id: string;
   created_at: string;
   profile_hash: string; // For cache invalidation
-  
+
   // Core strategy components
   fit_summary: string[]; // 4-6 bullets explaining why user fits
   must_have_gaps: SkillGap[]; // Critical missing skills with fixes
@@ -18,6 +20,13 @@ export interface JobStrategy {
   };
   ats_keywords: string[]; // 10-15 ATS optimization keywords
   talking_points: TalkingPoint[]; // 4 bullets mapped to achievements
+  matchCalculation?: MatchCalculation; // Match scores and overlaps (optional)
+  tasks?: Array<{ // Tasks to emphasize based on job requirements
+    task: string;
+    task_description?: string;
+    alignment_score: number;
+  }>;
+  competitive_advantages?: string[]; // Key advantages over other candidates
 }
 
 export interface SkillGap {
@@ -64,6 +73,8 @@ export interface CoverLetter {
   length: 'short' | 'medium' | 'long'; // 150-200, 220-300, 320-400 words
   language: 'EN' | 'DE' | 'AUTO';
   content: {
+    subject?: string; // Email subject line
+    salutation?: string; // Opening greeting (e.g., "Dear Hiring Team")
     intro: string;
     body_paragraphs: string[];
     closing: string;

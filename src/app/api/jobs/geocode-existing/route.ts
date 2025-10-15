@@ -35,33 +35,33 @@ export async function POST() {
 
     for (const job of jobs) {
       processed++;
-      
+
       // Determine the best location string to geocode
       let locationToGeocode = null;
-      
-      if (job.city && job.country) {
-        locationToGeocode = `${job.city}, ${job.country}`;
-      } else if (job.city) {
-        locationToGeocode = job.city;
-      } else if (job.location_raw) {
+
+      if ((job as any).city && (job as any).country) {
+        locationToGeocode = `${(job as any).city}, ${(job as any).country}`;
+      } else if ((job as any).city) {
+        locationToGeocode = (job as any).city;
+      } else if ((job as any).location_raw) {
         // Skip if location indicates remote work
-        if (job.location_raw.toLowerCase().includes('remote')) {
-          console.log(`🗺️ Skipping remote job ${job.id}: ${job.location_raw}`);
+        if ((job as any).location_raw.toLowerCase().includes('remote')) {
+          console.log(`🗺️ Skipping remote job ${(job as any).id}: ${(job as any).location_raw}`);
           results.push({
-            id: job.id,
-            location: job.location_raw,
+            id: (job as any).id,
+            location: (job as any).location_raw,
             status: 'skipped_remote',
             coordinates: null
           });
           continue;
         }
-        locationToGeocode = job.location_raw;
+        locationToGeocode = (job as any).location_raw;
       }
 
       if (!locationToGeocode || !locationToGeocode.trim()) {
-        console.log(`🗺️ Skipping job ${job.id}: No valid location data`);
+        console.log(`🗺️ Skipping job ${(job as any).id}: No valid location data`);
         results.push({
-          id: job.id,
+          id: (job as any).id,
           location: 'No location data',
           status: 'skipped_no_location',
           coordinates: null
@@ -69,26 +69,26 @@ export async function POST() {
         continue;
       }
 
-      console.log(`🗺️ [${processed}/${jobs.length}] Geocoding job ${job.id}: "${locationToGeocode}"`);
+      console.log(`🗺️ [${processed}/${jobs.length}] Geocoding job ${(job as any).id}: "${locationToGeocode}"`);
 
       try {
         const geocoded = await locationService.geocodeLocation(locationToGeocode);
         
         if (geocoded) {
           // Update job with coordinates
-          const { error: updateError } = await supabase
+          const { error: updateError } = await (supabase as any)
             .from('jobs')
             .update({
               latitude: geocoded.latitude,
               longitude: geocoded.longitude
             })
-            .eq('id', job.id);
+            .eq('id', (job as any).id);
 
           if (updateError) {
-            console.error(`🗺️ Failed to update job ${job.id}:`, updateError.message);
+            console.error(`🗺️ Failed to update job ${(job as any).id}:`, updateError.message);
             errors++;
             results.push({
-              id: job.id,
+              id: (job as any).id,
               location: locationToGeocode,
               status: 'update_error',
               coordinates: null,
@@ -96,29 +96,29 @@ export async function POST() {
             });
           } else {
             updated++;
-            console.log(`🗺️ ✅ Updated job ${job.id} with coordinates [${geocoded.latitude}, ${geocoded.longitude}]`);
+            console.log(`🗺️ ✅ Updated job ${(job as any).id} with coordinates [${geocoded.latitude}, ${geocoded.longitude}]`);
             results.push({
-              id: job.id,
+              id: (job as any).id,
               location: locationToGeocode,
               status: 'success',
               coordinates: [geocoded.latitude, geocoded.longitude]
             });
           }
         } else {
-          console.warn(`🗺️ Failed to geocode job ${job.id}: "${locationToGeocode}"`);
+          console.warn(`🗺️ Failed to geocode job ${(job as any).id}: "${locationToGeocode}"`);
           errors++;
           results.push({
-            id: job.id,
+            id: (job as any).id,
             location: locationToGeocode,
             status: 'geocoding_failed',
             coordinates: null
           });
         }
       } catch (error) {
-        console.error(`🗺️ Error geocoding job ${job.id}:`, error);
+        console.error(`🗺️ Error geocoding job ${(job as any).id}:`, error);
         errors++;
         results.push({
-          id: job.id,
+          id: (job as any).id,
           location: locationToGeocode,
           status: 'error',
           coordinates: null,
@@ -178,7 +178,7 @@ export async function GET() {
     }
 
     const total = stats?.length || 0;
-    const withCoordinates = stats?.filter(job => job.latitude && job.longitude).length || 0;
+    const withCoordinates = stats?.filter(job => (job as any).latitude && (job as any).longitude).length || 0;
     const withoutCoordinates = total - withCoordinates;
 
     return NextResponse.json({

@@ -38,6 +38,7 @@ export interface Skills {
   technology: string[];
   soft_skills: string[];
   design: string[];
+  [key: string]: string[]; // Allow dynamic skill categories
 }
 
 export interface Language {

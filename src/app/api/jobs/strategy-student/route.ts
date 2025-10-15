@@ -68,19 +68,22 @@ export async function POST(request: NextRequest) {
     console.log(`🎓 STUDENT STRATEGY: Analyzing job ${job_id}`);
     
     // Fetch job data (without companies join for now)
-    const { data: jobData, error: jobError } = await supabase
+    const { data: jobDataRaw, error: jobError } = await supabase
       .from('jobs')
       .select('*')
       .eq('id', job_id)
       .single();
-    
-    if (jobError || !jobData) {
+
+    if (jobError || !jobDataRaw) {
       console.error('🎓 STUDENT STRATEGY: Job fetch error:', jobError);
       return NextResponse.json(
         { error: 'Job not found', details: jobError?.message },
         { status: 404 }
       );
     }
+
+    // Cast to any for easier property access
+    const jobData = jobDataRaw as any;
     
     // Fetch or use provided student profile
     let profileData: any = student_profile;
@@ -169,7 +172,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Convert resume_data to profile format
-          const resumeRecord = profiles[0];
+          const resumeRecord = profiles[0] as any;
           profileData = {
             name: resumeRecord.personal_info?.name,
             email: resumeRecord.personal_info?.email,
@@ -225,20 +228,20 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    if (!cacheError && cachedStrategy?.strategy_data) {
+    if (!cacheError && (cachedStrategy as any)?.strategy_data) {
       console.log('🎓 STUDENT STRATEGY: Found cached strategy in Supabase');
       return NextResponse.json({
         success: true,
-        strategy: cachedStrategy.strategy_data,
+        strategy: (cachedStrategy as any).strategy_data,
         cached: true,
-        cached_at: cachedStrategy.created_at,
+        cached_at: (cachedStrategy as any).created_at,
         context: {
           job_title: jobData.title,
           company: jobData.company_name,
           is_werkstudent: jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent'),
-          coursework_matches: cachedStrategy.strategy_data.coursework_alignment?.length || 0,
-          project_matches: cachedStrategy.strategy_data.project_alignment?.length || 0,
-          eligibility_score: Object.values(cachedStrategy.strategy_data.eligibility_checklist || {}).filter((v: any) => v).length
+          coursework_matches: (cachedStrategy as any).strategy_data.coursework_alignment?.length || 0,
+          project_matches: (cachedStrategy as any).strategy_data.project_alignment?.length || 0,
+          eligibility_score: Object.values((cachedStrategy as any).strategy_data.eligibility_checklist || {}).filter((v: any) => v).length
         }
       });
     }
@@ -466,7 +469,7 @@ OUTPUT SCHEMA:
 CRITICAL: Use the EXACT job responsibilities listed below, NOT generic skills. Each task in job_task_analysis MUST correspond to a real responsibility from the job posting.
 
 JOB RESPONSIBILITIES TO ANALYZE:
-${compactContext.job.responsibilities.map((resp, i) => `${i+1}. ${resp}`).join('\n')}
+${compactContext.job.responsibilities.map((resp: any, i: number) => `${i+1}. ${resp}`).join('\n')}
 
 REQUIRED SKILLS FROM JOB:
 ${compactContext.job.required_skills.join(', ')}
@@ -486,7 +489,7 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
 
         // GPT-5-mini: Accurate, comprehensive learning resource links (replacing Claude)
         llmService.generateLearningPaths(
-          compactContext.job.responsibilities.map(resp => ({ task: resp }))
+          compactContext.job.responsibilities.map((resp: any) => ({ task: resp }))
         )
       ]);
       
@@ -540,7 +543,7 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
 
         // Try to extract at least the job_task_analysis section
         try {
-          const taskAnalysisMatch = cleanedContent.match(/"job_task_analysis":\s*\[([^\]]+)\]/s);
+          const taskAnalysisMatch = cleanedContent.match(/"job_task_analysis":\s*\[([\s\S]+?)\]/);
           if (taskAnalysisMatch) {
             // Build minimal valid JSON with just the tasks
             const minimalJson = `{
@@ -657,7 +660,7 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
       
       // Save to Supabase for persistent caching (7 days) using auth user_id
       try {
-        await supabase
+        await (supabase as any)
           .from('job_analysis_cache')
           .insert({
             job_id,

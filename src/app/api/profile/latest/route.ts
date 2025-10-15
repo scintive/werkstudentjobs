@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const { data: resumeDataList, error: resumeError } = await supabase
       .from('resume_data')
       .select('*')
-      .eq('user_id', authUserId)
+      .eq('user_id', authUserId as any)
       .order('updated_at', { ascending: false })
       .limit(1)
     
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     
     if (!resumeError && resumeDataList && resumeDataList.length > 0) {
       // Use complete resume data
-      const resumeRecord = resumeDataList[0];
+      const resumeRecord = resumeDataList[0] as any;
       console.log('🔍 LATEST PROFILE: Found complete resume data');
 
       // Get photo and student info from user_profiles if available
@@ -62,20 +62,21 @@ export async function GET(request: NextRequest) {
         const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
           .select('photo_url, hours_available, current_semester, university_name, start_preference')
-          .eq('user_id', authUserId)
+          .eq('user_id', authUserId as any)
           .single();
 
         console.log('👨‍🎓 PROFILE QUERY: error =', profileError, 'has data =', !!profile);
 
         if (profile && !profileError) {
-          if (profile.photo_url) {
-            photoUrl = profile.photo_url;
+          const profileData = profile as any;
+          if (profileData.photo_url) {
+            photoUrl = profileData.photo_url;
             console.log('📸 PHOTO DEBUG: Got photo from user_profiles =', photoUrl);
           }
-          hoursAvailable = profile.hours_available;
-          currentSemester = profile.current_semester;
-          universityName = profile.university_name;
-          startPreference = profile.start_preference;
+          hoursAvailable = profileData.hours_available;
+          currentSemester = profileData.current_semester;
+          universityName = profileData.university_name;
+          startPreference = profileData.start_preference;
           console.log('👨‍🎓 STUDENT INFO: hours_available =', hoursAvailable, 'semester =', currentSemester);
         } else {
           console.log('👨‍🎓 STUDENT INFO: No user_profiles data found or error occurred');

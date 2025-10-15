@@ -1,0 +1,26 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 330ms
+ ✓ Compiled successfully in 8.2s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/resume-editor/PerfectStudio.tsx:1577:21
+Type error: Type '{ degree: string; field_of_study: string; institution: string; year: string; } | { degree: string; field_of_study: string; institution: string; duration: string; }' is not assignable to type '{ degree: string; field_of_study: string; institution: string; year: string; }'.
+  Object literal may only specify known properties, and 'duration' does not exist in type '{ degree: string; field_of_study: string; institution: string; year: string; }'.
+
+[0m [90m 1575 |[39m                     field_of_study[33m:[39m [32m''[39m[33m,[39m
+ [90m 1576 |[39m                     institution[33m:[39m [32m''[39m[33m,[39m
+[31m[1m>[22m[39m[90m 1577 |[39m                     duration[33m:[39m [32m''[39m
+ [90m      |[39m                     [31m[1m^[22m[39m
+ [90m 1578 |[39m                   }]
+ [90m 1579 |[39m                 })
+ [90m 1580 |[39m               }}[0m
+Next.js build worker exited with code: 1 and signal: null

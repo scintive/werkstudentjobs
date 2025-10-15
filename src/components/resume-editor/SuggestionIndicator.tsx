@@ -44,7 +44,7 @@ export function SuggestionIndicator({
   }, [isExpanded])
   
   // Auto-detect if this should be compact based on suggestion type
-  const shouldBeCompact = compact || suggestion.section === 'title' || suggestion.type === 'skill_add' || suggestion.type === 'skill_removal'
+  const shouldBeCompact = compact || suggestion.section === 'title' || suggestion.type === 'skill_add' || suggestion.type === 'skill_remove'
 
   if (shouldBeCompact) {
     // Inline chip style for skills, titles, or short text
@@ -111,8 +111,8 @@ export function SuggestionIndicator({
       >
         <Lightbulb className="w-4 h-4 text-amber-600" />
         <span className="text-sm text-amber-700 font-medium">
-          {suggestion.type === 'skill_add' || suggestion.type === 'skill_addition' ? 'Add skill' : 
-           suggestion.type === 'skill_remove' || suggestion.type === 'skill_removal' ? 'Remove skill' :
+          {suggestion.type === 'skill_add' ? 'Add skill' :
+           suggestion.type === 'skill_remove' ? 'Remove skill' :
            suggestion.section === 'title' ? 'Title suggestion' :
            suggestion.section === 'summary' ? 'Summary suggestion' :
            suggestion.section === 'experience' ? 'Experience suggestion' :

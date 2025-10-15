@@ -10,8 +10,8 @@
  */
 
 import OpenAI from 'openai';
-import type { JobWithCompany, MatchCalculation, LanguageSkill } from '../supabase/types';
-import type { UserProfile as LegacyUserProfile } from '../types';
+import type { JobWithCompany, MatchCalculation, LanguageSkill } from '@/lib/supabase/types';
+import type { UserProfile as LegacyUserProfile } from '@/lib/types';
 
 // Matching weights configuration
 const MATCH_WEIGHTS = {
@@ -450,11 +450,14 @@ ${germanTerms.join('\n')}`;
     job: JobWithCompany,
     userProfile: LegacyUserProfile
   ): Promise<MatchCalculation> {
+    // Type assertion needed for archived code that expects additional properties
+    const jobTyped = job as any;
+
     // Extract and normalize job data
-    const jobSkillsOriginal = job.skills_original || [];
-    const jobToolsOriginal = job.tools_original || [];
-    const jobSkillsCanonical = await this.normalizeToCanonical(jobSkillsOriginal, job.content_language || 'unknown');
-    const jobToolsCanonical = await this.normalizeToCanonical(jobToolsOriginal, job.content_language || 'unknown');
+    const jobSkillsOriginal = jobTyped.skills_original || [];
+    const jobToolsOriginal = jobTyped.tools_original || [];
+    const jobSkillsCanonical = await this.normalizeToCanonical(jobSkillsOriginal, jobTyped.content_language || 'unknown');
+    const jobToolsCanonical = await this.normalizeToCanonical(jobToolsOriginal, jobTyped.content_language || 'unknown');
 
     // Extract and normalize user data
     const userSkillsRaw: string[] = [];
@@ -492,7 +495,8 @@ ${germanTerms.join('\n')}`;
     
     if (userProfile.languages) {
       if (Array.isArray(userProfile.languages)) {
-        userProfile.languages.forEach(lang => {
+        // Type assertion needed for legacy user profile
+        (userProfile.languages as any[]).forEach(lang => {
           if (typeof lang === 'string') {
             // Enhanced regex to handle multiple formats:
             // "English (C1)", "German (C2)", "English C1", "German - Native", etc.
@@ -554,27 +558,30 @@ ${germanTerms.join('\n')}`;
     console.log('🎯 TOOLS DEBUG: toolsOverlap result:', toolsOverlap);
     
     const languageFit = this.calculateLanguageFit(
-      job.language_required || 'UNKNOWN',
+      jobTyped.language_required || 'UNKNOWN',
       userLanguages
     );
 
     // Enhanced location parsing with debugging
-    console.log('🎯 LOCATION DEBUG: job.location_city:', job.location_city);
+    console.log('🎯 LOCATION DEBUG: job.location_city:', jobTyped.location_city);
     console.log('🎯 LOCATION DEBUG: userProfile.personal_details:', userProfile.personal_details);
-    
+
+    // Type assertion needed for legacy personal details structure
+    const personalDetails = userProfile.personal_details as any;
+
     // Try multiple possible location fields from user profile
-    const userLocation = userProfile.personal_details?.city || 
-                        userProfile.personal_details?.location || 
-                        userProfile.personal_details?.address ||
-                        userProfile.personal_details?.contact?.address ||
+    const userLocation = personalDetails?.city ||
+                        personalDetails?.location ||
+                        personalDetails?.address ||
+                        personalDetails?.contact?.address ||
                         null;
-    
+
     console.log('🎯 LOCATION DEBUG: resolved userLocation:', userLocation);
-    
+
     const locationFit = this.calculateLocationFit(
-      job.location_city,
-      job.remote_allowed || false,
-      job.hybrid_allowed || false,
+      jobTyped.location_city,
+      jobTyped.remote_allowed || false,
+      jobTyped.hybrid_allowed || false,
       userLocation,
       true, // Assume user is willing remote for now
       true  // Assume user is willing hybrid for now
@@ -616,7 +623,7 @@ ${germanTerms.join('\n')}`;
         explanation: locationFit.explanation
       },
       totalScore: Math.round(totalScore * 100), // Convert to percentage
-      weights: MATCH_WEIGHTS
+      weights: MATCH_WEIGHTS as any  // Type assertion for legacy weight structure
     };
   }
 

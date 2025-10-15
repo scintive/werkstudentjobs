@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 490ms
+ ✓ Compiled successfully in 8.2s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/matchingService.ts:454:35
+Type error: Property 'skills_original' does not exist on type 'JobWithCompany'.
+
+[0m [90m 452 |[39m   )[33m:[39m [33mPromise[39m[33m<[39m[33mMatchCalculation[39m[33m>[39m {
+ [90m 453 |[39m     [90m// Extract and normalize job data[39m
+[31m[1m>[22m[39m[90m 454 |[39m     [36mconst[39m jobSkillsOriginal [33m=[39m job[33m.[39mskills_original [33m||[39m [][33m;[39m
+ [90m     |[39m                                   [31m[1m^[22m[39m
+ [90m 455 |[39m     [36mconst[39m jobToolsOriginal [33m=[39m job[33m.[39mtools_original [33m||[39m [][33m;[39m
+ [90m 456 |[39m     [36mconst[39m jobSkillsCanonical [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mnormalizeToCanonical(jobSkillsOriginal[33m,[39m job[33m.[39mcontent_language [33m||[39m [32m'unknown'[39m)[33m;[39m
+ [90m 457 |[39m     [36mconst[39m jobToolsCanonical [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mnormalizeToCanonical(jobToolsOriginal[33m,[39m job[33m.[39mcontent_language [33m||[39m [32m'unknown'[39m)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

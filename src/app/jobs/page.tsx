@@ -46,7 +46,7 @@ function JobsContent() {
     })
 
     // Legacy categories expected by some callers, but include ALL categories too
-    const legacySkills: Record<string, string[]> = {
+    const legacySkills = {
       technology: [
         ...(allSkillsObj.technical || []),
         ...(allSkillsObj.core || []),

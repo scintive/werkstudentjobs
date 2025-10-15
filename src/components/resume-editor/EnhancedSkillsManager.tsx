@@ -336,7 +336,15 @@ export function EnhancedSkillsManager({
       }
     })
 
-    setOrganizedData({ organized_categories: organizedCategories })
+    setOrganizedData({
+      organized_categories: organizedCategories,
+      profile_assessment: {
+        career_focus: '',
+        skill_level: '',
+        recommendations: ''
+      },
+      category_mapping: {}
+    })
     setExpandedCategories(new Set(Object.keys(organizedCategories)))
   }, [skills])
 
@@ -479,25 +487,25 @@ export function EnhancedSkillsManager({
     return spaced.replace(/\b\w/g, c => c.toUpperCase())
   }
 
-  const handleAddSkill = (categoryName: string, skill: string, proficiency?: string) => {
+  const handleAddSkill = (categoryName: string, skill: string, proficiency?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert') => {
     if (!organizedData) return
 
     const updatedCategories = { ...organizedData.organized_categories }
-    
+
     if (!updatedCategories[categoryName]) {
       updatedCategories[categoryName] = { skills: [], suggestions: [], reasoning: '', allowProficiency: false }
     }
-    
+
     // Check if skill already exists
-    const skillExists = updatedCategories[categoryName].skills.some(existingSkill => 
+    const skillExists = updatedCategories[categoryName].skills.some(existingSkill =>
       (typeof existingSkill === 'string' ? existingSkill : existingSkill.skill) === skill
     )
-    
+
     if (!skillExists) {
       // Add skill with proficiency if category supports it and proficiency is provided
       const shouldUseProficiency = updatedCategories[categoryName].allowProficiency && proficiency
       const skillToAdd = shouldUseProficiency ? { skill, proficiency } : skill
-      
+
       updatedCategories[categoryName].skills.push(skillToAdd)
       
       // Remove from suggestions
@@ -628,12 +636,12 @@ export function EnhancedSkillsManager({
     onLanguagesChange(updatedLanguages)
   }
 
-  const handleUpdateSkillProficiency = (categoryName: string, skillName: string, proficiency: string) => {
+  const handleUpdateSkillProficiency = (categoryName: string, skillName: string, proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert') => {
     if (!organizedData) return
 
     const updatedCategories = { ...organizedData.organized_categories }
     const category = updatedCategories[categoryName]
-    
+
     if (category) {
       category.skills = category.skills.map(skill => {
         if (typeof skill === 'string' && skill === skillName) {

@@ -58,9 +58,9 @@ export const SectionCard = ({
         onClick={onToggle}
       >
         <div className="flex items-center gap-2">
-          {React.cloneElement(icon as React.ReactElement, { className: cn('w-5 h-5', colors.icon) })}
+          {React.isValidElement(icon) ? React.cloneElement(icon, { className: cn('w-5 h-5', colors.icon) } as any) : icon}
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-          {badge !== undefined && badge > 0 && (
+          {badge !== undefined && (typeof badge === 'number' ? badge > 0 : badge) && (
             <span className={cn(
               "text-sm px-2 py-0.5 rounded-full font-medium",
               colors.badge

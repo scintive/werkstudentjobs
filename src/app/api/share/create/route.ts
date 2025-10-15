@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const shareToken = shareTokenData && shareTokenData.length > 0 ? shareTokenData[0] : null
+    const shareRecords = shareTokenData as any[] | null
+    const shareToken = shareRecords && shareRecords.length > 0 ? (shareRecords[0] as any) : null
 
     if (!shareToken) {
       console.error('No share token returned from database')
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       success: true,
       token,
       shareUrl,
-      expiresAt: shareToken.expires_at
+      expiresAt: (shareToken as any).expires_at
     })
 
   } catch (error) {

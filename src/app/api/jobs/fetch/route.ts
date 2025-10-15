@@ -174,9 +174,9 @@ export async function GET(request: NextRequest) {
 
     // DEBUG: Log what we're sending to client
     console.log('🔍 FETCH API: Sending jobs to client');
-    console.log('🔍 FETCH API: First job skills:', jobsData[0]?.skills?.slice(0, 3));
-    console.log('🔍 FETCH API: First job skills count:', jobsData[0]?.skills?.length || 0);
-    console.log('🔍 FETCH API: First job title:', jobsData[0]?.title);
+    console.log('🔍 FETCH API: First job skills:', (jobsData[0] as any)?.skills?.slice(0, 3));
+    console.log('🔍 FETCH API: First job skills count:', (jobsData[0] as any)?.skills?.length || 0);
+    console.log('🔍 FETCH API: First job title:', (jobsData[0] as any)?.title);
 
     return NextResponse.json({
       success: true,
@@ -283,9 +283,9 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     );
     
     // 4. Geocode job location if available
-    const jobGeoData = { latitude: null, longitude: null };
+    const jobGeoData: { latitude: number | null, longitude: number | null } = { latitude: null, longitude: null };
     const jobLocation = extractedJob.location_city || rawJob.location;
-    
+
     if (jobLocation && jobLocation.trim() && !jobLocation.toLowerCase().includes('remote')) {
       console.log(`🗺️ Geocoding job location: "${jobLocation}"`);
       try {
@@ -413,8 +413,8 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
       responsibilities: Array.isArray(extractedJob.tasks_responsibilities) ? extractedJob.tasks_responsibilities : null,
       nice_to_have: Array.isArray(extractedJob.nice_to_have) ? extractedJob.nice_to_have : null,
       benefits: Array.isArray(extractedJob.benefits) ? extractedJob.benefits : null,
-      who_we_are_looking_for: Array.isArray(extractedJob.who_we_are_looking_for) ? extractedJob.who_we_are_looking_for : null,
-      application_requirements: Array.isArray(extractedJob.application_requirements) ? extractedJob.application_requirements : null,
+      who_we_are_looking_for: Array.isArray((extractedJob as any).who_we_are_looking_for) ? (extractedJob as any).who_we_are_looking_for : null,
+      application_requirements: Array.isArray((extractedJob as any).application_requirements) ? (extractedJob as any).application_requirements : null,
       
       // Store research data in description for now (until schema is updated)
       // hiring_manager: extractedJob.hiring_manager, // TODO: Add to schema
@@ -433,9 +433,9 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     // 6. Store in Supabase (upsert to avoid duplicates)
     const { error } = await supabase
       .from('jobs')
-      .upsert(jobData, { 
+      .upsert(jobData as any, {
         onConflict: 'external_id',
-        ignoreDuplicates: false 
+        ignoreDuplicates: false
       });
 
     if (error) {
@@ -467,17 +467,17 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
   if (existingCompany) {
     // Check if we should update with new research data (update if we have comprehensive research OR more than 7 days old)
     const shouldUpdate = companyResearch && (
-      !existingCompany.updated_at ||
-      new Date().getTime() - new Date(existingCompany.updated_at).getTime() > 7 * 24 * 60 * 60 * 1000 || // 7 days
+      !(existingCompany as any).updated_at ||
+      new Date().getTime() - new Date((existingCompany as any).updated_at).getTime() > 7 * 24 * 60 * 60 * 1000 || // 7 days
       (companyResearch.founded || companyResearch.employee_count || companyResearch.description) // OR has comprehensive data
     );
 
     if (shouldUpdate) {
       console.log(`🏢 Updating company research for: ${companyName}`);
-      await updateCompanyWithResearch(existingCompany.id, companyResearch);
+      await updateCompanyWithResearch((existingCompany as any).id, companyResearch);
     }
 
-    return existingCompany.id;
+    return (existingCompany as any).id;
   }
 
   // Create new company with research data
@@ -581,9 +581,9 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
         .single();
       
       if (existingCompany) {
-        return existingCompany.id;
+        return (existingCompany as any).id;
       }
-      
+
       throw new Error(`Failed to find existing company "${companyName}": ${selectError?.message || 'Unknown error'}`);
     }
     
@@ -594,7 +594,7 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
     throw new Error(`Failed to create company "${companyName}": No data returned`);
   }
 
-  return newCompany.id;
+  return (newCompany as any).id;
 }
 
 /**
@@ -677,7 +677,7 @@ async function updateCompanyWithResearch(companyId: string, companyResearch: any
   updateData.research_last_updated = new Date().toISOString();
   updateData.research_source = 'gpt_web_search';
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('companies')
     .update(updateData)
     .eq('id', companyId);

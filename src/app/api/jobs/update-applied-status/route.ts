@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile to get user_profile_id
-    const { data: userProfile } = await supabase
+    const { data: userProfile } = await (supabase as any)
       .from('user_profiles')
       .select('id')
       .eq('user_id', userId)
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (applied) {
       // Add interaction record
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from('user_job_interactions')
         .insert({
           user_profile_id: userProfile.id,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Remove interaction record
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await (supabase as any)
         .from('user_job_interactions')
         .delete()
         .eq('user_profile_id', userProfile.id)

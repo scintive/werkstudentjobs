@@ -1,0 +1,26 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ⚠ Slow filesystem detected. The benchmark took 135ms. If /Users/varunmishra/Documents/Projects/WerkstudentJobs2/visual-app-backup-c26614e9/.next is a network drive, consider moving it to a local folder. If you have an antivirus enabled, consider excluding your project directory.
+ ✓ Finished writing to disk in 1357ms
+ ✓ Compiled successfully in 64s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/jobs/JobBrowser.tsx:271:7
+Type error: Object literal may only specify known properties, and 'website' does not exist in type '{ id: string; name: string; domain: string | null; logo_url: string | null; industry: string | null; size_category: "small" | "startup" | "medium" | "large" | "enterprise" | null; headquarters: string | null; ... 22 more ...; glassdoor_rating: number | null; }'.
+
+[0m [90m 269 |[39m       name[33m:[39m [32m'TechCorp Solutions'[39m[33m,[39m
+ [90m 270 |[39m       logo_url[33m:[39m [32m'https://via.placeholder.com/100'[39m[33m,[39m
+[31m[1m>[22m[39m[90m 271 |[39m       website[33m:[39m [32m'https://techcorp.com'[39m[33m,[39m
+ [90m     |[39m       [31m[1m^[22m[39m
+ [90m 272 |[39m       linkedin_url[33m:[39m [32m'https://linkedin.com/company/techcorp'[39m[33m,[39m
+ [90m 273 |[39m       description[33m:[39m [32m'Leading technology solutions provider'[39m[33m,[39m
+ [90m 274 |[39m       slogan[33m:[39m [32m'Innovation at Scale'[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

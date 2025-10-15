@@ -41,7 +41,10 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-    
+
+    // Cast to any for easier property access
+    const jobDataAny = jobData as any;
+
     // Get latest profile data (use current request origin to avoid port/env mismatch)
     let profileData = null;
     try {
@@ -71,16 +74,16 @@ export async function POST(request: NextRequest) {
     // Create strategy prompt
     const strategyPrompt = {
       job: {
-        title: jobData.title,
-        company: jobData.company_name || 'Company',
+        title: jobDataAny.title,
+        company: jobDataAny.company_name || 'Company',
         must_haves: [
-          ...(jobData.skills || []),
-          ...(jobData.tools || []),
-          ...(jobData.responsibilities || [])
+          ...(jobDataAny.skills || []),
+          ...(jobDataAny.tools || []),
+          ...(jobDataAny.responsibilities || [])
         ].slice(0, 8),
-        nice_to_haves: (jobData.nice_to_have || []).slice(0, 6),
-        work_mode: jobData.work_mode,
-        location: jobData.location_city
+        nice_to_haves: (jobDataAny.nice_to_have || []).slice(0, 6),
+        work_mode: jobDataAny.work_mode,
+        location: jobDataAny.location_city
       },
       profile: {
         name: profileData.personalInfo?.name || 'Professional',
@@ -156,8 +159,8 @@ OUTPUT SCHEMA:
           ...strategy
         },
         context: {
-          job_title: jobData.title,
-          company: jobData.company_name,
+          job_title: jobDataAny.title,
+          company: jobDataAny.company_name,
           profile_name: profileData.personalInfo?.name
         }
       });

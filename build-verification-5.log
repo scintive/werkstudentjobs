@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 470ms
+ ✓ Compiled successfully in 8.3s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/archived/matchingService.ts:13:70
+Type error: Cannot find module '../supabase/types' or its corresponding type declarations.
+
+[0m [90m 11 |[39m
+ [90m 12 |[39m [36mimport[39m [33mOpenAI[39m [36mfrom[39m [32m'openai'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 13 |[39m [36mimport[39m type { [33mJobWithCompany[39m[33m,[39m [33mMatchCalculation[39m[33m,[39m [33mLanguageSkill[39m } [36mfrom[39m [32m'../supabase/types'[39m[33m;[39m
+ [90m    |[39m                                                                      [31m[1m^[22m[39m
+ [90m 14 |[39m [36mimport[39m type { [33mUserProfile[39m [36mas[39m [33mLegacyUserProfile[39m } [36mfrom[39m [32m'../types'[39m[33m;[39m
+ [90m 15 |[39m
+ [90m 16 |[39m [90m// Matching weights configuration[39m[0m
+Next.js build worker exited with code: 1 and signal: null

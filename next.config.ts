@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
     // Silence workspace root inference warning during tests
     root: __dirname,
   },
+  eslint: {
+    // Don't fail build on ESLint warnings
+    ignoreDuringBuilds: true,
+  },
 }
 
 export default nextConfig

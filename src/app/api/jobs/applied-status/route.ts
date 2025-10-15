@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', userId as any)
       .limit(1)
       .single()
 
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     const { data: interactions, error } = await supabase
       .from('user_job_interactions')
       .select('job_id, created_at, interaction_data')
-      .eq('user_profile_id', userProfile.id)
-      .eq('interaction_type', 'apply')
+      .eq('user_profile_id', (userProfile as any).id)
+      .eq('interaction_type' as any, 'apply' as any)
       .order('created_at', { ascending: false })
 
     if (error) {

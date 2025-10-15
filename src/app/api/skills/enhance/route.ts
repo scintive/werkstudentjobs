@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client 
-    llmService.client = llmService.initializeClient();
+    (llmService as any).client = llmService.initializeClient();
     
     // Generate intelligent skill suggestions based on profile analysis
     console.log('🎯 Calling GPT for intelligent skill suggestions...');
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
       
       // Legacy format support for existing frontend
       suggestions: {
-        technical: intelligentSuggestions.skill_suggestions?.technical?.map(s => s.skill) || [],
-        soft_skills: intelligentSuggestions.skill_suggestions?.soft_skills?.map(s => s.skill) || [],
-        industry_specific: intelligentSuggestions.skill_suggestions?.industry_specific?.map(s => s.skill) || [],
-        tools_platforms: intelligentSuggestions.skill_suggestions?.tools_platforms?.map(s => s.skill) || []
+        technical: intelligentSuggestions.skill_suggestions?.technical?.map((s: any) => s.skill) || [],
+        soft_skills: intelligentSuggestions.skill_suggestions?.soft_skills?.map((s: any) => s.skill) || [],
+        industry_specific: intelligentSuggestions.skill_suggestions?.industry_specific?.map((s: any) => s.skill) || [],
+        tools_platforms: intelligentSuggestions.skill_suggestions?.tools_platforms?.map((s: any) => s.skill) || []
       },
       
       // Enhanced suggestions with reasoning

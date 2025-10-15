@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 1067ms
+ ✓ Compiled successfully in 13.6s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/jobs/JobBrowser.tsx:281:7
+Type error: Object literal may only specify known properties, but 'funding_stage' does not exist in type '{ id: string; name: string; domain: string | null; logo_url: string | null; industry: string | null; size_category: "small" | "startup" | "medium" | "large" | "enterprise" | null; headquarters: string | null; ... 22 more ...; glassdoor_rating: number | null; }'. Did you mean to write 'funding_status'?
+
+[0m [90m 279 |[39m       created_at[33m:[39m [32m'2025-08-20'[39m[33m,[39m
+ [90m 280 |[39m       updated_at[33m:[39m [32m'2025-08-20'[39m[33m,[39m
+[31m[1m>[22m[39m[90m 281 |[39m       funding_stage[33m:[39m [36mnull[39m[33m,[39m
+ [90m     |[39m       [31m[1m^[22m[39m
+ [90m 282 |[39m       total_funding[33m:[39m [36mnull[39m[33m,[39m
+ [90m 283 |[39m       year_founded[33m:[39m [36mnull[39m[33m,[39m
+ [90m 284 |[39m       tech_stack[33m:[39m [36mnull[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

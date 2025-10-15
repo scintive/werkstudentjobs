@@ -57,8 +57,8 @@ export default function SettingsPage() {
         console.log('🔄 Auto-saving...')
 
         // Update all resume_data entries for this user
-        const { error: updateError } = await supabase
-          .from('resume_data')
+        const { error: updateError } = await (supabase
+          .from('resume_data') as any)
           .update({
             personal_info: {
               name: formData.name,
@@ -75,8 +75,8 @@ export default function SettingsPage() {
         if (updateError) throw updateError
 
         // Update onboarding fields in user_profiles
-        const { error: profileError } = await supabase
-          .from('user_profiles')
+        const { error: profileError } = await (supabase
+          .from('user_profiles') as any)
           .update({
             hours_available: formData.hoursAvailable,
             current_semester: formData.currentSemester,
@@ -128,6 +128,9 @@ export default function SettingsPage() {
         .order('updated_at', { ascending: false })
         .limit(1)
 
+      // Type assertion for partial select
+      const typedResumeData = resumeData as Array<{ personal_info: any }> | null
+
       // Load onboarding fields from user_profiles
       const { data: profileData } = await supabase
         .from('user_profiles')
@@ -135,8 +138,11 @@ export default function SettingsPage() {
         .eq('user_id', sessionData.session.user.id)
         .single()
 
-      if (resumeData && resumeData[0]?.personal_info) {
-        const info = resumeData[0].personal_info
+      // Type assertion for partial select
+      const typedProfileData = profileData as { hours_available: number | null; current_semester: number | null; university_name: string | null; start_preference: string | null } | null
+
+      if (typedResumeData && typedResumeData[0]?.personal_info) {
+        const info = typedResumeData[0].personal_info
         setFormData({
           name: info.name || '',
           email: sessionData.session.user.email || '',
@@ -144,19 +150,19 @@ export default function SettingsPage() {
           location: info.location || '',
           linkedin: info.linkedin || '',
           website: info.website || '',
-          hoursAvailable: profileData?.hours_available,
-          currentSemester: profileData?.current_semester,
-          universityName: profileData?.university_name || '',
-          startPreference: profileData?.start_preference || ''
+          hoursAvailable: typedProfileData?.hours_available ?? undefined,
+          currentSemester: typedProfileData?.current_semester ?? undefined,
+          universityName: typedProfileData?.university_name || '',
+          startPreference: typedProfileData?.start_preference || ''
         })
-      } else if (profileData) {
+      } else if (typedProfileData) {
         // If no resume_data but profile exists, populate onboarding fields
         setFormData(prev => ({
           ...prev,
-          hoursAvailable: profileData.hours_available,
-          currentSemester: profileData.current_semester,
-          universityName: profileData.university_name || '',
-          startPreference: profileData.start_preference || ''
+          hoursAvailable: typedProfileData.hours_available ?? undefined,
+          currentSemester: typedProfileData.current_semester ?? undefined,
+          universityName: typedProfileData.university_name || '',
+          startPreference: typedProfileData.start_preference || ''
         }))
       }
     } catch (err) {
@@ -178,8 +184,8 @@ export default function SettingsPage() {
       console.log('💾 Saving personal info:', formData)
 
       // Update all resume_data entries for this user
-      const { data: updateData, error: updateError } = await supabase
-        .from('resume_data')
+      const { data: updateData, error: updateError } = await (supabase
+        .from('resume_data') as any)
         .update({
           personal_info: {
             name: formData.name,
@@ -201,8 +207,8 @@ export default function SettingsPage() {
       console.log('✅ Resume data updated:', updateData)
 
       // Update onboarding fields in user_profiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
+      const { data: profileData, error: profileError } = await (supabase
+        .from('user_profiles') as any)
         .update({
           hours_available: formData.hoursAvailable,
           current_semester: formData.currentSemester,

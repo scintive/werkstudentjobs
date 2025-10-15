@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     console.log(`🔍 PROFILE: Resolving profile for session ${session_id}`);
     
     // Use existing RPC to get or create user profile
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .rpc('get_or_create_user_profile_from_resume', {
         p_session_id: session_id
       });

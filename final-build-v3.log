@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 1141ms
+ ✓ Compiled successfully in 25.8s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/jobs/JobBrowser.tsx:249:5
+Type error: Type '"hybrid"' is not assignable to type '"Remote" | "Hybrid" | "Onsite" | "Unknown" | null'. Did you mean '"Hybrid"'?
+
+[0m [90m 247 |[39m     location_country[33m:[39m [32m'Germany'[39m[33m,[39m
+ [90m 248 |[39m     location_full[33m:[39m [32m'Berlin, Germany'[39m[33m,[39m
+[31m[1m>[22m[39m[90m 249 |[39m     work_mode[33m:[39m [32m'hybrid'[39m[33m,[39m
+ [90m     |[39m     [31m[1m^[22m[39m
+ [90m 250 |[39m     employment_type[33m:[39m [32m'Full-time'[39m[33m,[39m
+ [90m 251 |[39m     seniority_level[33m:[39m [32m'Senior'[39m[33m,[39m
+ [90m 252 |[39m     salary_info[33m:[39m [32m'€80,000 - €120,000'[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

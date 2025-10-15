@@ -107,11 +107,11 @@ export default function UploadPage() {
       }),
       certifications: (profile.certifications || []).map(cert => ({
         name: cert.title,
-        issuer: cert.issuer || '',
+        issuer: cert.institution || '',
         date: cert.date || '',
-        description: cert.description || ''
+        description: (cert as any).description || ''
       })),
-      customSections: profile.custom_sections || []
+      customSections: (profile as any).custom_sections || []
     }
 
     // Save using ResumeDataService

@@ -2,7 +2,7 @@
 
 import { supabase } from '@/lib/supabase/client'
 import type { ResumeData } from '@/lib/types'
-import { ResumeDataService } from './resumeDataService'
+import { ResumeDataService } from '@/lib/services/resumeDataService'
 
 export interface JobMatchResult {
   job_id: string
@@ -73,7 +73,8 @@ export class JobMatchingService {
       }
       
       // Call Supabase function to get or create profile
-      const { data: profileResult, error } = await supabase
+      // Type assertion needed because Supabase type generation doesn't recognize this RPC function
+      const { data: profileResult, error } = await (supabase as any)
         .rpc('get_or_create_user_profile_from_resume', { p_session_id: sessionId })
       
       if (error || !profileResult) {
@@ -83,7 +84,13 @@ export class JobMatchingService {
       
       userProfileId = profileResult
     }
-    
+
+    // Type guard to ensure userProfileId is not null after checks
+    if (!userProfileId) {
+      console.error('User profile ID is still null after retrieval attempt')
+      return []
+    }
+
     // Check cache if enabled
     if (useCache) {
       const cached = this.getCachedResults(userProfileId)
@@ -91,9 +98,9 @@ export class JobMatchingService {
         return this.applyFilters(cached, filters)
       }
     }
-    
+
     // Calculate matches using Supabase function
-    const { data: matches, error } = await supabase
+    const { data: matches, error } = await (supabase as any)
       .rpc('calculate_job_matches', {
         p_user_profile_id: userProfileId,
         p_limit: limit
@@ -117,14 +124,14 @@ export class JobMatchingService {
   // Save match results to database for persistence
   async saveMatchResults(userProfileId?: string): Promise<void> {
     if (!userProfileId) {
-      userProfileId = this.resumeService.getUserProfileId()
+      const id = this.resumeService.getUserProfileId()
+      if (!id) {
+        throw new Error('No user profile ID available')
+      }
+      userProfileId = id
     }
-    
-    if (!userProfileId) {
-      throw new Error('No user profile ID available')
-    }
-    
-    const { error } = await supabase
+
+    const { error } = await (supabase as any)
       .rpc('save_match_results', { p_user_profile_id: userProfileId })
     
     if (error) {
@@ -135,13 +142,13 @@ export class JobMatchingService {
   // Get saved match results from database
   async getSavedMatchResults(userProfileId?: string): Promise<JobMatchResult[]> {
     if (!userProfileId) {
-      userProfileId = this.resumeService.getUserProfileId()
+      const id = this.resumeService.getUserProfileId()
+      if (!id) {
+        return []
+      }
+      userProfileId = id
     }
-    
-    if (!userProfileId) {
-      return []
-    }
-    
+
     const { data, error } = await supabase
       .from('job_match_results')
       .select(`
@@ -173,9 +180,12 @@ export class JobMatchingService {
       console.error('Failed to get saved results:', error)
       return []
     }
-    
+
+    // Type assertion needed for Supabase nested query result
+    const typedData = data as any[] || []
+
     // Transform to our format
-    return (data || []).map(result => ({
+    return typedData.map(result => ({
       job_id: result.job_id,
       company_id: result.jobs.company_id,
       title: result.jobs.title,
@@ -237,9 +247,12 @@ export class JobMatchingService {
       console.error('Failed to fetch job details:', error)
       return matches // Return without enhancement
     }
-    
+
+    // Type assertion needed for Supabase nested query result
+    const typedJobs = jobs as any[] || []
+
     // Create a map for quick lookup
-    const jobMap = new Map((jobs || []).map(job => [job.id, job]))
+    const jobMap = new Map(typedJobs.map(job => [job.id, job]))
     
     // Enhance matches
     return matches.map(match => {

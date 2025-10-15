@@ -14,7 +14,7 @@ import {
 import type { ResumeSuggestion } from '@/lib/services/resumeVariantService'
 
 interface InlineSuggestionOverlayProps {
-  iframeRef: React.RefObject<HTMLIFrameElement>
+  iframeRef: React.RefObject<HTMLIFrameElement | null>
   suggestions: ResumeSuggestion[]
   onAccept: (suggestionId: string) => void
   onDecline: (suggestionId: string) => void
@@ -542,7 +542,7 @@ export function InlineSuggestionOverlay({
           } else {
             targetElement = certHeader || null
           }
-        } else if (!targetElement && suggestion.section === 'custom_sections') {
+        } else if (!targetElement && suggestion.section === 'custom') {
           // Fallback: try to match text anywhere
           if (suggestion.original_content) {
             const elems = Array.from(doc.querySelectorAll('p, li, div, span, strong')) as HTMLElement[]
@@ -652,14 +652,16 @@ export function InlineSuggestionOverlay({
             }
 
             // Add applied highlight effect
-            setAppliedHighlights(prev => new Set([...prev, suggestion.id]))
-            setTimeout(() => {
-              setAppliedHighlights(prev => {
-                const next = new Set(prev)
-                next.delete(suggestion.id)
-                return next
-              })
-            }, 1000)
+            if (onHighlightChange) {
+              const newHighlights = new Set(appliedHighlights)
+              newHighlights.add(suggestion.id)
+              onHighlightChange(newHighlights)
+              setTimeout(() => {
+                const updatedHighlights = new Set(appliedHighlights)
+                updatedHighlights.delete(suggestion.id)
+                onHighlightChange(updatedHighlights)
+              }, 1000)
+            }
 
             console.log('📞 Calling onAccept for suggestion:', suggestion.id)
             onAccept(suggestion.id)

@@ -1,0 +1,25 @@
+
+> visual-app@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 474ms
+ ✓ Compiled successfully in 8.6s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./src/components/resume-editor/PerfectStudio.tsx:1664:45
+Type error: Type '{ id: string; title: string; type: "list" | "text" | "achievements"; items: { title?: string | undefined; subtitle?: string | undefined; date?: string | undefined; description?: string | undefined; details?: string[] | undefined; }[]; }[] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+
+[0m [90m 1662 |[39m                   onToggle[33m=[39m{() [33m=>[39m toggleSection([32m'custom'[39m)}
+ [90m 1663 |[39m                   onAdd[33m=[39m{() [33m=>[39m {
+[31m[1m>[22m[39m[90m 1664 |[39m                     [36mconst[39m newSections [33m=[39m [[33m...[39mlocalData[33m.[39mcustomSections]
+ [90m      |[39m                                             [31m[1m^[22m[39m
+ [90m 1665 |[39m                     newSections[sectionIndex][33m.[39mitems [33m=[39m [
+ [90m 1666 |[39m                       [33m...[39m(newSections[sectionIndex][33m.[39mitems [33m||[39m [])[33m,[39m
+ [90m 1667 |[39m                       { title[33m:[39m [32m''[39m[33m,[39m subtitle[33m:[39m [32m''[39m[33m,[39m date[33m:[39m [32m''[39m[33m,[39m description[33m:[39m [32m''[39m }[0m
+Next.js build worker exited with code: 1 and signal: null

@@ -46,9 +46,9 @@ import {
 import { ResumeDataService } from '@/lib/services/resumeDataService'
 import { supabase } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { TailorEnhancedRichText } from './TailorEnhancedRichText'
-import { TailorSimpleTemplateDropdown } from './TailorSimpleTemplateDropdown'
-import { TailorEnhancedSkillsManager } from './TailorEnhancedSkillsManager'
+import { TailorEnhancedRichText } from '@/components/tailor-resume-editor/TailorEnhancedRichText'
+import { TailorSimpleTemplateDropdown } from '@/components/tailor-resume-editor/TailorSimpleTemplateDropdown'
+import { TailorEnhancedSkillsManager } from '@/components/tailor-resume-editor/TailorEnhancedSkillsManager'
 // Debug inspector removed for production cleanliness
 
 // AI Suggestion Types for Tailor Integration
@@ -269,7 +269,7 @@ const TailorSectionCard = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
-              {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4 text-gray-600' })}
+              {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4 text-gray-600' } as any)}
             </div>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
             {badge !== undefined && (
@@ -368,87 +368,8 @@ export const TailorPerfectStudio = ({
         // Clear any potential localStorage conflicts
         localStorage.removeItem('resume_session_id');
         localStorage.removeItem('resume_data');
-        if (userProfile) {
-          const convertedData = {
-            personalInfo: {
-              name: userProfile.personal_details?.name || '',
-              email: userProfile.personal_details?.contact?.email || '',
-              phone: userProfile.personal_details?.contact?.phone || '',
-              location: userProfile.personal_details?.contact?.address || '',
-              linkedin: userProfile.personal_details?.contact?.linkedin || '',
-              website: ''
-            },
-            professionalTitle: userProfile.professional_title || '',
-            professionalSummary: userProfile.professional_summary || '',
-            enableProfessionalSummary: !!userProfile.professional_summary,
-            skills: userProfile.skills || {},
-            experience: userProfile.experience || [],
-            education: userProfile.education || [],
-            projects: userProfile.projects || [],
-            languages: (userProfile.languages || []).map((lang: any) => {
-              if (typeof lang === 'string') {
-                // Parse string format like "English (Fluent (Native-level))"
-                const match = lang.match(/^([^(]+)\s*\(([^)]+)\)$/);
-                if (match) {
-                  return {
-                    language: match[1].trim(),
-                    proficiency: match[2].trim()
-                  };
-                }
-                // Fallback if no parentheses found
-                return {
-                  language: lang.trim(),
-                  proficiency: 'Not specified'
-                };
-              } else {
-                // Already structured object
-                return {
-                  language: lang.language || lang,
-                  proficiency: lang.proficiency || 'Not specified'
-                };
-              }
-            }),
-            certifications: userProfile.certifications || [],
-            customSections: (userProfile.custom_sections || []).map((section: any, index: number) => {
-              
-              // Helper function to intelligently parse custom section items based on title
-              const parseCustomSectionItem = (item: string, sectionTitle: string) => {
-                // Handle format: "Role, Organization (Duration) — Description"
-                const match = item.match(/^(.*?),\s*(.*?)\s*\(([^)]+)\)\s*[—-]\s*(.*)$/);
-                if (match) {
-                  return {
-                    field1: match[1].trim(), // Role/Position
-                    field2: match[2].trim(), // Organization  
-                    field3: match[3].trim(), // Duration
-                    field4: match[4].trim()  // Impact/Description
-                  };
-                }
-                
-                // Default: Put entire item in field1
-                return {
-                  field1: item,
-                  field2: '',
-                  field3: '',
-                  field4: ''
-                };
-              };
-              
-              return {
-                id: `custom-${index}`,
-                title: section.title,
-                type: 'custom',
-                items: section.items.map((item: string) => parseCustomSectionItem(item, section.title))
-              }
-            })
-          };
-          setResumeData(convertedData);
-          
-          if (onResumeDataLoaded) {
-            onResumeDataLoaded(convertedData);
-          }
-          setLoading(false);
-          return;
-        }
+
+        // Note: Legacy userProfile conversion code removed - component now only uses propResumeData and API fetching
         
         // Try multiple data sources
         const resumeService = ResumeDataService.getInstance()
@@ -504,7 +425,7 @@ export const TailorPerfectStudio = ({
   }, [propResumeData])
   
   const updateResumeData = (updates: any) => {
-    setResumeData(prev => ({ ...prev, ...updates }))
+    setResumeData((prev: any) => ({ ...prev, ...updates }))
     // Trigger preview update after data change
     generatePreview({ ...resumeData, ...updates })
   }
@@ -645,7 +566,7 @@ export const TailorPerfectStudio = ({
 
   // Derived suggestion helpers
   const summarySuggestion = React.useMemo(() => aiSuggestions.find(s => s.type === 'summary'), [aiSuggestions])
-  const skillsSuggestion = React.useMemo(() => aiSuggestions.find(s => s.type === 'skills'), [aiSuggestions])
+  const skillsSuggestion = React.useMemo(() => aiSuggestions.find(s => s.type === 'skill'), [aiSuggestions])
   const bulletSuggestions = React.useMemo(() => aiSuggestions.filter(s => s.type === 'bullet'), [aiSuggestions])
   const suggestionCounts = React.useMemo(() => ({
     bullet: bulletSuggestions.length,
@@ -656,8 +577,8 @@ export const TailorPerfectStudio = ({
   // Compute skill diff when a skills suggestion exists
   const skillDiff = React.useMemo(() => {
     if (!skillsSuggestion || !skillsSuggestion.suggestion || !resumeData?.skills) return null
-    const proposed = skillsSuggestion.suggestion as Record<string, any[]>
-    const current = resumeData.skills as Record<string, any[]>
+    const proposed = skillsSuggestion.suggestion as unknown as Record<string, any[]>
+    const current = resumeData.skills as unknown as Record<string, any[]>
     const result: { added: Record<string, string[]>; removed: Record<string, string[]> } = { added: {}, removed: {} }
     const allCats = new Set([...Object.keys(proposed || {}), ...Object.keys(current || {})])
     allCats.forEach(cat => {
@@ -1060,38 +981,38 @@ export const TailorPerfectStudio = ({
                   <div className="flex gap-1">
                     <button onClick={() => {
                       console.log('🚨🚨 TAILOR PERFECT STUDIO: APPLY ALL SKILLS CLICKED:', {
-                        suggestionId: skillsSuggestion.id,
-                        skillsSuggestion: skillsSuggestion,
+                        suggestionId: skillsSuggestion!.id,
+                        skillsSuggestion: skillsSuggestion!,
                         skillDiff: skillDiff
                       })
-                      onSuggestionAccept?.(skillsSuggestion.id)
+                      onSuggestionAccept?.(skillsSuggestion!.id)
                     }} className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs hover:bg-indigo-700">Apply All</button>
                     <button onClick={() => {
                       console.log('🚨🚨 TAILOR PERFECT STUDIO: DISMISS SKILLS CLICKED:', {
-                        suggestionId: skillsSuggestion.id,
-                        skillsSuggestion: skillsSuggestion,
+                        suggestionId: skillsSuggestion!.id,
+                        skillsSuggestion: skillsSuggestion!,
                         skillDiff: skillDiff
                       })
-                      onSuggestionReject?.(skillsSuggestion.id)
+                      onSuggestionReject?.(skillsSuggestion!.id)
                     }} className="px-2.5 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs hover:bg-gray-300">Skip</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {Object.keys(skillDiff.added).length > 0 && (
+                  {Object.keys(skillDiff!.added).length > 0 && (
                     <div>
                       <div className="text-xs font-medium text-green-700">Add</div>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {Object.entries(skillDiff.added).flatMap(([cat, arr]) => (arr as string[]).map(s => (
+                        {Object.entries(skillDiff!.added).flatMap(([cat, arr]) => (arr as string[]).map(s => (
                           <span key={`add-${cat}-${s}`} className="px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[11px]">{s}</span>
                         )))}
                       </div>
                     </div>
                   )}
-                  {Object.keys(skillDiff.removed).length > 0 && (
+                  {Object.keys(skillDiff!.removed).length > 0 && (
                     <div>
                       <div className="text-xs font-medium text-red-700">Remove</div>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {Object.entries(skillDiff.removed).flatMap(([cat, arr]) => (arr as string[]).map(s => (
+                        {Object.entries(skillDiff!.removed).flatMap(([cat, arr]) => (arr as string[]).map(s => (
                           <span key={`rem-${cat}-${s}`} className="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[11px]">{s}</span>
                         )))}
                       </div>

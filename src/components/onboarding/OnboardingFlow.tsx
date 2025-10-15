@@ -7,8 +7,6 @@ import { supabase } from '@/lib/supabase/client'
 import Image from 'next/image'
 import { ImageCropModal } from '@/components/resume-editor/ImageCropModal'
 import { FileUpload } from '@/components/ui/file-upload'
-import { searchUniversities } from '@/lib/data/german-universities'
-
 interface OnboardingData {
   // Resume data
   resumeExtracted?: boolean
@@ -49,8 +47,9 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
 
   // University autocomplete states
   const [universitySearch, setUniversitySearch] = useState('')
-  const [universitySuggestions, setUniversitySuggestions] = useState<string[]>([])
+  const [universitySuggestions, setUniversitySuggestions] = useState<Array<{name: string, display: string, city: string, state: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [universityLoading, setUniversityLoading] = useState(false)
 
   const totalSteps = 6 // 0-5: Resume, Photo, Hours, Semester, University, Start
 
@@ -86,6 +85,31 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
 
       const result = await response.json()
 
+      // DEBUG: Log what was extracted
+      console.log('🔍 === ONBOARDING EXTRACTION DEBUG ===')
+      console.log('🔍 Experience count:', (result.profile.experience || []).length)
+      if (result.profile.experience && result.profile.experience.length > 0) {
+        result.profile.experience.forEach((exp: any, idx: number) => {
+          console.log(`🔍 Experience ${idx + 1}:`, {
+            company: exp.company,
+            position: exp.position,
+            responsibilities_count: (exp.responsibilities || []).length,
+            has_responsibilities: !!exp.responsibilities
+          })
+        })
+      }
+      console.log('🔍 Certifications count:', (result.profile.certifications || []).length)
+      if (result.profile.certifications && result.profile.certifications.length > 0) {
+        result.profile.certifications.forEach((cert: any, idx: number) => {
+          console.log(`🔍 Certification ${idx + 1}:`, {
+            title: cert.title,
+            institution: cert.institution,
+            date: cert.date
+          })
+        })
+      }
+      console.log('🔍 === END ONBOARDING DEBUG ===')
+
       setUploadState(prev => ({
         ...prev,
         progress: 100
@@ -108,29 +132,78 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
         const { ResumeDataService } = await import('@/lib/services/resumeDataService')
         const resumeService = ResumeDataService.getInstance()
 
-        // Convert profile to ResumeData format (same as upload page)
+        // Filter out invalid certifications (empty or undefined title)
+        const validCertifications = (result.profile.certifications || []).filter((cert: any) =>
+          cert && cert.title && typeof cert.title === 'string' && cert.title.trim() !== '' && cert.title.toLowerCase() !== 'undefined'
+        )
+        console.log('🔍 Filtered certifications:', validCertifications.length, 'out of', (result.profile.certifications || []).length)
+
+        // Convert profile to ResumeData format (EXACT COPY from ElegantTemplateBar.tsx working logic)
         const resumeData: any = {
           personalInfo: {
-            name: result.profile.personal_details?.name || result.profile.personal_info?.name || 'Unknown',
-            email: result.profile.personal_details?.contact?.email || result.profile.personal_info?.email || '',
-            phone: result.profile.personal_details?.contact?.phone || result.profile.personal_info?.phone || '',
-            location: result.profile.personal_details?.contact?.address || result.profile.personal_info?.location || '',
-            linkedin: result.profile.personal_details?.contact?.linkedin || result.profile.personal_info?.linkedin || ''
+            name: result.profile.personal_details?.name || 'Unknown',
+            email: result.profile.personal_details?.contact?.email || '',
+            phone: result.profile.personal_details?.contact?.phone || '',
+            location: result.profile.personal_details?.contact?.address || '',
+            linkedin: result.profile.personal_details?.contact?.linkedin || ''
           },
           professionalTitle: result.profile.professional_title || "Professional",
-          professionalSummary: result.profile.professional_summary || result.profile.summary || "",
-          enableProfessionalSummary: !!(result.profile.professional_summary || result.profile.summary),
-          skills: result.profile.skills || {},
-          experience: result.profile.experience || [],
-          education: result.profile.education || [],
-          projects: (result.profile.projects || []).map(proj => ({
-            name: proj.title,  // Map title to name
+          professionalSummary: result.profile.professional_summary || "",
+          enableProfessionalSummary: !!result.profile.professional_summary,
+          skills: {
+            technical: result.profile.skills?.technology || [],
+            soft_skills: result.profile.skills?.soft_skills || [],
+            tools: result.profile.skills?.design || []
+          },
+          experience: (result.profile.experience || []).map((exp: any) => ({
+            company: exp.company,
+            position: exp.position,
+            duration: exp.duration,
+            achievements: exp.responsibilities
+          })),
+          education: (result.profile.education || []).map((edu: any) => ({
+            degree: edu.degree,
+            field_of_study: edu.field_of_study,
+            institution: edu.institution,
+            year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
+          })),
+          projects: (result.profile.projects || []).map((proj: any) => ({
+            name: proj.title,
             description: proj.description,
             technologies: [],
             date: "2023"
           })),
-          languages: result.profile.languages || [],
-          certifications: result.profile.certifications || [],
+          languages: (result.profile.languages || []).map((lang: any) => {
+            if (typeof lang === 'string') {
+              const match = lang.match(/^(.+?)\s*\((.+?)\)$/)
+              if (match) {
+                return {
+                  name: match[1].trim(),
+                  language: match[1].trim(),
+                  level: match[2].trim(),
+                  proficiency: match[2].trim()
+                }
+              }
+              return {
+                name: lang,
+                language: lang,
+                level: 'Not specified',
+                proficiency: 'Not specified'
+              }
+            }
+            return {
+              name: lang.language || lang.name || '',
+              language: lang.language || lang.name || '',
+              level: lang.proficiency || lang.level || 'Not specified',
+              proficiency: lang.proficiency || lang.level || 'Not specified'
+            }
+          }),
+          certifications: (result.profile.certifications || []).map((cert: any) => ({
+            name: cert.title,
+            issuer: cert.issuer || cert.institution || '',
+            date: cert.date || '',
+            description: cert.description || ''
+          })),
           customSections: result.profile.custom_sections || []
         }
 
@@ -223,22 +296,33 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
   }
 
   // University search handler
-  const handleUniversitySearchChange = (value: string) => {
+  const handleUniversitySearchChange = async (value: string) => {
     setUniversitySearch(value)
     setData({ ...data, universityName: value })
 
     if (value.length >= 2) {
-      const suggestions = searchUniversities(value, 6)
-      setUniversitySuggestions(suggestions)
-      setShowSuggestions(true)
+      setUniversityLoading(true)
+      try {
+        const response = await fetch(`/api/universities/search?q=${encodeURIComponent(value)}&limit=10`)
+        const result = await response.json()
+
+        if (result.universities) {
+          setUniversitySuggestions(result.universities)
+          setShowSuggestions(true)
+        }
+      } catch (error) {
+        console.error('Error searching universities:', error)
+      } finally {
+        setUniversityLoading(false)
+      }
     } else {
       setShowSuggestions(false)
     }
   }
 
-  const selectUniversity = (university: string) => {
-    setUniversitySearch(university)
-    setData({ ...data, universityName: university })
+  const selectUniversity = (university: {name: string, display: string}) => {
+    setUniversitySearch(university.name)
+    setData({ ...data, universityName: university.name })
     setShowSuggestions(false)
   }
 
@@ -270,13 +354,13 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
 
       let error
       if (existingProfile) {
-        const result = await supabase
+        const result = await (supabase as any)
           .from('user_profiles')
           .update(profileData)
           .eq('user_id', userId)
         error = result.error
       } else {
-        const result = await supabase
+        const result = await (supabase as any)
           .from('user_profiles')
           .insert({
             user_id: userId,
@@ -296,7 +380,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
       // (Resume data is already saved immediately after extraction in Step 0)
       if (photoUrl) {
         console.log('📸 Updating photo in resume_data...')
-        const { error: resumePhotoError } = await supabase
+        const { error: resumePhotoError } = await (supabase as any)
           .from('resume_data')
           .update({ photo_url: photoUrl })
           .eq('user_id', userId)
@@ -718,7 +802,13 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                   autoFocus
                 />
 
-                {showSuggestions && universitySuggestions.length > 0 && (
+                {universityLoading && (
+                  <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-lg p-4 text-center">
+                    <div className="text-sm text-gray-600">Searching...</div>
+                  </div>
+                )}
+
+                {showSuggestions && universitySuggestions.length > 0 && !universityLoading && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -730,10 +820,17 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                         onClick={() => selectUniversity(uni)}
                         className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
                       >
-                        <span className="text-gray-900">{uni}</span>
+                        <div className="text-gray-900 font-medium">{uni.name}</div>
+                        <div className="text-xs text-gray-500">{uni.city}, {uni.state}</div>
                       </button>
                     ))}
                   </motion.div>
+                )}
+
+                {showSuggestions && universitySuggestions.length === 0 && !universityLoading && universitySearch.length >= 2 && (
+                  <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-lg p-4 text-center">
+                    <div className="text-sm text-gray-600">No universities found</div>
+                  </div>
                 )}
               </div>
 

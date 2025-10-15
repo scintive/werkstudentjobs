@@ -11,6 +11,8 @@ interface StudentCoverLetter {
   length: 'short' | 'balanced';
   language: 'DE' | 'EN';
   content: {
+    subject: string;
+    salutation: string;
     intro: string;
     body_paragraphs: string[];
     closing: string;
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
         .from('resume_variants')
         .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count, user_id')
         .eq('id', variant_id)
-        .eq('user_id', authUserId)
+        .eq('user_id', authUserId as any)
         .single();
 
       existingVariant = variant;
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
         .from('resume_variants')
         .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count, user_id')
         .eq('job_id', job_id)
-        .eq('user_id', authUserId)
+        .eq('user_id', authUserId as any)
         .order('updated_at', { ascending: false })
         .limit(1);
 
@@ -130,9 +132,9 @@ export async function POST(request: NextRequest) {
     }
 
     // If variant exists with cover letter, return it (unless regenerating)
-    if (existingVariant?.cover_letter_content && !custom_instructions && !force_regenerate) {
+    if ((existingVariant as any)?.cover_letter_content && !custom_instructions && !force_regenerate) {
       console.log('📋 COVER LETTER: Found existing cover letter in variant');
-      const savedData = JSON.parse(existingVariant.cover_letter_content);
+      const savedData = JSON.parse((existingVariant as any).cover_letter_content);
 
       // Handle versioned format vs legacy format
       let versions = [];
@@ -146,14 +148,14 @@ export async function POST(request: NextRequest) {
         // Legacy format - convert to versioned
         versions = [{
           version: 1,
-          generated_at: existingVariant.cover_letter_generated_at || new Date().toISOString(),
+          generated_at: (existingVariant as any).cover_letter_generated_at || new Date().toISOString(),
           cover_letter: savedData
         }];
         currentVersion = 1;
       }
 
       // Get the current version for display
-      const currentLetter = versions.find(v => v.version === currentVersion) || versions[versions.length - 1];
+      const currentLetter = versions.find((v: any) => v.version === currentVersion) || versions[versions.length - 1];
       const savedLetter = currentLetter.cover_letter;
 
       // Calculate word count for existing letter
@@ -171,9 +173,9 @@ export async function POST(request: NextRequest) {
         current_version: currentVersion,
         metadata: {
           word_count: wordCount,
-          generation_count: existingVariant.cover_letter_generation_count || 0,
+          generation_count: (existingVariant as any).cover_letter_generation_count || 0,
           generation_limit: 2,
-          generated_at: currentLetter.generated_at,
+          generated_at: (currentLetter as any).generated_at,
           total_versions: versions.length
         }
       });
@@ -195,17 +197,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce 2-generation limit
-    if (existingVariant && existingVariant.cover_letter_generation_count >= 2) {
+    if (existingVariant && (existingVariant as any).cover_letter_generation_count >= 2) {
       console.log('⚠️ COVER LETTER: Generation limit reached (2/2)');
       return NextResponse.json({
         error: 'Cover letter generation limit reached',
         message: 'You can only generate 2 cover letters per job. Please use the existing one or edit it manually.',
-        generation_count: existingVariant.cover_letter_generation_count
+        generation_count: (existingVariant as any).cover_letter_generation_count
       }, { status: 429 });
     }
 
     // Fetch job data
-    const { data: jobData, error: jobError } = await supabase
+    const { data: jobDataRaw, error: jobError } = await supabase
       .from('jobs')
       .select(`
         *,
@@ -218,13 +220,16 @@ export async function POST(request: NextRequest) {
       `)
       .eq('id', job_id)
       .single();
-    
-    if (jobError || !jobData) {
+
+    if (jobError || !jobDataRaw) {
       return NextResponse.json(
         { error: 'Job not found' },
         { status: 404 }
       );
     }
+
+    // Add type assertion for all jobData accesses
+    const jobData = jobDataRaw as any;
     
     // Use provided student profile or fetch from database
     let profileData: Partial<StudentProfile> = student_profile || {};
@@ -271,7 +276,7 @@ export async function POST(request: NextRequest) {
         const userName = dbProfile.personalInfo?.name ||
                         dbProfile.personal_info?.name ||
                         dbProfile.name ||
-                        'Varun Mishra';
+                        '';
 
         console.log('🎓 STUDENT COVER LETTER: Extracted user name:', userName);
 
@@ -305,7 +310,7 @@ export async function POST(request: NextRequest) {
           language_proficiencies: dbProfile.language_proficiencies || [],
           academic_projects: dbProfile.projects || dbProfile.academic_projects || [],
           relevant_coursework: dbProfile.relevant_coursework || []
-        };
+        } as any;
       } else {
         const { data: dbProfile, error: profileError } = await supabase
           .from('user_profiles')
@@ -322,17 +327,17 @@ export async function POST(request: NextRequest) {
         
         // Convert database profile to student profile format
         profileData = {
-          degree_program: dbProfile.degree_program || 'Computer Science',
-          university: dbProfile.university || '',
-          current_year: dbProfile.current_year || 3,
-          expected_graduation: dbProfile.expected_graduation || '2025-06',
-          weekly_availability: dbProfile.weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
-          earliest_start_date: dbProfile.earliest_start_date || 'immediately',
-          preferred_duration: dbProfile.preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
+          degree_program: (dbProfile as any).degree_program || 'Computer Science',
+          university: (dbProfile as any).university || '',
+          current_year: (dbProfile as any).current_year || 3,
+          expected_graduation: (dbProfile as any).expected_graduation || '2025-06',
+          weekly_availability: (dbProfile as any).weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
+          earliest_start_date: (dbProfile as any).earliest_start_date || 'immediately',
+          preferred_duration: (dbProfile as any).preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
           enrollment_status: 'enrolled',
-          language_proficiencies: dbProfile.language_proficiencies || [],
-          academic_projects: dbProfile.academic_projects || [],
-          relevant_coursework: dbProfile.relevant_coursework || []
+          language_proficiencies: (dbProfile as any).language_proficiencies || [],
+          academic_projects: (dbProfile as any).academic_projects || [],
+          relevant_coursework: (dbProfile as any).relevant_coursework || []
         };
       }
     }
@@ -415,7 +420,7 @@ export async function POST(request: NextRequest) {
         evidence_map: evidenceMap
       },
       student: {
-        name: profileData.name || 'Varun Mishra', // Use actual user name
+        name: (profileData as any).name || '', // Use actual user name
         degree: profileData.degree_program,
         university: profileData.university,
         year: profileData.current_year,
@@ -425,34 +430,25 @@ export async function POST(request: NextRequest) {
         duration: profileData.preferred_duration ?
           `${profileData.preferred_duration.months_min}-${profileData.preferred_duration.months_max} months` :
           '6-12 months',
-        projects: (profileData.academic_projects || []).slice(0, 3).map(p => ({
+        projects: (profileData.academic_projects || []).slice(0, 3).map((p: any) => ({
           title: p.title,
           description: p.description,
           technologies: p.technologies || [],
           metrics: p.metrics || [],
           outcomes: p.outcomes || ''
         })),
-        coursework: (profileData.relevant_coursework || []).slice(0, 4).map(c => ({
+        coursework: (profileData.relevant_coursework || []).slice(0, 4).map((c: any) => ({
           course_name: c.course_name,
           key_topics: c.key_topics || [],
           relevance: c.relevance_to_job || ''
         })),
         languages: profileData.language_proficiencies || [],
-        skills: profileData.technical_skills || [],
-        tools: profileData.tools_familiar_with || []
-      },
-      strategy: strategy_context || {
-        positioning: {
-          themes: ['academic excellence', 'practical projects', 'eager to learn'],
-          elevator_pitch: 'Motivated student with strong academic foundation and hands-on project experience'
-        },
-        ats_keywords: [],
-        must_have_gaps: [],
-        competitive_advantages: []
+        skills: (profileData as any).technical_skills || [],
+        tools: (profileData as any).tools_familiar_with || []
       },
       language: targetLanguage,
       tone,
-      word_count: wordCounts[length]
+      word_count: wordCounts[length as keyof typeof wordCounts]
     };
     
     // Tone-specific prompts for students
@@ -462,7 +458,7 @@ export async function POST(request: NextRequest) {
       enthusiastic: 'Express excitement about the role and company. Show passion for the field.'
     };
     
-    const systemPrompt = `You are an elite Werkstudent cover letter writer with access to DEEP MATCHING DATA between the candidate and this specific job. ${tonePrompts[tone]}
+    const systemPrompt = `You are an elite Werkstudent cover letter writer with access to DEEP MATCHING DATA between the candidate and this specific job. ${tonePrompts[tone as keyof typeof tonePrompts]}
 
 🎯 CRITICAL ADVANTAGE: You have PRECISE DATA showing exactly why this candidate is qualified:
 - ${matchedSkills.length} MATCHED SKILLS with the job requirements
@@ -477,7 +473,7 @@ Write a cover letter that PROVES the candidate can do THIS SPECIFIC JOB using CO
 3. Real project/experience that demonstrates it
 
 🚨 CRITICAL WORD COUNT REQUIREMENT - THIS IS MANDATORY:
-- TARGET: ${wordCounts[length]} WORDS for letter content (intro + body_paragraphs + closing combined)
+- TARGET: ${wordCounts[length as keyof typeof wordCounts]} WORDS for letter content (intro + body_paragraphs + closing combined)
 - Count ONLY the actual letter paragraphs, NOT the sign_off
 - ${length === 'long' ? '⚠️ FOR LONG (350 words): You MUST write EXACTLY 340-360 words. This is NON-NEGOTIABLE. Write detailed, rich paragraphs with specific examples and metrics. Do NOT write short paragraphs.' : ''}
 - ${length === 'medium' || length === '250words' ? 'FOR MEDIUM (250-270 words): You MUST write AT LEAST 245 words with strong detail.' : ''}
@@ -575,7 +571,7 @@ ${include_hours ? `- Availability phrase: "I'm available starting ${letterContex
 ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instructions}\n` : ''}
 
 ⚠️ FINAL REMINDERS:
-1. WORD COUNT: Must be ${wordCounts[length]} words (intro + body_paragraphs + closing)
+1. WORD COUNT: Must be ${wordCounts[length as keyof typeof wordCounts]} words (intro + body_paragraphs + closing)
 2. USE THE STRATEGY DATA ABOVE: Reference specific matched skills, tools, and task evidence
 3. BE SPECIFIC: Use the evidence provided for each task, don't make up generic claims
 4. SHOW UNDERSTANDING: Demonstrate you know what the role involves by referencing actual tasks
@@ -618,7 +614,7 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
         ],
         model: 'gpt-4o', // Use GPT-4o for high-quality cover letter generation
         temperature: 0.8, // Slightly higher for more natural writing
-        max_tokens: maxTokensMap[length] || 1100
+        max_tokens: maxTokensMap[length as keyof typeof maxTokensMap] || 1100
       });
 
       const rawContent = aiResponse.choices?.[0]?.message?.content || '{}';
@@ -742,7 +738,7 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
         length,
         language: targetLanguage,
         content: {
-          subject: letterData.subject || `Application for ${job.title}`,
+          subject: letterData.subject || `Application for ${jobData.title}`,
           salutation: letterData.salutation || 'Dear Hiring Team',
           intro: letterData.intro || '',
           body_paragraphs: letterData.body_paragraphs || [],
@@ -773,20 +769,20 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
       console.log(`🎓 STUDENT COVER LETTER: Generated ${tone} ${length} letter (${targetLanguage}) - ${wordCount} words`);
 
       // Save cover letter to variant with versioning
-      if (existingVariant?.id) {
-        const newGenerationCount = (existingVariant.cover_letter_generation_count || 0) + 1;
+      if ((existingVariant as any)?.id) {
+        const newGenerationCount = ((existingVariant as any).cover_letter_generation_count || 0) + 1;
 
         // Load existing versions or create new array
         let versions = [];
-        if (existingVariant.cover_letter_content) {
-          const savedData = JSON.parse(existingVariant.cover_letter_content);
+        if ((existingVariant as any).cover_letter_content) {
+          const savedData = JSON.parse((existingVariant as any).cover_letter_content);
           if (savedData.versions && Array.isArray(savedData.versions)) {
             versions = savedData.versions;
           } else {
             // Convert legacy format to versioned
             versions = [{
               version: 1,
-              generated_at: existingVariant.cover_letter_generated_at || new Date().toISOString(),
+              generated_at: (existingVariant as any).cover_letter_generated_at || new Date().toISOString(),
               tone: savedData.tone,
               length: savedData.length,
               cover_letter: savedData
@@ -816,8 +812,8 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
             cover_letter_content: JSON.stringify(versionedData),
             cover_letter_generated_at: new Date().toISOString(),
             cover_letter_generation_count: newGenerationCount
-          })
-          .eq('id', existingVariant.id);
+          } as any)
+          .eq('id', (existingVariant as any).id);
 
         console.log(`💾 COVER LETTER: Saved version ${newGenerationCount}/2 (total ${versions.length} versions)`);
 

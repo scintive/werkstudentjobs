@@ -76,7 +76,7 @@ import type { StudentProfile } from '@/lib/types/studentProfile'
 import type { JobWithCompany } from '@/lib/supabase/types'
 
 interface JobBrowserProps {
-  userProfile?: unknown
+  userProfile?: any
   onJobSelect?: (job: JobWithCompany) => void
   className?: string
 }
@@ -235,7 +235,7 @@ function extractSalaryFromBenefits(benefits: string[] | null): string | null {
 }
 
 // Mock data for demonstration
-const mockJobs: JobWithCompany[] = [
+const mockJobs = [
   {
     id: '1',
     company_id: '1',
@@ -246,7 +246,7 @@ const mockJobs: JobWithCompany[] = [
     location_city: 'Berlin',
     location_country: 'Germany',
     location_full: 'Berlin, Germany',
-    work_mode: 'hybrid',
+    work_mode: 'Hybrid',
     employment_type: 'Full-time',
     seniority_level: 'Senior',
     salary_info: '€80,000 - €120,000',
@@ -268,15 +268,33 @@ const mockJobs: JobWithCompany[] = [
       id: '1',
       name: 'TechCorp Solutions',
       logo_url: 'https://via.placeholder.com/100',
-      website: 'https://techcorp.com',
+      domain: 'techcorp.com',
       linkedin_url: 'https://linkedin.com/company/techcorp',
       description: 'Leading technology solutions provider',
       slogan: 'Innovation at Scale',
       employee_count: 500,
       industry: 'Technology',
-      location: 'Berlin, Germany',
+      headquarters: 'Berlin, Germany',
+      size_category: 'medium' as const,
       created_at: '2025-08-20',
-      updated_at: '2025-08-20'
+      updated_at: '2025-08-20',
+      external_id: null,
+      website_url: 'https://techcorp.com',
+      location: 'Berlin, Germany',
+      founded_year: null,
+      careers_page_url: null,
+      headquarters_location: 'Berlin, Germany',
+      office_locations: null,
+      industry_sector: null,
+      business_model: null,
+      key_products_services: null,
+      company_size_category: null,
+      funding_status: null,
+      notable_investors: null,
+      leadership_team: null,
+      company_values: null,
+      culture_highlights: null,
+      glassdoor_rating: null
     }
   },
   {
@@ -602,11 +620,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         if (userProfile && transformedJobs.length > 0) {
           console.log('🎯 User profile available, calculating weighted match scores...')
           console.log('🎯 DEBUG: User profile structure:', {
-            hasSkills: !!userProfile.skills,
-            skillCategories: userProfile.skills ? Object.keys(userProfile.skills) : [],
-            sampleSkills: userProfile.skills ? Object.entries(userProfile.skills).slice(0, 2).map(([k, v]) => [k, Array.isArray(v) ? v.slice(0, 3) : v]) : [],
-            hasLanguages: !!userProfile.languages,
-            languagesCount: Array.isArray(userProfile.languages) ? userProfile.languages.length : 0
+            hasSkills: !!(userProfile as any).skills,
+            skillCategories: (userProfile as any).skills ? Object.keys((userProfile as any).skills) : [],
+            sampleSkills: (userProfile as any).skills ? Object.entries((userProfile as any).skills).slice(0, 2).map(([k, v]: [string, any]) => [k, Array.isArray(v) ? v.slice(0, 3) : v]) : [],
+            hasLanguages: !!(userProfile as any).languages,
+            languagesCount: Array.isArray((userProfile as any).languages) ? (userProfile as any).languages.length : 0
           })
           try {
             const matchingController = new AbortController()
@@ -722,7 +740,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         console.error('JobBrowser: API returned error status:', response.status)
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if ((error as any).name === 'AbortError') {
         console.error('JobBrowser: API request timed out after 2 minutes')
       } else {
         console.error('JobBrowser: Error fetching jobs:', error)
@@ -839,11 +857,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         if (job.country?.toLowerCase().includes(query)) return true
         // Search in skills
         if (job.skills && Array.isArray(job.skills)) {
-          if (job.skills.some(skill => skill.toLowerCase().includes(query))) return true
+          if (job.skills.some((skill: any) => typeof skill === 'string' && skill.toLowerCase().includes(query))) return true
         }
         // Search in tools
         if (job.tools && Array.isArray(job.tools)) {
-          if (job.tools.some(tool => tool.toLowerCase().includes(query))) return true
+          if (job.tools.some((tool: any) => typeof tool === 'string' && tool.toLowerCase().includes(query))) return true
         }
         // Search in job description
         if (job.description?.toLowerCase().includes(query)) return true
@@ -884,8 +902,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         
         // Handle onsite jobs
         if (selectedMode === 'onsite') {
-          return workMode === 'onsite' || workMode === 'office' || 
-                 (workMode !== 'remote' && workMode !== 'hybrid' && !job.is_remote && !job.remote_allowed);
+          return workMode === 'onsite' || workMode === 'office' ||
+                 (workMode !== 'Remote' && workMode !== 'Hybrid' && !job.is_remote && !job.remote_allowed);
         }
         
         return workMode === selectedMode;
@@ -926,7 +944,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
       filtered = filtered.filter(job => {
         // Always include remote jobs
-        if (job.work_mode === 'remote') return true
+        if (job.work_mode === 'Remote') return true
 
         // If geo distance is available, use distance-based filtering
         if ('distanceKm' in job && typeof job.distanceKm === 'number') {
@@ -946,7 +964,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
     // Remote location filter (legacy)
     if (selectedLocation === 'Remote') {
-      filtered = filtered.filter(job => job.is_remote || job.work_mode === 'remote');
+      filtered = filtered.filter(job => job.is_remote || job.work_mode === 'Remote');
     }
 
     // Job type filter
@@ -972,8 +990,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
           return scoreB - scoreA;
         case 'distance':
           // Sort by distance (remote jobs go last)
-          const distA = ('distanceKm' in a && a.work_mode !== 'remote') ? a.distanceKm || 999 : 999;
-          const distB = ('distanceKm' in b && b.work_mode !== 'remote') ? b.distanceKm || 999 : 999;
+          const distA = ('distanceKm' in a && a.work_mode !== 'Remote') ? a.distanceKm || 999 : 999;
+          const distB = ('distanceKm' in b && b.work_mode !== 'Remote') ? b.distanceKm || 999 : 999;
           return distA - distB;
         case 'date':
           return new Date(b.posted_at || 0).getTime() - new Date(a.posted_at || 0).getTime()
@@ -1342,11 +1360,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 score={job.match_score}
                                 size="sm"
                                 showLabel={false}
-                                breakdown={job.matchCalculation ? {
-                                  skills: Math.round((job.matchCalculation.skillsOverlap?.score || 0) * 100),
-                                  tools: Math.round((job.matchCalculation.toolsOverlap?.score || 0) * 100),
-                                  language: Math.round((job.matchCalculation.languageFit?.score || 0) * 100),
-                                  location: Math.round((job.matchCalculation.locationFit?.score || 0) * 100)
+                                breakdown={(job as any).matchCalculation ? {
+                                  skills: Math.round(((job as any).matchCalculation.skillsOverlap?.score || 0) * 100),
+                                  tools: Math.round(((job as any).matchCalculation.toolsOverlap?.score || 0) * 100),
+                                  language: Math.round(((job as any).matchCalculation.languageFit?.score || 0) * 100),
+                                  location: Math.round(((job as any).matchCalculation.locationFit?.score || 0) * 100)
                                 } : undefined}
                               />
                             )}
@@ -1365,7 +1383,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                               </span>
                             )}
                             {/* Show distance if available */}
-                            {'distanceKm' in job && job.distanceKm !== undefined && job.work_mode !== 'remote' && (
+                            {'distanceKm' in job && job.distanceKm !== undefined && job.work_mode !== 'Remote' && (
                               <>
                                 <span className="text-gray-300">•</span>
                                 <span className="text-xs font-medium text-blue-600">{job.distanceKm}km</span>
@@ -1406,29 +1424,29 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 <EligibilityChecker
                                   studentProfile={studentProfile}
                                   jobRequirements={{
-                                    hours_per_week: job.hours_per_week || '15-20',
-                                    language_required: job.german_required || job.language_required,
-                                    location: job.location_city,
-                                    duration: job.duration_months?.toString(),
-                                    start_date: job.start_date
+                                    hours_per_week: (job as any).hours_per_week || '15-20',
+                                    language_required: job.german_required || job.language_required || undefined,
+                                    location: job.location_city || undefined,
+                                    duration: (job as any).duration_months?.toString(),
+                                    start_date: (job as any).start_date
                                   }}
                                   compact={true}
                                 />
                               </div>
                             )}
-                            {(() => {
+                            {((): React.ReactNode => {
                               // Smart language detection for existing jobs
-                              let detectedLanguage = job.german_required;
-                              
+                              let detectedLanguage: any = job.german_required;
+
                               // If unknown, try to detect from job content
                               if (detectedLanguage === 'unknown' || !detectedLanguage) {
                                 // Check if job content appears to be in English
                                 const englishIndicators = [
                                   job.title?.includes('Intern'),
-                                  job.responsibilities?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
-                                  job.skills?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some(eng => s.includes(eng)))
+                                  job.responsibilities?.some((r: any) => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                                  job.skills?.some((s: any) => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some((eng: string) => s.includes(eng)))
                                 ];
-                                
+
                                 if (englishIndicators.filter(Boolean).length >= 2) {
                                   detectedLanguage = 'EN';
                                 }
@@ -1573,11 +1591,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                         <EligibilityChecker
                           studentProfile={studentProfile}
                           jobRequirements={{
-                            hours_per_week: selectedJob.hours_per_week || '15-20',
-                            language_required: selectedJob.german_required || selectedJob.language_required,
-                            location: selectedJob.location_city,
-                            duration: selectedJob.duration_months?.toString(),
-                            start_date: selectedJob.start_date
+                            hours_per_week: (selectedJob as any).hours_per_week || '15-20',
+                            language_required: selectedJob.german_required || selectedJob.language_required || undefined,
+                            location: selectedJob.location_city || undefined,
+                            duration: (selectedJob as any).duration_months?.toString(),
+                            start_date: (selectedJob as any).start_date || undefined
                           }}
                           compact={false}
                         />
@@ -1592,11 +1610,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           score={selectedJob.match_score}
                           size="md"
                           showLabel={true}
-                          breakdown={selectedJob.matchCalculation ? {
-                            skills: Math.round((selectedJob.matchCalculation.skillsOverlap?.score || 0) * 100),
-                            tools: Math.round((selectedJob.matchCalculation.toolsOverlap?.score || 0) * 100),
-                            language: Math.round((selectedJob.matchCalculation.languageFit?.score || 0) * 100),
-                            location: Math.round((selectedJob.matchCalculation.locationFit?.score || 0) * 100)
+                          breakdown={(selectedJob as any).matchCalculation ? {
+                            skills: Math.round(((selectedJob as any).matchCalculation.skillsOverlap?.score || 0) * 100),
+                            tools: Math.round(((selectedJob as any).matchCalculation.toolsOverlap?.score || 0) * 100),
+                            language: Math.round(((selectedJob as any).matchCalculation.languageFit?.score || 0) * 100),
+                            location: Math.round(((selectedJob as any).matchCalculation.locationFit?.score || 0) * 100)
                           } : undefined}
                         />
                       )}
@@ -1612,19 +1630,19 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                       {selectedJob.is_werkstudent && (
                         <Badge className="bg-amber-100 text-amber-800 text-xs h-5 px-1.5">Werkstudent</Badge>
                       )}
-                      {(() => {
+                      {((): React.ReactNode => {
                         // Smart language detection for existing jobs
-                        let detectedLanguage = selectedJob.german_required;
-                        
+                        let detectedLanguage: string | null = selectedJob.german_required;
+
                         // If unknown, try to detect from job content
                         if (detectedLanguage === 'unknown' || !detectedLanguage) {
                           // Check if job content appears to be in English
                           const englishIndicators = [
                             selectedJob.title?.includes('Intern'),
-                            selectedJob.responsibilities?.some(r => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
-                            selectedJob.skills?.some(s => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some(eng => s.includes(eng)))
+                            selectedJob.responsibilities?.some((r: any) => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                            selectedJob.skills?.some((s: any) => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some((eng: string) => s.includes(eng)))
                           ];
-                          
+
                           if (englishIndicators.filter(Boolean).length >= 2) {
                             detectedLanguage = 'EN';
                           }
@@ -1802,7 +1820,6 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                   {/* Right Sidebar - Compact */}
                   <div className="space-y-2">
-                    {/* Matching Skills Card - Shows intersection between user skills and job requirements */}
                     {userProfile && selectedJob && (
                       <div className="transform scale-90 origin-top">
                         <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
@@ -1812,7 +1829,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                             </div>
                             <h3 className="font-semibold text-green-900 text-sm">Matching Skills</h3>
                             <div className="ml-auto text-xs text-green-600 font-medium">
-                              {(() => {
+                              {((): string => {
                                 // Prefer server-calculated overlap if available
                                 const mc = (selectedJob as any).matchCalculation;
                                 if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
@@ -1854,7 +1871,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           </div>
                           
                           <div className="space-y-2">
-                            {(() => {
+                            {((): React.ReactNode => {
                               // Prefer server-calculated lists
                               const mc = (selectedJob as any).matchCalculation;
                               if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
@@ -2008,7 +2025,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                     )}
 
                     {/* Skills Analysis Panel - Moved to top */}
-                    {(() => {
+                    {((): boolean => {
                       const skills = (selectedJob as any).skills
                         ;
                       return Array.isArray(skills) && skills.length > 0;

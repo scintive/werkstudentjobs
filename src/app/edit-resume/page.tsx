@@ -47,6 +47,8 @@ export default function EditResumePage() {
     router.push('/dashboard')
   }
 
+  const PerfectStudioComponent = PerfectStudio as any
+
   if (loading || !userId) {
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -59,7 +61,7 @@ export default function EditResumePage() {
     <EditModeProvider>
       <SupabaseResumeProvider mode="base">
         <div className="min-h-screen bg-gray-50">
-          <PerfectStudio onNext={handleNext} showNavigation={true} />
+          <PerfectStudioComponent onNext={handleNext} showNavigation={true} />
         </div>
       </SupabaseResumeProvider>
     </EditModeProvider>

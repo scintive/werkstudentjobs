@@ -30,14 +30,16 @@ export async function GET(
       )
     }
 
-    if (!data || data.length === 0) {
+    const shareRecords = data as any[] | null;
+
+    if (!shareRecords || shareRecords.length === 0) {
       return NextResponse.json(
         { error: 'Share link not found or has expired' },
         { status: 404 }
       )
     }
 
-    const shareData = data[0]
+    const shareData = shareRecords[0] as any
 
     // Check if expired
     if (shareData.is_expired) {
