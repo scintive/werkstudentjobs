@@ -1,6 +1,6 @@
 import '@/lib/polyfills/url-canparse';
 export const runtime = 'nodejs';
-export const maxDuration = 60; // 60 seconds timeout for Vercel
+export const maxDuration = 300; // 5 minutes timeout for Vercel Pro (was 60s)
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { llmService } from '@/lib/services/llmService';

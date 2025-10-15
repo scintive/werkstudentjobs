@@ -1,3 +1,6 @@
+export const runtime = 'nodejs';
+export const maxDuration = 300; // 5 minutes for Vercel Pro
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { llmService } from '@/lib/services/llmService';

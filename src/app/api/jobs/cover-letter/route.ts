@@ -1,3 +1,6 @@
+export const runtime = 'nodejs';
+export const maxDuration = 180; // 3 minutes for cover letter generation
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/serverClient';
 import { llmService } from '@/lib/services/llmService';
