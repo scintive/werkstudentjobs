@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/varunmishra/Documents/Projects/WerkstudentJobs2/visual-app-backup-c26614e9/fetch-jobs-local.py", line 7, in <module>
+    from jobspy import scrape_jobs
+ModuleNotFoundError: No module named 'jobspy'
