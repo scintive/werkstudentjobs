@@ -26,17 +26,21 @@ export async function GET(request: NextRequest) {
     // Verify cron secret for security
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
+    
+    // Allow manual testing with special query parameter
+    const url = new URL(request.url);
+    const manualRun = url.searchParams.get('manual') === 'true';
 
-    // Check Vercel Cron secret or custom API key
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Check Vercel Cron secret or custom API key (skip if manual run without secret set)
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}` && !manualRun) {
       console.error('❌ Unauthorized cron request');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    console.log('🕐 CRON JOB STARTED:', new Date().toISOString());
+    
+    console.log(`🕐 CRON JOB STARTED (${manualRun ? 'MANUAL' : 'SCHEDULED'}):`, new Date().toISOString());
     console.log('🎯 Running JobSpy scraper...');
 
     // Configuration for JobSpy
