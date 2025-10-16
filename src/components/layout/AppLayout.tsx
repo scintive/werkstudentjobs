@@ -5,6 +5,7 @@ import AppHeader from '@/components/navigation/AppHeader'
 import { Footer } from '@/components/layout/Footer'
 import { CookieConsentProvider } from '@/lib/contexts/CookieConsentContext'
 import { CookieBanner } from '@/components/gdpr/CookieBanner'
+import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
         <Footer />
         <CookieBanner />
+        <FeedbackButton />
       </div>
     </CookieConsentProvider>
   )
