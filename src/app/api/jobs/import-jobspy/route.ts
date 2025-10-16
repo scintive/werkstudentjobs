@@ -10,6 +10,80 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 /**
+ * Find company's career page / application link using Tavily
+ * Returns company career page URL or null if not found
+ */
+async function findCompanyCareerPage(companyName: string, companyWebsite: string | null): Promise<string | null> {
+  const TAVILY_API_KEY = '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';
+  
+  try {
+    // Search for company's career/jobs page
+    const searchQuery = `${companyName} careers jobs apply stellenangebote karriere`;
+    console.log(`🔍 Searching for career page: ${searchQuery}`);
+    
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TAVILY_API_KEY}`
+      },
+      body: JSON.stringify({
+        query: searchQuery,
+        max_results: 5,
+        search_depth: 'basic',
+        include_domains: companyWebsite ? [new URL(companyWebsite).hostname] : []
+      })
+    });
+
+    if (!response.ok) {
+      console.warn(`⚠️ Tavily search failed for ${companyName}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const results = data.results || [];
+
+    // Prioritize:
+    // 1. Company website career pages
+    // 2. Any non-Indeed, non-job-board links
+    const companyDomain = companyWebsite ? new URL(companyWebsite).hostname.replace('www.', '') : '';
+    
+    for (const result of results) {
+      const url = result.url.toLowerCase();
+      const hostname = new URL(result.url).hostname.replace('www.', '');
+      
+      // Skip job boards
+      if (url.includes('indeed.com') || url.includes('stepstone') || url.includes('monster.com') || url.includes('glassdoor')) {
+        continue;
+      }
+      
+      // Prioritize company domain career pages
+      if (companyDomain && hostname.includes(companyDomain)) {
+        if (url.includes('/career') || url.includes('/jobs') || url.includes('/stellenangebote') || url.includes('/karriere') || url.includes('/apply')) {
+          console.log(`✅ Found company career page: ${result.url}`);
+          return result.url;
+        }
+      }
+    }
+
+    // Fallback: Return first non-job-board result
+    for (const result of results) {
+      const url = result.url.toLowerCase();
+      if (!url.includes('indeed.com') && !url.includes('stepstone') && !url.includes('monster.com')) {
+        console.log(`✅ Found potential application page: ${result.url}`);
+        return result.url;
+      }
+    }
+
+    console.log(`⚠️ No career page found for ${companyName}`);
+    return null;
+  } catch (error) {
+    console.error(`❌ Error finding career page for ${companyName}:`, error);
+    return null;
+  }
+}
+
+/**
  * Import jobs from JobSpy scraper
  *
  * POST /api/jobs/import-jobspy
@@ -320,6 +394,24 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Find company's official application/career page using Tavily
+        console.log(`🔍 Finding official career page for ${jobData.companyName}...`);
+        const officialCareerPage = await findCompanyCareerPage(
+          jobData.companyName, 
+          jobData.companyWebsite || companyResearch.research?.website || null
+        );
+        
+        // Determine best application link (prefer company page over job boards)
+        let applicationLink = officialCareerPage; // Highest priority: Company career page
+        if (!applicationLink && extractedJob.job_description_link && !extractedJob.job_description_link.includes('indeed.com')) {
+          applicationLink = extractedJob.job_description_link; // Second: Non-Indeed job link
+        }
+        if (!applicationLink && jobData.url && !jobData.url.includes('indeed.com')) {
+          applicationLink = jobData.url; // Third: JobSpy URL if not Indeed
+        }
+        
+        console.log(`📍 Application link determined: ${applicationLink || 'None found (will use portal_link)'}`);
+
         // Insert job into database
         const { data: newJob, error: jobError } = await supabaseAdmin
           .from('jobs')
@@ -349,6 +441,7 @@ export async function POST(request: NextRequest) {
             portal_link: extractedJob.portal_link || jobData.url || '',
             linkedin_url: job.site === 'linkedin' ? jobData.url : '',
             job_description_link: extractedJob.job_description_link,
+            application_link: applicationLink, // Official company career page (prioritized over job boards)
 
             // Dates
             posted_at: extractedJob.date_posted || (jobData.postedAt ? new Date(jobData.postedAt).toISOString() : new Date().toISOString()),
