@@ -380,18 +380,56 @@ export async function POST(request: NextRequest) {
           console.log(`✅ Created company: ${jobData.companyName}`);
         }
 
-        // Check if job already exists (by portal_link)
+        // ROBUST DUPLICATE CHECK - Check multiple fields to prevent duplicates
+        let isDuplicate = false;
+        
+        // Method 1: Check by portal_link (most reliable)
         if (jobData.url) {
-          const { data: existingJob } = await supabaseAdmin
+          const { data: existingByLink } = await supabaseAdmin
             .from('jobs')
-            .select('id')
+            .select('id, title')
             .eq('portal_link', jobData.url)
             .single();
 
-          if (existingJob) {
-            console.log(`⏭️  Job already exists: ${job.title} at ${jobData.companyName}`);
-            continue;
+          if (existingByLink) {
+            console.log(`⏭️  DUPLICATE (portal_link): ${job.title} at ${jobData.companyName}`);
+            isDuplicate = true;
           }
+        }
+        
+        // Method 2: Check by job_description_link (fallback)
+        if (!isDuplicate && extractedJob.job_description_link) {
+          const { data: existingByDescLink } = await supabaseAdmin
+            .from('jobs')
+            .select('id, title')
+            .eq('job_description_link', extractedJob.job_description_link)
+            .single();
+
+          if (existingByDescLink) {
+            console.log(`⏭️  DUPLICATE (job_description_link): ${job.title} at ${jobData.companyName}`);
+            isDuplicate = true;
+          }
+        }
+        
+        // Method 3: Check by title + company (last resort for jobs without URLs)
+        if (!isDuplicate && jobData.title && jobData.companyName) {
+          const { data: existingByTitleCompany } = await supabaseAdmin
+            .from('jobs')
+            .select('id, title, portal_link')
+            .eq('title', jobData.title)
+            .eq('company_id', companyId)
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+            .single();
+
+          if (existingByTitleCompany) {
+            console.log(`⏭️  DUPLICATE (title+company): ${job.title} at ${jobData.companyName}`);
+            isDuplicate = true;
+          }
+        }
+        
+        if (isDuplicate) {
+          console.log(`   💡 Skipping to avoid duplicate - GPT call saved!`);
+          continue;
         }
 
         // Find company's official application/career page using Tavily

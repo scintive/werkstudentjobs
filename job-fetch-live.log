@@ -1,0 +1,26 @@
+============================================================
+🚀 LOCAL JOB FETCHER - Starting...
+============================================================
+
+📊 Scraping 100 werkstudent jobs from Indeed...
+✅ Found 100 jobs from Indeed
+💾 Saved backup to: werkstudent_jobs_20251016_130808.csv
+
+🔄 Sending 100 jobs to Vercel API for processing...
+📍 Endpoint: https://werkstudentjobs.com/api/jobs/import-jobspy
+
+⏳ This will take several minutes as each job goes through:
+   1. GPT extraction & analysis
+   2. Company research (Tavily)
+   3. Career page finding (Tavily)
+   4. Database insertion
+
+============================================================
+
+❌ API Error: 504
+Response: An error occurred with your deployment
+
+FUNCTION_INVOCATION_TIMEOUT
+
+fra1::tw5zp-1760612888686-ba458ce1d065
+
