@@ -414,6 +414,7 @@ export async function POST(request: NextRequest) {
         company: jobData.company_name || 'Your company',
         company_description: jobData.companies?.description || '',
         company_industry: jobData.companies?.industry || '',
+        hiring_manager: jobData.hiring_manager || null, // CRITICAL: Add hiring manager for personalized salutation
         is_werkstudent: jobData.title?.toLowerCase().includes('werkstudent') ||
                         jobData.title?.toLowerCase().includes('working student'),
         requirements: {
@@ -575,14 +576,21 @@ TONE FOR STUDENTS:
 ${targetLanguage === 'DE' ? `
 GERMAN LANGUAGE REQUIREMENTS:
 - Use "Sie" form (formal)
-- Opening: "Sehr geehrte Damen und Herren" or "Sehr geehrte/r [Name]"
+${letterContext.job.hiring_manager ? `- **CRITICAL**: Hiring Manager is "${letterContext.job.hiring_manager}" - Address them directly!
+  * If name contains "Frau": "Sehr geehrte Frau [Last Name]," (e.g., "Sehr geehrte Frau Lippert,")
+  * If name contains "Herr": "Sehr geehrter Herr [Last Name]," (e.g., "Sehr geehrter Herr Schmidt,")
+  * If full name only (e.g., "Ann-Kathrin Lippert"): Determine gender from first name and use "Sehr geehrte Frau Lippert," or "Sehr geehrter Herr [Last Name],"
+  * NEVER use "Sehr geehrte Damen und Herren" when hiring manager name is available!` : `- Opening: "Sehr geehrte Damen und Herren," (use only if no hiring manager name available)`}
 ${include_university && include_semester ? `- Natural integration: "Als ${letterContext.student.degree}-Student im ${letterContext.student.year}. Semester..."` : include_university ? `- Natural integration: "Als ${letterContext.student.degree}-Student..."` : '- Professional introduction without student details'}
 ${include_hours ? `- Availability phrase: "Ich stehe Ihnen ab ${letterContext.student.start_date} mit ${letterContext.student.availability} zur Verfügung"` : `- Availability phrase: "Ich stehe Ihnen ab ${letterContext.student.start_date} zur Verfügung"`}
 - Closing: "Mit freundlichen Grüßen"
 - Use strong German business verbs: entwickeln, optimieren, implementieren, analysieren
 ` : `
 ENGLISH LANGUAGE REQUIREMENTS:
-- Opening: "Dear Hiring Team" or "Dear [Name]"
+${letterContext.job.hiring_manager ? `- **CRITICAL**: Hiring Manager is "${letterContext.job.hiring_manager}" - Address them by name!
+  * Use: "Dear Ms. [Last Name]," or "Dear Mr. [Last Name]," (e.g., "Dear Ms. Lippert,")
+  * If unsure of title, use full name: "Dear ${letterContext.job.hiring_manager},"
+  * NEVER use generic "Dear Hiring Team" when hiring manager name is available!` : `- Opening: "Dear Hiring Team," or "Dear Hiring Manager," (use only if no hiring manager name available)`}
 ${include_university && include_semester ? `- Natural integration: "As a ${letterContext.student.year}-year ${letterContext.student.degree} student..."` : include_university ? `- Natural integration: "As a ${letterContext.student.degree} student..."` : '- Professional introduction without student details'}
 ${include_hours ? `- Availability phrase: "I'm available starting ${letterContext.student.start_date} for ${letterContext.student.duration} at ${letterContext.student.availability}"` : `- Availability phrase: "I'm available starting ${letterContext.student.start_date} for ${letterContext.student.duration}"`}
 - Closing: "Best regards" or "Kind regards"
@@ -603,7 +611,7 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
 ⚠️ CRITICAL: Output ONLY valid JSON with this EXACT structure:
 {
   "subject": "Application for [position] - creative variation in ${targetLanguage === 'DE' ? 'German' : 'English'} (avoid 'RE:' prefix)",
-  "salutation": "personalized greeting in ${targetLanguage === 'DE' ? 'German' : 'English'} (vary: ${targetLanguage === 'DE' ? 'Sehr geehrte Damen und Herren / Sehr geehrte/r [Name]' : 'Dear Hiring Team / Dear Hiring Manager / Dear [Company] Team'})",
+  "salutation": "${letterContext.job.hiring_manager ? `"${targetLanguage === 'DE' ? 'Sehr geehrte Frau/Herr [Last Name from: ' + letterContext.job.hiring_manager + ']' : 'Dear Ms./Mr. [Last Name from: ' + letterContext.job.hiring_manager + ']'}" - MUST use hiring manager name!` : `"personalized greeting in ${targetLanguage === 'DE' ? 'German' : 'English'} (${targetLanguage === 'DE' ? 'Sehr geehrte Damen und Herren' : 'Dear Hiring Team'})"`}",
   "intro": "engaging opener + ${include_university ? 'enrollment status + ' : ''}value preview (FULL PARAGRAPH, NOT JUST LABELS)",
   "body_paragraphs": [
     "FULL PARAGRAPH 1: project showcase with metrics and direct job relevance (5-6 sentences for long, 3-4 for medium)",
