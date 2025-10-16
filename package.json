@@ -45,6 +45,7 @@
     "openai": "^4.57.0",
     "pdf-parse": "^1.1.1",
     "puppeteer": "^22.12.1",
+    "puppeteer-core": "^24.25.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-easy-crop": "^5.5.2",

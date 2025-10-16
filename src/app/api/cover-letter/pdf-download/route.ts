@@ -4,25 +4,38 @@ import { NextRequest, NextResponse } from 'next/server';
 let _puppeteer: any = null;
 let _chromium: any = null;
 
+// Try puppeteer-core first (for Vercel), fallback to puppeteer (for local)
 async function getPuppeteer() {
   if (_puppeteer) return _puppeteer;
   try {
-    _puppeteer = (await import('puppeteer')).default;
+    // Try puppeteer-core first (needed for @sparticuz/chromium)
+    _puppeteer = (await import('puppeteer-core')).default;
+    console.log('✅ Using puppeteer-core');
   } catch (e) {
-    console.error('🐛 Failed to import puppeteer (cover letter):', e);
-    throw new Error('Puppeteer not available');
+    try {
+      // Fallback to regular puppeteer for local development
+      _puppeteer = (await import('puppeteer')).default;
+      console.log('✅ Using puppeteer');
+    } catch (e2) {
+      console.error('🐛 Failed to import puppeteer (cover letter):', e2);
+      throw new Error('Puppeteer not available');
+    }
   }
   return _puppeteer;
 }
 
 async function getChromium() {
   if (_chromium) return _chromium;
-  try {
-    const chromiumModule = await import('@sparticuz/chromium');
-    _chromium = chromiumModule.default;
-  } catch (e) {
-    console.log('⚠️ @sparticuz/chromium not available, using default Chrome');
-    return null;
+  // Only use chromium on Vercel (production)
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    try {
+      const chromiumModule = await import('@sparticuz/chromium');
+      _chromium = chromiumModule.default;
+      console.log('✅ Using @sparticuz/chromium for serverless');
+    } catch (e) {
+      console.log('⚠️ @sparticuz/chromium not available');
+      return null;
+    }
   }
   return _chromium;
 }
@@ -66,9 +79,9 @@ export async function POST(request: NextRequest) {
     const chromium = await getChromium();
     
     const launchOptions: any = {
-      headless: true,
+      headless: chromium?.headless !== undefined ? chromium.headless : true,
       args: chromium 
-        ? chromium.args
+        ? [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox']
         : [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -77,12 +90,14 @@ export async function POST(request: NextRequest) {
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu'
-          ]
+          ],
+      defaultViewport: chromium?.defaultViewport
     };
 
     // Use serverless Chrome executable on Vercel
     if (chromium) {
       launchOptions.executablePath = await chromium.executablePath();
+      console.log('✅ Chromium executable path:', launchOptions.executablePath);
     }
 
     browser = await puppeteer.launch(launchOptions);
