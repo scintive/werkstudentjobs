@@ -246,15 +246,27 @@ export async function POST(request: NextRequest) {
         const authHeader = request.headers.get('authorization');
         const cookieHeader = request.headers.get('cookie');
 
-        console.log('🎓 STUDENT COVER LETTER: Fetching profile from /api/profile/latest');
-        console.log('🎓 STUDENT COVER LETTER: Has auth header:', !!authHeader, 'Has cookies:', !!cookieHeader);
+        console.log('🎓 COVER LETTER: Calling /api/profile/latest');
+        console.log('🎓 COVER LETTER: Auth header received:', authHeader ? `${authHeader.substring(0, 20)}...` : 'NONE');
+        console.log('🎓 COVER LETTER: Cookie header received:', cookieHeader ? `${cookieHeader.length} bytes` : 'NONE');
 
-        const fetchHeaders: Record<string, string> = {};
-        if (authHeader) fetchHeaders['Authorization'] = authHeader;
-        if (cookieHeader) fetchHeaders['Cookie'] = cookieHeader;
+        const fetchHeaders: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (authHeader) {
+          fetchHeaders['Authorization'] = authHeader;
+          console.log('🎓 COVER LETTER: Forwarding Authorization header');
+        }
+        if (cookieHeader) {
+          fetchHeaders['Cookie'] = cookieHeader;
+          console.log('🎓 COVER LETTER: Forwarding Cookie header');
+        }
+
+        console.log('🎓 COVER LETTER: Fetch headers:', Object.keys(fetchHeaders));
 
         const profileResponse = await fetch(`${baseUrl}/api/profile/latest`, {
-          headers: fetchHeaders
+          headers: fetchHeaders,
+          cache: 'no-store'
         });
 
         if (!profileResponse.ok) {
