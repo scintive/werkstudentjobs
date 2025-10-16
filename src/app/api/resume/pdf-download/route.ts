@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
 
     // Use serverless Chrome executable on Vercel
     if (chromium) {
-      launchOptions.executablePath = await chromium.executablePath;
+      launchOptions.executablePath = await chromium.executablePath();
     }
 
     browser = await puppeteer.launch(launchOptions);
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
 
     // Use serverless Chrome executable on Vercel
     if (chromium) {
-      launchOptions.executablePath = await chromium.executablePath;
+      launchOptions.executablePath = await chromium.executablePath();
     }
 
     browser = await puppeteer.launch(launchOptions);
