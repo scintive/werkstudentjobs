@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
     const launchOptions: any = {
       headless: true,
       args: chromium 
-        ? await chromium.args
+        ? chromium.args
         : [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
     const launchOptions: any = {
       headless: true,
       args: chromium 
-        ? await chromium.args
+        ? chromium.args
         : [
             '--no-sandbox',
             '--disable-setuid-sandbox',

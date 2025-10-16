@@ -242,16 +242,19 @@ export async function POST(request: NextRequest) {
         // Use the profile API to get the latest profile
         const baseUrl = process.env.NEXTJS_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-        // Get auth header from request
+        // Forward all relevant headers (auth, cookies)
         const authHeader = request.headers.get('authorization');
+        const cookieHeader = request.headers.get('cookie');
 
         console.log('🎓 STUDENT COVER LETTER: Fetching profile from /api/profile/latest');
+        console.log('🎓 STUDENT COVER LETTER: Has auth header:', !!authHeader, 'Has cookies:', !!cookieHeader);
+
+        const fetchHeaders: Record<string, string> = {};
+        if (authHeader) fetchHeaders['Authorization'] = authHeader;
+        if (cookieHeader) fetchHeaders['Cookie'] = cookieHeader;
 
         const profileResponse = await fetch(`${baseUrl}/api/profile/latest`, {
-          headers: authHeader ? {
-            'Authorization': authHeader
-          } : {},
-          credentials: 'include'
+          headers: fetchHeaders
         });
 
         if (!profileResponse.ok) {
