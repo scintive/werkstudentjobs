@@ -45,21 +45,22 @@ export function AIAnalysisLoader({ type, title, subtitle }: AIAnalysisLoaderProp
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
 
   const steps = type === 'strategy' ? STRATEGY_STEPS : RESUME_STEPS
-  const defaultTitle = type === 'strategy' ? 'AI Brain Analyzing' : 'Preparing AI Resume Editor'
+  const defaultTitle = type === 'strategy' ? '🧪 Brewing Your Perfect Strategy' : 'Preparing AI Resume Editor'
   const defaultSubtitle = type === 'strategy'
-    ? 'Deep-diving into job requirements and crafting your positioning strategy...'
+    ? 'Mixing your skills with job requirements to craft something amazing...'
     : 'Analyzing and tailoring your resume for this specific opportunity...'
 
   useEffect(() => {
     const timers: NodeJS.Timeout[] = []
 
-    // Intelligent timing: spread steps across expected GPT duration (30-45s)
-    // Steps 1-3: Faster (2-4s each) - builds trust early
-    // Step 4: Slower (15-25s) - this is when GPT actually works
-    // Step 5: Quick (2-3s) - final polish
+    // Intelligent timing: spread steps across expected GPT duration (20-30s)
+    // All steps flow smoothly without long pauses
+    // Steps 1-3: Quick (2-3s each) - builds trust early
+    // Step 4: Moderate (8-10s) - main processing
+    // Step 5: Quick (2s) - final polish
     const stepDurations = type === 'strategy'
-      ? [2000, 3000, 3500, 20000, 2500] // Total ~31s
-      : [1500, 2500, 3000, 18000, 2000] // Total ~27s
+      ? [2000, 2500, 3000, 8000, 2000] // Total ~17.5s - smooth flow
+      : [1500, 2000, 2500, 7000, 1500] // Total ~14.5s - smooth flow
 
     let accumulatedTime = 0
 

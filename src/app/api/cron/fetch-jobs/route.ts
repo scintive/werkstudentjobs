@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     console.log('🎯 Running JobSpy scraper...');
 
     // Configuration for JobSpy
-    const resultsWanted = 10; // Fetch 10 jobs
+    const resultsWanted = 100; // Fetch 100 jobs daily
     const jobspyDir = process.env.JOBSPY_DIR || '/tmp/jobspy';
 
     // Ensure JobSpy directory exists
