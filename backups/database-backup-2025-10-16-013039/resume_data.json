@@ -1,0 +1,1163 @@
+[
+  {
+    "id": "fee548e9-d956-47ff-a7ef-4585c0831bf0",
+    "session_id": null,
+    "user_id": "0639c681-1ce4-4955-b90a-302eb22b036b",
+    "personal_info": {
+      "name": "Varun Mishra",
+      "email": "m.varun@oth-aw.de",
+      "phone": "+49 176 134 20040",
+      "linkedin": "",
+      "location": "Weiden in der Oberpfalz, Germany"
+    },
+    "professional_title": "Product Development Specialist",
+    "professional_summary": "With 5+ years of experience in product development and AI-driven UX, I excel at bridging the gap between technology and user experience. Currently, I am a Werkstudent at Conrad Electronic SE, where I built an intelligent automation ecosystem that reduced support ticket volume by 60% for over 400 B2B partners. My key projects include leading the full-stack development of an IoT time-tracking system for Krones AG, achieving a System Usability Score of 87.5, and creating an AI-powered presentation platform that received 100% client approval. I am proficient in product strategy, UI/UX design, and full-stack development, with a strong command of tools like Figma, React, and Node.js. My goal is to leverage my skills in innovative product solutions that enhance user engagement and drive business success.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [
+        "Adobe XD",
+        "Photoshop",
+        "Canva",
+        "Final Cut Pro"
+      ],
+      "technical": [
+        "Product Strategy",
+        "UI/UX Design",
+        "Prompt Engineering",
+        "Generative AI Workflows",
+        "Automation",
+        "REST APIs",
+        "React",
+        "Next.js",
+        "Node.js",
+        "Swift",
+        "Figma"
+      ],
+      "soft_skills": []
+    },
+    "experience": [
+      {
+        "company": "Conrad Electronic SE",
+        "duration": "Mar 2023 – May 2025",
+        "position": "Werkstudent, AI, Automation & Product Development",
+        "achievements": [
+          "Built an intelligent automation ecosystem (Zapier, GPT-4) that cut support ticket volume by 60% for 400+ B2B partners by automating KPI reporting, quality alerts, and partner request routing.",
+          "Managed a complete UI/UX overhaul of the seller support platform, shifting from a technical structure to a user-centric, journey-based information architecture.",
+          "Designed and developed a functional React/Next.js prototype for a new Zendesk Help Center (Live Mockup) and presented a bilingual AI chatbot proof-of-concept to key stakeholders.",
+          "Managed the full project lifecycle, from discovery and stakeholder interviews to development, documentation, and training two interns on automation best practices."
+        ]
+      },
+      {
+        "company": "HeySaadhak",
+        "duration": "Apr 2021 – Jul 2022",
+        "position": "UI/UX Designer",
+        "achievements": [
+          "Owned the end-to-end UI/UX design in Figma for a social learning platform, delivering a complete system of interactive specifications for web and mobile that enabled an on-schedule product launch."
+        ]
+      },
+      {
+        "company": "Remote / New Delhi",
+        "duration": "Jan 2019 – Dec 2021",
+        "position": "Freelance Full-Stack Developer",
+        "achievements": [
+          "Designed, built, and maintained 5+ responsive websites for clients across real estate and creative arts, including White Door Homes and the artist portfolio for Sanchit Babbar.",
+          "Provided end-to-end services from UX design (Figma) and development (React, Node.js, WordPress) to deployment and maintenance, increasing organic traffic by 35% for one client through SEO and improved lead capture."
+        ]
+      },
+      {
+        "company": "Design Everest",
+        "duration": "Nov 2016 – Apr 2017",
+        "position": "Front-End Engineer",
+        "achievements": [
+          "Rebuilt the corporate website in React, implementing a redesigned, user-tested navigation that improved key form completion rates by 25%."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "Expected 2026",
+        "degree": "Bachelor of Science",
+        "institution": "OTH Amberg-Weiden",
+        "field_of_study": "Digital Technology & Management"
+      },
+      {
+        "year": "2015",
+        "degree": "Associate of Science",
+        "institution": "De Anza College",
+        "field_of_study": "Computer Science"
+      }
+    ],
+    "projects": [
+      {
+        "date": "2023",
+        "name": "OneTap – Factory Time Tracking IoT System",
+        "description": "Led the full-stack development of an IoT time-tracking system that solved a critical data-accuracy problem for a major industrial partner (Krones AG). Built a complete ecosystem—from a native Swift/watchOS app to a real-time Next.js dashboard—powered by Node.js and Socket.IO, achieving a System Usability Score of 87.5.",
+        "technologies": []
+      },
+      {
+        "date": "2023",
+        "name": "Vertical – Smart Hydroponic Farming System",
+        "description": "Initiated and led the product strategy for an in-home hydroponic farming system, framing it as a solution to the 'broken food system.' Drove the project from initial market research to a functional IoT hardware prototype, developing the brand identity, business plan, and pitch deck that secured market validation at the BayStartup conference.",
+        "technologies": []
+      },
+      {
+        "date": "2023",
+        "name": "Make or Spot – AI-Generated Party Game",
+        "description": "Created a production-ready physical card game by mastering the challenge of AI-driven design consistency. Developed a sophisticated 'master prompt' engineering workflow in ChatGPT to generate 90 unique, stylistically-cohesive card illustrations, solving a key problem in generative AI and evolving the product from a simple party prototype to a polished final version.",
+        "technologies": []
+      },
+      {
+        "date": "2023",
+        "name": "Exceleron – AI-Powered Presentation Platform",
+        "description": "Invented a novel Figma-to-interactive-pitch pipeline using a collaborative AI workflow, creating an AI-driven engine to transform a dense 27-slide deck into a dynamic web presentation. This delivered a themed, interactive story for a major energy-tech client under a 48-hour deadline, resulting in 100% client approval and praise from the CEO.",
+        "technologies": []
+      }
+    ],
+    "certifications": [
+      {
+        "date": "Jul 2022",
+        "name": "ARIS for Business Process Management",
+        "issuer": "Software AG",
+        "description": ""
+      },
+      {
+        "date": "Jun 2020",
+        "name": "Full-Stack Development: Flutter & Node.js",
+        "issuer": "Udemy",
+        "description": ""
+      },
+      {
+        "date": "Jun 2023",
+        "name": "Big Data Foundations",
+        "issuer": "WSB University",
+        "description": ""
+      }
+    ],
+    "custom_sections": [
+      {
+        "items": [
+          {
+            "date": "2023-2024",
+            "title": "Student Council Member",
+            "subtitle": "OTH Amberg-Weiden",
+            "description": "Represented student body and managed campus event social media."
+          },
+          {
+            "date": "Feb 2023",
+            "title": "Innovation Challenge Lead",
+            "subtitle": "Antwerp, Belgium",
+            "description": "Led a 5-member team in a design thinking challenge to revive local retail for the brand e5.be."
+          },
+          {
+            "date": "2024",
+            "title": "Media Team Producer",
+            "subtitle": "Kaleido Retreat",
+            "description": "Produced photo and video content for a major wellness retreat."
+          }
+        ],
+        "title": "Leadership & Volunteer"
+      }
+    ],
+    "last_template_used": "swiss",
+    "is_active": true,
+    "profile_completeness": 1,
+    "created_at": "2025-10-16T13:41:01.599375+00:00",
+    "updated_at": "2025-10-16T22:51:14.619531+00:00",
+    "last_accessed_at": "2025-10-16T22:51:14.521+00:00",
+    "languages": [
+      {
+        "name": "English",
+        "level": "Fluent (Native-level)",
+        "language": "English",
+        "proficiency": "Fluent (Native-level)"
+      },
+      {
+        "name": "German",
+        "level": "Working Proficiency (B1)",
+        "language": "German",
+        "proficiency": "Working Proficiency (B1)"
+      },
+      {
+        "name": "Hindi",
+        "level": "Native Speaker",
+        "language": "Hindi",
+        "proficiency": "Native Speaker"
+      }
+    ],
+    "photo_url": null
+  },
+  {
+    "id": "3c2548ef-8a58-4c62-88e0-92c470044932",
+    "session_id": null,
+    "user_id": "46d0a315-f275-401c-a97e-0a1a664bde48",
+    "personal_info": {
+      "name": "Ashraful Alam Bijoy",
+      "email": "ashrafulbijoy.bd@gmail.com",
+      "phone": "+4917687187202",
+      "linkedin": "www.linkedin.com/in/ashraful-alam-bijoy",
+      "location": "Erlangen, Germany"
+    },
+    "professional_title": "Logistics and Sales Specialist",
+    "professional_summary": "With 4+ years of experience in logistics and sales, I am currently a Rider at Just Eat Takeaway.com, where I ensure timely and efficient delivery services. Previously, I served as a Logistics Assistant at Amazon, optimizing supply chain processes and enhancing operational efficiency. My experience as a Retail Sales Manager at Max Fashion allowed me to drive sales and improve customer satisfaction, earning 'Sales Man of the Month' multiple times. I possess strong skills in digital marketing, business administration, and problem-solving. I hold several certifications, including a Mini-MBA Diploma and Project Management Principles. I aim to leverage my organizational skills and attention to detail in a part-time role that contributes to the success of a small business or non-profit organization.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "Digital Marketing",
+        "Project Management"
+      ],
+      "soft_skills": [
+        "Organizational Skills",
+        "Attention to Detail",
+        "Problem-Solving"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Just Eat Takeaway.com",
+        "duration": "November 2023 - Present",
+        "position": "Rider",
+        "achievements": [
+          "Ensure timely and efficient delivery of food orders to customers."
+        ]
+      },
+      {
+        "company": "Amazon",
+        "duration": "June 2023 - October 2023",
+        "position": "Logistics Assistant",
+        "achievements": [
+          "Optimized supply chain processes to enhance operational efficiency.",
+          "Assisted in managing inventory and logistics operations."
+        ]
+      },
+      {
+        "company": "Max Fashion",
+        "duration": "September 2018 - March 2019",
+        "position": "Retail Sales Manager",
+        "achievements": [
+          "Drove sales and improved customer satisfaction.",
+          "Recognized as 'Sales Man of the Month' multiple times."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2022",
+        "degree": "Bachelor's degree",
+        "institution": "OTH Amberg-Weiden",
+        "field_of_study": "International Business"
+      },
+      {
+        "year": "",
+        "degree": "Bachelor of Business Administration",
+        "institution": "Gopalganj Science and Technology University (GSTU)",
+        "field_of_study": "Tourism and Hospitality Management"
+      },
+      {
+        "year": "",
+        "degree": "Higher Secondary Certificate",
+        "institution": "Sonar Bangla College",
+        "field_of_study": "Business Studies"
+      },
+      {
+        "year": "",
+        "degree": "Secondary School Certificate",
+        "institution": "Bamoil School and College",
+        "field_of_study": "Science"
+      }
+    ],
+    "projects": [],
+    "certifications": [
+      {
+        "date": "",
+        "name": "Essentials of Entrepreneurship: Thinking & Action",
+        "issuer": "",
+        "description": ""
+      },
+      {
+        "date": "",
+        "name": "Mini-MBA Diploma",
+        "issuer": "",
+        "description": ""
+      },
+      {
+        "date": "",
+        "name": "Project Management Principles and Practices Specialization",
+        "issuer": "",
+        "description": ""
+      },
+      {
+        "date": "",
+        "name": "Effective Problem-Solving and Decision-Making",
+        "issuer": "",
+        "description": ""
+      },
+      {
+        "date": "",
+        "name": "Project Management: The Basics for Success",
+        "issuer": "",
+        "description": ""
+      }
+    ],
+    "custom_sections": [
+      {
+        "items": [
+          {
+            "date": "",
+            "title": "Sales Man of the Month",
+            "subtitle": "Max Fashion",
+            "description": "Recognized multiple times for outstanding sales performance."
+          }
+        ],
+        "title": "Honors & Awards"
+      }
+    ],
+    "last_template_used": "swiss",
+    "is_active": true,
+    "profile_completeness": 0.97,
+    "created_at": "2025-10-16T14:24:57.582863+00:00",
+    "updated_at": "2025-10-16T14:35:02.618957+00:00",
+    "last_accessed_at": "2025-10-16T14:35:02.426+00:00",
+    "languages": [
+      {
+        "name": "Hindi",
+        "level": "Elementary",
+        "language": "Hindi",
+        "proficiency": "Elementary"
+      },
+      {
+        "name": "German",
+        "level": "Elementary",
+        "language": "German",
+        "proficiency": "Elementary"
+      },
+      {
+        "name": "English",
+        "level": "Professional working",
+        "language": "English",
+        "proficiency": "Professional working"
+      },
+      {
+        "name": "Bengali",
+        "level": "Professional working",
+        "language": "Bengali",
+        "proficiency": "Professional working"
+      }
+    ],
+    "photo_url": null
+  },
+  {
+    "id": "a5d641d0-9d06-43b1-a1da-854e99fc3db4",
+    "session_id": null,
+    "user_id": "1b5d06ae-d1bd-41e4-81fe-6dfd2876debf",
+    "personal_info": {
+      "name": "Ibrahim Abrar Billah",
+      "email": "abrarsomrat558@gmail.com",
+      "phone": "+4915566096883",
+      "linkedin": "Not specified",
+      "location": "Vierzigmannstraße 10, 91054 Erlangen"
+    },
+    "professional_title": "Logistics Assistant",
+    "professional_summary": "With 4+ years of experience in logistics and operations, I have honed my skills in communication, teamwork, and reliability across various roles. Most recently, I served as a Logistics Assistant at Amazon, where I contributed to optimizing supply chain processes and enhancing team collaboration. My achievements include improving delivery efficiency by 15% through effective coordination and problem-solving. I am proficient in MS Office and have a solid foundation in international business management. I am passionate about leveraging my skills in a dynamic environment to drive operational excellence and contribute to team success. My goal is to further develop my expertise in logistics and operations within a forward-thinking organization.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "MS Office"
+      ],
+      "soft_skills": [
+        "Communication",
+        "Teamwork",
+        "Reliability",
+        "Time Management"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Amazon",
+        "duration": "06/2023 - 10/2023",
+        "position": "Logistics Assistant",
+        "achievements": [
+          "Teamwork and collaboration to ensure efficient logistics operations.",
+          "Assisted in optimizing supply chain processes."
+        ]
+      },
+      {
+        "company": "Just Eat Takeaway.com",
+        "duration": "11/2023",
+        "position": "Driver",
+        "achievements": [
+          "Ensured reliable communication with customers.",
+          "Demonstrated strong reliability in delivery operations."
+        ]
+      },
+      {
+        "company": "Jammy's Restaurant, Gremsdorf",
+        "duration": "06/2019 - 07/2023",
+        "position": "Cook",
+        "achievements": [
+          "Maintained effective communication and teamwork in a fast-paced kitchen environment.",
+          "Worked under pressure to meet tight deadlines."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2023",
+        "degree": "International Business",
+        "institution": "OTH Amberg-Weiden, Germany",
+        "field_of_study": "Management, Sales, Communication"
+      },
+      {
+        "year": "",
+        "degree": "Bachelor of Arts",
+        "institution": "Tejgaon College, Bangladesh",
+        "field_of_study": "English Literature"
+      },
+      {
+        "year": "",
+        "degree": "G.C.E Advanced Level",
+        "institution": "Birshrestha Noor Mohammad Public College",
+        "field_of_study": "Science"
+      }
+    ],
+    "projects": [],
+    "certifications": [],
+    "custom_sections": [
+      {
+        "items": [
+          {
+            "date": "",
+            "title": "Reading",
+            "subtitle": "",
+            "description": "Enjoys reading various genres."
+          },
+          {
+            "date": "",
+            "title": "Sports",
+            "subtitle": "",
+            "description": "Active in football and jogging."
+          }
+        ],
+        "title": "Hobbies & Interests"
+      }
+    ],
+    "last_template_used": "swiss",
+    "is_active": true,
+    "profile_completeness": 0.94,
+    "created_at": "2025-10-16T14:53:52.677694+00:00",
+    "updated_at": "2025-10-16T14:56:26.642356+00:00",
+    "last_accessed_at": "2025-10-16T14:56:26.524+00:00",
+    "languages": [
+      {
+        "name": "German",
+        "level": "A2",
+        "language": "German",
+        "proficiency": "A2"
+      },
+      {
+        "name": "English",
+        "level": "Fluent",
+        "language": "English",
+        "proficiency": "Fluent"
+      },
+      {
+        "name": "Bangla",
+        "level": "Native Speaker",
+        "language": "Bangla",
+        "proficiency": "Native Speaker"
+      }
+    ],
+    "photo_url": "https://ieliwaibbkexqbudfher.supabase.co/storage/v1/object/public/profile-photos/1b5d06ae-d1bd-41e4-81fe-6dfd2876debf/profile.jpg"
+  },
+  {
+    "id": "99be5601-9fa7-4b53-99cb-5f3b50a46d8b",
+    "session_id": null,
+    "user_id": "d691bf72-7436-4b1d-b0a3-3584e752b663",
+    "personal_info": {
+      "name": "Özgür Özmen",
+      "email": "ozgur.ozmen@gmx.de",
+      "phone": "+49 9431 510681",
+      "linkedin": "",
+      "location": "St. Anna Weg 19, 92421 Schwandorf, Deutschland"
+    },
+    "professional_title": "International Business Student",
+    "professional_summary": "Over 2 years of experience in customer service and logistics, complemented by ongoing studies in International Business. Currently pursuing a Bachelor of Arts at Ostbayerische Technische Hochschule, expected to graduate in 2025. Successfully completed an apprenticeship in wholesale and foreign trade, demonstrating strong analytical and organizational skills. Proficient in MS Office Suite with expert-level knowledge in Word, Excel, and PowerPoint. Bilingual in German and Turkish, with good command of English. Aiming to leverage academic knowledge and practical experience to contribute effectively in a dynamic business environment.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "MS Office Suite (Word, Excel, PowerPoint)"
+      ],
+      "soft_skills": []
+    },
+    "experience": [
+      {
+        "company": "Danhauser GmbH & Co. KG",
+        "duration": "09/2017 - 01/2020",
+        "position": "Apprentice in Wholesale and Foreign Trade",
+        "achievements": [
+          "Successfully completed apprenticeship."
+        ]
+      },
+      {
+        "company": "Pizzeria Amalfi",
+        "duration": "04/2015 - 09/2017",
+        "position": "Service and Counter Staff",
+        "achievements": [
+          "Worked part-time during school."
+        ]
+      },
+      {
+        "company": "BLG Logistics Group",
+        "duration": "01/2015 - 04/2015",
+        "position": "Temporary Worker in Logistics",
+        "achievements": [
+          "Commissioning and inventory management."
+        ]
+      },
+      {
+        "company": "Pizzeria Amalfi",
+        "duration": "04/2010 - 01/2015",
+        "position": "Service and Counter Staff (Part-time)",
+        "achievements": [
+          "Student job to supplement pocket money."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2025",
+        "degree": "Bachelor of Arts",
+        "institution": "Ostbayerische Technische Hochschule (OTH)",
+        "field_of_study": "International Business"
+      },
+      {
+        "year": "2022",
+        "degree": "Fachabitur",
+        "institution": "Staatliche Berufsoberschule",
+        "field_of_study": "Wirtschaft"
+      },
+      {
+        "year": "2011 - 2014",
+        "degree": "Mittlere Reife",
+        "institution": "Staatliche Wirtschaftsschule",
+        "field_of_study": ""
+      },
+      {
+        "year": "2006 - 2011",
+        "degree": "Grund- und Mittelschule",
+        "institution": "Kreuzbergschule",
+        "field_of_study": ""
+      }
+    ],
+    "projects": [],
+    "certifications": [],
+    "custom_sections": [
+      {
+        "items": [
+          {
+            "date": "",
+            "title": "Intern",
+            "subtitle": "BMW Autohaus Lell",
+            "description": "Internship as a vehicle mechatronics technician."
+          },
+          {
+            "date": "",
+            "title": "Intern",
+            "subtitle": "Autohaus Maschek",
+            "description": "Internship as an office clerk."
+          },
+          {
+            "date": "",
+            "title": "Intern",
+            "subtitle": "Sparkasse",
+            "description": "Internship as a bank clerk."
+          }
+        ],
+        "title": "Internships"
+      }
+    ],
+    "last_template_used": "classic",
+    "is_active": true,
+    "profile_completeness": 0.94,
+    "created_at": "2025-10-16T20:18:19.97538+00:00",
+    "updated_at": "2025-10-16T20:36:51.435923+00:00",
+    "last_accessed_at": "2025-10-16T20:36:51.325+00:00",
+    "languages": [
+      {
+        "name": "German",
+        "level": "Native Speaker",
+        "language": "German",
+        "proficiency": "Native Speaker"
+      },
+      {
+        "name": "Turkish",
+        "level": "Native Speaker",
+        "language": "Turkish",
+        "proficiency": "Native Speaker"
+      },
+      {
+        "name": "English",
+        "level": "Good knowledge in spoken and written",
+        "language": "English",
+        "proficiency": "Good knowledge in spoken and written"
+      }
+    ],
+    "photo_url": null
+  },
+  {
+    "id": "a9e14595-d6b8-46ac-98ec-28b058f0e0ee",
+    "session_id": null,
+    "user_id": "b9d0c7ea-5a12-478b-ac52-ccc38e4f72b4",
+    "personal_info": {
+      "name": "Iftakhar Ahmed Rafi",
+      "email": "iftiahmed.rafi@gmail.com",
+      "phone": "(+49) 15209748791",
+      "linkedin": "",
+      "location": "Heynestraße 27, 90443 Nürnberg, Germany"
+    },
+    "professional_title": "Digital Technology Specialist",
+    "professional_summary": "With 3+ years of experience in digital technology and management, I have developed a strong foundation in delivery services, inventory management, and hotel operations. In my most recent role as a Delivery Driver, I honed my organizational skills and attention to detail while ensuring timely service. I am proficient in multiple languages, including English and German, and possess strong digital skills in Microsoft Office and digital marketing. My commitment to quality and exceptional communication abilities have consistently contributed to team success. I am eager to leverage my skills to support organizational goals and drive efficiency in a dynamic work environment.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "Microsoft Word",
+        "Microsoft PowerPoint",
+        "Microsoft Outlook",
+        "Microsoft MovieMaker",
+        "Digital Marketing",
+        "C/C++"
+      ],
+      "soft_skills": [
+        "Organizational skills",
+        "Attention to detail",
+        "Communication",
+        "Multitasking"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Lieferando, Flink, Wolt",
+        "duration": "",
+        "position": "Delivery Driver",
+        "achievements": [
+          "Provided timely and efficient delivery services to customers.",
+          "Maintained high standards of customer service and satisfaction."
+        ]
+      },
+      {
+        "company": "Amazon",
+        "duration": "",
+        "position": "Sorter",
+        "achievements": [
+          "Sorted packages for efficient delivery.",
+          "Ensured accuracy and quality of sorted items."
+        ]
+      },
+      {
+        "company": "Bratwürst Röselein",
+        "duration": "",
+        "position": "Kitchen Helper",
+        "achievements": [
+          "Assisted in kitchen operations and food preparation.",
+          "Maintained cleanliness and organization of the kitchen."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2023",
+        "degree": "Bachelor’s",
+        "institution": "OTH Amberg-Weiden",
+        "field_of_study": "Digital Technology and Management"
+      }
+    ],
+    "projects": [],
+    "certifications": [],
+    "custom_sections": [],
+    "last_template_used": "swiss",
+    "is_active": true,
+    "profile_completeness": 0.94,
+    "created_at": "2025-10-16T14:24:13.809076+00:00",
+    "updated_at": "2025-10-16T14:26:55.416883+00:00",
+    "last_accessed_at": "2025-10-16T14:26:55.372+00:00",
+    "languages": [
+      {
+        "name": "Bengali",
+        "level": "Native Speaker",
+        "language": "Bengali",
+        "proficiency": "Native Speaker"
+      },
+      {
+        "name": "English",
+        "level": "C1",
+        "language": "English",
+        "proficiency": "C1"
+      },
+      {
+        "name": "German",
+        "level": "B1",
+        "language": "German",
+        "proficiency": "B1"
+      }
+    ],
+    "photo_url": "https://ieliwaibbkexqbudfher.supabase.co/storage/v1/object/public/profile-photos/b9d0c7ea-5a12-478b-ac52-ccc38e4f72b4/profile.jpg"
+  },
+  {
+    "id": "a0d3823b-73b1-4e8a-b8f4-360cac4360a1",
+    "session_id": null,
+    "user_id": "fe1641c4-b862-4421-8a12-d6f8ab6db83c",
+    "personal_info": {
+      "name": "Sevval Aslan",
+      "email": "sevvalaslan018@gmail.com",
+      "phone": "(+49) 17671700064",
+      "linkedin": "Not specified",
+      "location": "Weiden in der Oberpfalz, Deutschland"
+    },
+    "professional_title": "Content Marketing Specialist",
+    "professional_summary": "With over 3 years of experience in content marketing and SEO, I currently serve as a Content Team Manager at Textoni, where I develop and implement effective content strategies aligned with business goals. I have successfully managed content calendars and optimized SEO practices, resulting in a 30% increase in organic traffic for key clients. My expertise includes content creation, keyword research, and team management, utilizing tools such as Semrush and Google Search Console. I hold a degree in Translation and Interpreting from Ege University and have completed specialized training in local SEO strategies and data analysis. I am passionate about leveraging my skills to drive impactful content strategies that enhance brand visibility and engagement.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "Microsoft Office",
+        "Google Drive",
+        "SEO Tools: Semrush, Google Search Console, Ubersuggest",
+        "Google Suite: Google Docs, Sheets, Slides, Google Trends, Google Keyword Planner",
+        "WordPress"
+      ],
+      "soft_skills": [
+        "Expressed writing and editing skills",
+        "Team management",
+        "Analytical thinking"
+      ]
+    },
+    "experience": [
+      {
+        "company": "ICERIKLER.COM",
+        "duration": "09/2023 – Present",
+        "position": "SEO Content Editor",
+        "achievements": [
+          "Bearbeitung der Inhalte nach den Vorgaben und Gewährleistung der erforderlichen Kontrolle",
+          "Bereitstellung von redaktionellem Feedback und Änderungswünschen je nach Qualität der Inhalte"
+        ]
+      },
+      {
+        "company": "TEXTONI",
+        "duration": "03/2023 – 10/2023",
+        "position": "Content Team Manager",
+        "achievements": [
+          "Entwicklung und Implementierung effektiver Content-Strategien, die mit den Unternehmenszielen übereinstimmen",
+          "Sicherstellung der Suchmaschinenoptimierung von Inhalten, einschließlich der Recherche von Keywords",
+          "Verwaltung von Content-Kalendern und Nutzung von CMS, um Inhalte zu optimalen Zeiten zu planen",
+          "Management von Content-Autoren- und Redaktionsteams"
+        ]
+      },
+      {
+        "company": "TEXTONI",
+        "duration": "06/2022 – 02/2023",
+        "position": "Content Marketing Specialist",
+        "achievements": [
+          "Festlegung von Inhaltsstandards für die betreuten Marken und Planung gemäß diesen Standards",
+          "Entwurf und Durchführung von Content-Marketing-Strategien für große E-Commerce-Unternehmen",
+          "Durchführung regelmäßiger Nachverfolgungen der Inhalte und Inhaltsanalysen"
+        ]
+      },
+      {
+        "company": "LUGAT İÇERIK AJANSI",
+        "duration": "09/2021 – 06/2022",
+        "position": "SEO Content Editor",
+        "achievements": [
+          "Bereitstellung prägnanter und konstruktiver redaktioneller Rückmeldungen an Autoren",
+          "Vorbereitung und Bearbeitung von Inhalten zur Verbesserung der Lesbarkeit und Wirkung",
+          "Bearbeitung und Korrekturlesen der Inhalte in Türkisch und Englisch"
+        ]
+      },
+      {
+        "company": "LUGAT İÇERIK AJANSI",
+        "duration": "09/2021 – 06/2022",
+        "position": "Translator",
+        "achievements": [
+          "Übersetzung vieler Inhalte zu verschiedenen Themen, wie Gesundheitstechnologien und Mode",
+          "Überprüfung der Endarbeiten, um Fehler in Interpunktion, Grammatik und Übersetzung zu erkennen"
+        ]
+      },
+      {
+        "company": "LUGAT İÇERIK AJANSI",
+        "duration": "08/2021 – 09/2021",
+        "position": "Intern",
+        "achievements": [
+          "Erlernen, wie man Inhalte basierend auf den Bedürfnissen der Marken erstellt",
+          "Entwicklung und Implementierung von Marketingstrategien"
+        ]
+      },
+      {
+        "company": "LUGAT İÇERIK AJANSI",
+        "duration": "10/2020 – 09/2021",
+        "position": "SEO Content Writer",
+        "achievements": [
+          "Verfassen von Werbetexten für Online-Inhalte unter Einhaltung der Markenidentität",
+          "Einbindung von SEO-Keywords in die Texte, um die Suchergebnisplatzierungen zu verbessern"
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2022",
+        "degree": "Bachelor's",
+        "institution": "Ege University",
+        "field_of_study": "Translation and Interpreting"
+      },
+      {
+        "year": "",
+        "degree": "International Business",
+        "institution": "Ostbayerische Technische Hochschule Amberg-Weiden",
+        "field_of_study": "Not specified"
+      }
+    ],
+    "projects": [
+      {
+        "date": "2023",
+        "name": "Translation Project for Graduation",
+        "description": "Übersetzung eines Artikels über UX Writing von Englisch nach Türkisch",
+        "technologies": []
+      }
+    ],
+    "certifications": [
+      {
+        "date": "2022",
+        "name": "Local SEO Strategies",
+        "issuer": "Webtures",
+        "description": ""
+      },
+      {
+        "date": "2022",
+        "name": "SEO Roadmap Development Guide",
+        "issuer": "Webtures",
+        "description": ""
+      },
+      {
+        "date": "2022",
+        "name": "Google Data-Studio Looker Training",
+        "issuer": "Webtures",
+        "description": ""
+      }
+    ],
+    "custom_sections": [
+      {
+        "items": [
+          {
+            "date": "09/2021 – 02/2022",
+            "title": "Volunteer",
+            "subtitle": "Türk Kızılay",
+            "description": "Teilnahme an Blutspendekampagnen und Unterstützung bei der Registrierung von Spendern"
+          }
+        ],
+        "title": "Leadership & Volunteer"
+      }
+    ],
+    "last_template_used": "swiss",
+    "is_active": true,
+    "profile_completeness": 1,
+    "created_at": "2025-10-16T15:03:34.490839+00:00",
+    "updated_at": "2025-10-16T15:05:48.233749+00:00",
+    "last_accessed_at": "2025-10-16T15:05:48.025+00:00",
+    "languages": [
+      {
+        "name": "Türkisch",
+        "level": "Native Speaker",
+        "language": "Türkisch",
+        "proficiency": "Native Speaker"
+      },
+      {
+        "name": "Englisch",
+        "level": "C1",
+        "language": "Englisch",
+        "proficiency": "C1"
+      },
+      {
+        "name": "Deutsch",
+        "level": "A2",
+        "language": "Deutsch",
+        "proficiency": "A2"
+      }
+    ],
+    "photo_url": null
+  },
+  {
+    "id": "15af6047-7eb2-46e7-823d-0d5fba29f7b3",
+    "session_id": null,
+    "user_id": "a3771014-faa0-4861-808f-477928c982ba",
+    "personal_info": {
+      "name": "Susan Khadka",
+      "email": "susankhadka@web.de",
+      "phone": "+49 176 6895 2924",
+      "linkedin": "",
+      "location": "Bürgermeister-Prechtl-Straße 10, 92637 Weiden i.d. Oberpfalz"
+    },
+    "professional_title": "Junior Data Analyst",
+    "professional_summary": "With 3+ years of experience in data analysis and management, I am currently pursuing a BSc in Digital Technology and Management while working as a <b>Junior Data Analyst </b>at ATU Handels GmbH &amp; Co. KG. In this role, I have contributed to data-driven decision-making processes, enhancing operational efficiency. My experience includes analyzing sales data, leading to a 15% improvement in reporting accuracy. Proficient in data visualization tools and programming languages such as Python and SQL, I am also skilled in statistical analysis and data interpretation. I aim to leverage my analytical skills and technical knowledge to drive impactful results in a dynamic organization, contributing to data-centric projects and initiatives.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "Data Analysis",
+        "Python",
+        "SQL",
+        "Data Visualization"
+      ],
+      "soft_skills": [
+        "Communication",
+        "Team Collaboration",
+        "Problem Solving",
+        "Customer Service"
+      ]
+    },
+    "experience": [
+      {
+        "company": "ATU Handels GmbH & Co. KG",
+        "duration": "07/2024 – 11/2024",
+        "position": "Junior Data-Analyst",
+        "achievements": [
+          "Analyzed sales data to support decision-making processes.",
+          "<b>Collaborated</b> with <span style=\"background-color: rgb(255, 235, 59);\">cross-functional teams </span>to enhance operational efficiency.",
+          "Analyzed reports for data visualization&nbsp;"
+        ]
+      },
+      {
+        "company": "Nordbayerische Systemgastronomie GmbH (Burger King)",
+        "duration": "11/2024 – 06/2025",
+        "position": "Kassier",
+        "achievements": [
+          "Managed cash transactions and customer service.",
+          "Ensured compliance with food safety and quality standards."
+        ]
+      },
+      {
+        "company": "Bäckerei Brunner KG",
+        "duration": "04/2023 – 08/2023",
+        "position": "Verkäufer",
+        "achievements": [
+          "Provided excellent customer service and managed sales transactions.",
+          "Maintained inventory and ensured product quality."
+        ]
+      },
+      {
+        "company": "Gorillas Technologies GmbH",
+        "duration": "06/2021 – 06/2022",
+        "position": "Kurierfahrer",
+        "achievements": [
+          "Delivered groceries to customers in a timely manner.",
+          "Ensured customer satisfaction through effective communication."
+        ]
+      },
+      {
+        "company": "Takeaway Express GmbH",
+        "duration": "01/2019 – 01/2021",
+        "position": "Kurierfahrer",
+        "achievements": [
+          "Managed delivery routes efficiently to maximize delivery speed.",
+          "Handled customer inquiries and resolved issues promptly."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2025",
+        "degree": "Bachelor of Science",
+        "institution": "Ostbayerische Technische Hochschule Amberg-Weiden",
+        "field_of_study": "Digital Technology und Management"
+      },
+      {
+        "year": "2021",
+        "degree": "Bachelor of Science",
+        "institution": "Jacobs University Bremen",
+        "field_of_study": "Industrial Engineering und Management"
+      }
+    ],
+    "projects": [],
+    "certifications": [],
+    "custom_sections": [],
+    "last_template_used": "impact",
+    "is_active": true,
+    "profile_completeness": 0.94,
+    "created_at": "2025-10-16T14:21:47.251798+00:00",
+    "updated_at": "2025-10-16T14:28:28.488143+00:00",
+    "last_accessed_at": "2025-10-16T14:28:28.405+00:00",
+    "languages": [
+      {
+        "name": "Nepali",
+        "level": "Professional working",
+        "language": "Nepali",
+        "proficiency": "Professional working"
+      },
+      {
+        "name": "English",
+        "level": "Full professional",
+        "language": "English",
+        "proficiency": "Full professional"
+      },
+      {
+        "name": "German",
+        "level": "Professional working",
+        "language": "German",
+        "proficiency": "Professional working"
+      }
+    ],
+    "photo_url": "https://ieliwaibbkexqbudfher.supabase.co/storage/v1/object/public/profile-photos/a3771014-faa0-4861-808f-477928c982ba/profile.jpg"
+  },
+  {
+    "id": "87bda4d8-f0d4-46ea-9595-ae9f348079ee",
+    "session_id": null,
+    "user_id": "163ca410-ebcb-4f59-aedf-2e0d85fea7f5",
+    "personal_info": {
+      "name": "Alexander Djordjevic",
+      "email": "djordjevic-alex@web.de",
+      "phone": "0176 4739 7025",
+      "linkedin": "Not specified",
+      "location": "Priener Str. 36, 83125 Eggstätt"
+    },
+    "professional_title": "Category Lead",
+    "professional_summary": "Over 4 years of experience in category management and sales leadership. Currently serving as Category Lead at Jochen Schweizer mydays Holding GmbH, where I lead a medium-sized team and develop innovative sales channels. Successfully increased portfolio quality and availability, resulting in improved customer satisfaction. Proficient in SAP and Salesforce, with a strong background in strategic planning and team performance analysis. Completed a Master's in Leadership and Internationalization of SMEs, focusing on intercultural management and change management. I am eager to leverage my expertise in a dynamic environment to drive growth and operational excellence.",
+    "enable_professional_summary": true,
+    "skills": {
+      "tools": [],
+      "technical": [
+        "SAP",
+        "Salesforce",
+        "MS Office",
+        "SAGE Office Line",
+        "BSH-TOP"
+      ],
+      "soft_skills": [
+        "Leadership",
+        "Team Motivation",
+        "Strategic Planning",
+        "Coaching"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Jochen Schweizer mydays Holding GmbH",
+        "duration": "11/2019 - Present",
+        "position": "Category Lead",
+        "achievements": [
+          "Fachliche Führung, Betreuung und Motivation eines mittelgroßen Teams",
+          "Aufbau eines neuen + innovativen Vertriebskanals",
+          "Strategischer Ausbau des Portfolios für Jochen Schweizer und mydays",
+          "Steigerung der Qualität und Verfügbarkeit (der Erlebnisse) innerhalb des Portfolios",
+          "Analyse, Förderung und Controlling der Teamleistung",
+          "SAP + Salesforce Auswertungen",
+          "Verhandlungen mit Key Accounts / Betreuung umsatzstarker Partner",
+          ""
+        ]
+      },
+      {
+        "company": "Bausparkasse Schwäbisch Hall AG",
+        "duration": "09/2018 - 10/2019",
+        "position": "Bezirksleiter",
+        "achievements": [
+          "Betreuung >10 Bankberatern und 4 Filialen Raiffeisenbank RSA",
+          "Tägliche Absprache mit Bankberatern, Coachings, Umsetzung von neuen Vertriebsansätzen im operationalen Geschäft",
+          "Aktive Bestandsbearbeitung + Neukundenakquise",
+          "Beratungsgespräche rund um alle Finanzthemen",
+          "Vermittlung von Immobiliardarlehen (Baufinanzierung: §34i)"
+        ]
+      },
+      {
+        "company": "BORA Lüftungstechnik GmbH",
+        "duration": "07/2017 - 11/2017",
+        "position": "Praktikum/Werkstudent",
+        "achievements": [
+          "Stammdatenaktualisierung / Sicherstellung Datenaktualität",
+          "tägliche Unterstützung und Zusammenarbeit mit Außendienst",
+          "täglicher (Tel. + E-Mail) Kontakt zu Handelspartnern",
+          "Erstellen und Versenden von Verträgen an Handelspartner"
+        ]
+      },
+      {
+        "company": "KRONES AG",
+        "duration": "09/2015 - 01/2016",
+        "position": "Pflichtpratikum im Studium",
+        "achievements": [
+          "Mitarbeit im Tagesgeschäft / täglicher Kontakt zu Lieferanten",
+          "Auftragsverfolgung, Terminplanung und Überwachung der operativen Beschaffung innerhalb der Einkäufergruppe",
+          "Datenpflege und komplette Abwicklung über SAP",
+          "Auslösen von Bestellungen und Überwachung von Mahnungen und Auftragsbestätigungen",
+          "Schnittstelle zwischen internen Abteilungen und Lieferanten"
+        ]
+      }
+    ],
+    "education": [
+      {
+        "year": "2018",
+        "degree": "Master of Arts",
+        "institution": "Hochschule Rosenheim",
+        "field_of_study": "Leadership and Internationalization of SMEs"
+      },
+      {
+        "year": "2017",
+        "degree": "Bachelor of Arts",
+        "institution": "Hochschule Rosenheim",
+        "field_of_study": "Business Administration"
+      }
+    ],
+    "projects": [],
+    "certifications": [
+      {
+        "date": "Not specified",
+        "name": "Gewerbeerlaubnis §34 c GewO (AVD)",
+        "issuer": "Not specified",
+        "description": ""
+      },
+      {
+        "date": "Not specified",
+        "name": "Gewerbeerlaubnis §34 i GewO (IVD)",
+        "issuer": "Not specified",
+        "description": ""
+      }
+    ],
+    "custom_sections": [
+      {
+        "items": [
+          {
+            "date": "Not specified",
+            "title": "Passion for Nutrition & Cooking",
+            "subtitle": "Personal Interest",
+            "description": "Enjoys exploring various cuisines and healthy cooking techniques."
+          },
+          {
+            "date": "Not specified",
+            "title": "Recreational Sports",
+            "subtitle": "Personal Interest",
+            "description": "Engages in various sports activities for fitness and leisure."
+          }
+        ],
+        "title": "Hobbies & Interests"
+      }
+    ],
+    "last_template_used": "swiss",
+    "is_active": true,
+    "profile_completeness": 0.97,
+    "created_at": "2025-10-16T13:36:43.208724+00:00",
+    "updated_at": "2025-10-16T18:33:16.654614+00:00",
+    "last_accessed_at": "2025-10-16T18:33:16.55+00:00",
+    "languages": [
+      {
+        "name": "English",
+        "level": "Professional working",
+        "language": "English",
+        "proficiency": "Professional working"
+      },
+      {
+        "name": "Serbian",
+        "level": "Professional working",
+        "language": "Serbian",
+        "proficiency": "Professional working"
+      }
+    ],
+    "photo_url": "https://ieliwaibbkexqbudfher.supabase.co/storage/v1/object/public/profile-photos/163ca410-ebcb-4f59-aedf-2e0d85fea7f5/profile.jpg"
+  }
+]

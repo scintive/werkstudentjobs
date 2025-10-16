@@ -359,7 +359,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
   const [distanceRadius, setDistanceRadius] = React.useState<number>(100)
   const [selectedJobType, setSelectedJobType] = React.useState<string>('all')
   const [tailoredFilter, setTailoredFilter] = React.useState<'all' | 'only' | 'hide'>('all')
-  const [sortBy, setSortBy] = React.useState<string>('match_score')
+  const [sortBy, setSortBy] = React.useState<string>('date') // Default to latest jobs first
   const [savedJobs, setSavedJobs] = React.useState<Set<string>>(new Set())
   const [appliedJobs, setAppliedJobs] = React.useState<Set<string>>(new Set())
   const [tailoredJobs, setTailoredJobs] = React.useState<Map<string, { created_at: string, match_score?: number }>>(new Map())
@@ -551,7 +551,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
             setSelectedJob(cachedJobs[0])
           }
           setLoading(false)
-          setHasMore(cachedJobs.length >= 30) // Assume more if we got 30
+          setHasMore(false) // Cache means we already loaded all jobs
           return
         }
       }
@@ -564,8 +564,9 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout
 
-      const limit = 30 // Fetch 30 jobs per page
-      const offset = page * limit
+      // Fetch ALL jobs initially (up to 1000), then use pagination for more if needed
+      const limit = page === 0 ? 1000 : 100 // First page: all jobs, subsequent: 100 at a time
+      const offset = page * (page === 0 ? 1000 : 100)
 
       const response = await fetch(`/api/jobs/fetch?limit=${limit}&offset=${offset}`, {
         signal: controller.signal,
@@ -670,8 +671,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                 saveJobsToCache(matchedJobs) // Cache initial jobs
               }
 
-              // Check if more jobs available
-              setHasMore(matchedJobs.length >= 30)
+              // Check if more jobs available from API response
+              setHasMore(data.hasMore || false)
               setCurrentPage(page)
 
               // Auto-select first job only on initial load
@@ -709,7 +710,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
               saveJobsToCache(transformedJobs)
             }
 
-            setHasMore(transformedJobs.length >= 30)
+            setHasMore(data.hasMore || false)
             setCurrentPage(page)
 
             if (!append && transformedJobs.length > 0 && !selectedJob) {

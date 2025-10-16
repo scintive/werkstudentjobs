@@ -105,11 +105,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(
-      parseInt(searchParams.get('limit') || '200'),
-      500 // Increased maximum limit to show all jobs
+      parseInt(searchParams.get('limit') || '500'),
+      1000 // Increased maximum limit to show ALL jobs
     );
     const offset = parseInt(searchParams.get('offset') || '0');
     const forceRefresh = searchParams.get('refresh') === 'true';
+    const searchQuery = searchParams.get('search')?.trim() || '';
 
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
@@ -123,16 +124,28 @@ export async function GET(request: NextRequest) {
       await fetchAndStoreNewJobs(limit);
     }
 
-    // Get jobs from Supabase with company information
-    const { data: jobsData, error: jobsError } = await supabase
+    // Build query for jobs from Supabase with company information
+    let query = supabase
       .from('jobs')
       .select(`
         *,
         companies (*)
-      `)
-      .eq('is_active', true)
+      `, { count: 'exact' })
+      .eq('is_active', true);
+
+    // Add server-side search if query provided
+    if (searchQuery) {
+      // Use Postgres text search for better performance
+      // Search across title, description, skills, tools, city, country
+      query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%,country.ilike.%${searchQuery}%`);
+    }
+
+    // Apply ordering and pagination
+    query = query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    const { data: jobsData, error: jobsError, count } = await query;
 
     if (jobsError) {
       throw new Error(`Failed to fetch jobs from database: ${jobsError.message}`);
@@ -142,14 +155,14 @@ export async function GET(request: NextRequest) {
     if (!jobsData || jobsData.length === 0) {
       console.log('No jobs in database, fetching fresh data...');
       await fetchAndStoreNewJobs(limit);
-      
+
       // Try again after fetching
-      const { data: retryData, error: retryError } = await supabase
+      const { data: retryData, error: retryError, count: retryCount } = await supabase
         .from('jobs')
         .select(`
           *,
           companies (*)
-        `)
+        `, { count: 'exact' })
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -161,19 +174,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         jobs: retryData || [],
-        total: retryData?.length || 0,
+        total: retryCount || retryData?.length || 0,
         source: 'fresh_fetch'
       });
     }
 
-    // Get total count for pagination
-    const { count, error: countError } = await supabase
-      .from('jobs')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
-
     // DEBUG: Log what we're sending to client
     console.log('🔍 FETCH API: Sending jobs to client');
+    console.log('🔍 FETCH API: Search query:', searchQuery || 'none');
+    console.log('🔍 FETCH API: Jobs returned:', jobsData.length);
+    console.log('🔍 FETCH API: Total count:', count);
     console.log('🔍 FETCH API: First job skills:', (jobsData[0] as any)?.skills?.slice(0, 3));
     console.log('🔍 FETCH API: First job skills count:', (jobsData[0] as any)?.skills?.length || 0);
     console.log('🔍 FETCH API: First job title:', (jobsData[0] as any)?.title);
@@ -182,7 +192,11 @@ export async function GET(request: NextRequest) {
       success: true,
       jobs: jobsData as JobWithCompany[],
       total: count || jobsData.length,
+      offset,
+      limit,
+      hasMore: (count || 0) > offset + jobsData.length,
       source: 'database',
+      searchQuery: searchQuery || undefined,
       note: forceRefresh ? 'Enhanced extraction with optimized Google Search + GPT system' : undefined
     });
 

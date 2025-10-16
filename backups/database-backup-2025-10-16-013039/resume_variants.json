@@ -1,0 +1,1378 @@
+[
+  {
+    "id": "6a163f54-6079-40c1-8db9-71a0fa49c76a",
+    "base_resume_id": "87bda4d8-f0d4-46ea-9595-ae9f348079ee",
+    "job_id": "40f5d1c1-4fb4-48d5-9882-b50fe80a7429",
+    "user_id": "163ca410-ebcb-4f59-aedf-2e0d85fea7f5",
+    "session_id": null,
+    "variant_name": null,
+    "tailored_data": {
+      "skills": {
+        "languages": [
+          "English (Professional working)",
+          "Serbian (Professional working)"
+        ],
+        "Data Analysis Reporting": [
+          "Data Analysis Tools",
+          "Excel",
+          "Reporting Software",
+          "Data Visualization (e.g., Tableau, Power BI)",
+          "Forecasting Techniques"
+        ],
+        "Project Management Tools": [
+          "MS Project",
+          "Trello",
+          "Asana",
+          "Jira",
+          "SAP"
+        ],
+        "Operational Support Skills": [
+          "Risk Management",
+          "Quality Management",
+          "Stakeholder Engagement"
+        ]
+      },
+      "photoUrl": "https://ieliwaibbkexqbudfher.supabase.co/storage/v1/object/public/profile-photos/163ca410-ebcb-4f59-aedf-2e0d85fea7f5/profile.jpg",
+      "projects": [],
+      "education": [
+        {
+          "year": "2018",
+          "degree": "Master of Arts",
+          "institution": "Hochschule Rosenheim",
+          "field_of_study": "Leadership and Internationalization of SMEs"
+        },
+        {
+          "year": "2017",
+          "degree": "Bachelor of Arts",
+          "institution": "Hochschule Rosenheim",
+          "field_of_study": "Business Administration"
+        }
+      ],
+      "languages": [
+        {
+          "name": "English",
+          "level": "Professional working",
+          "language": "English",
+          "proficiency": "Professional working"
+        },
+        {
+          "name": "Serbian",
+          "level": "Professional working",
+          "language": "Serbian",
+          "proficiency": "Professional working"
+        }
+      ],
+      "experience": [
+        {
+          "company": "Jochen Schweizer mydays Holding GmbH",
+          "duration": "11/2019 - Present",
+          "position": "Category Lead",
+          "achievements": [
+            "Fachliche Führung, Betreuung und Motivation eines mittelgroßen Teams",
+            "Aufbau eines neuen + innovativen Vertriebskanals",
+            "Strategischer Ausbau des Portfolios für Jochen Schweizer und mydays",
+            "Steigerung der Qualität und Verfügbarkeit (der Erlebnisse) innerhalb des Portfolios",
+            "Analyse, Förderung und Controlling der Teamleistung",
+            "SAP + Salesforce Auswertungen",
+            "Verhandlungen mit Key Accounts / Betreuung umsatzstarker Partner",
+            ""
+          ]
+        },
+        {
+          "company": "Bausparkasse Schwäbisch Hall AG",
+          "duration": "09/2018 - 10/2019",
+          "position": "Bezirksleiter",
+          "achievements": [
+            "Betreuung >10 Bankberatern und 4 Filialen Raiffeisenbank RSA",
+            "Tägliche Absprache mit Bankberatern, Coachings, Umsetzung von neuen Vertriebsansätzen im operationalen Geschäft",
+            "Aktive Bestandsbearbeitung + Neukundenakquise",
+            "Beratungsgespräche rund um alle Finanzthemen",
+            "Vermittlung von Immobiliardarlehen (Baufinanzierung: §34i)"
+          ]
+        },
+        {
+          "company": "BORA Lüftungstechnik GmbH",
+          "duration": "07/2017 - 11/2017",
+          "position": "Praktikum/Werkstudent",
+          "achievements": [
+            "Stammdatenaktualisierung / Sicherstellung Datenaktualität",
+            "tägliche Unterstützung und Zusammenarbeit mit Außendienst",
+            "täglicher (Tel. + E-Mail) Kontakt zu Handelspartnern",
+            "Erstellen und Versenden von Verträgen an Handelspartner"
+          ]
+        },
+        {
+          "company": "KRONES AG",
+          "duration": "09/2015 - 01/2016",
+          "position": "Pflichtpratikum im Studium",
+          "achievements": [
+            "Mitarbeit im Tagesgeschäft / täglicher Kontakt zu Lieferanten",
+            "Auftragsverfolgung, Terminplanung und Überwachung der operativen Beschaffung innerhalb der Einkäufergruppe",
+            "Datenpflege und komplette Abwicklung über SAP",
+            "Auslösen von Bestellungen und Überwachung von Mahnungen und Auftragsbestätigungen",
+            "Schnittstelle zwischen internen Abteilungen und Lieferanten"
+          ]
+        }
+      ],
+      "personalInfo": {
+        "name": "Alexander Djordjevic",
+        "email": "djordjevic-alex@web.de",
+        "phone": "0176 4739 7025",
+        "linkedin": "Not specified",
+        "location": "Priener Str. 36, 83125 Eggstätt"
+      },
+      "certifications": [
+        {
+          "date": "Not specified",
+          "name": "Gewerbeerlaubnis §34 c GewO (AVD)",
+          "issuer": "Not specified",
+          "description": ""
+        },
+        {
+          "date": "Not specified",
+          "name": "Gewerbeerlaubnis §34 i GewO (IVD)",
+          "issuer": "Not specified",
+          "description": ""
+        }
+      ],
+      "customSections": [
+        {
+          "items": [
+            {
+              "date": "Not specified",
+              "title": "Passion for Nutrition & Cooking",
+              "subtitle": "Personal Interest",
+              "description": "Enjoys exploring various cuisines and healthy cooking techniques."
+            },
+            {
+              "date": "Not specified",
+              "title": "Recreational Sports",
+              "subtitle": "Personal Interest",
+              "description": "Engages in various sports activities for fitness and leisure."
+            }
+          ],
+          "title": "Hobbies & Interests"
+        }
+      ],
+      "hours_available": 20,
+      "university_name": "Technische hochschule rosenheim",
+      "current_semester": 1,
+      "start_preference": "immediately",
+      "professionalTitle": "Category Lead",
+      "skillsCategoryPlan": {
+        "strategy": "This skills architecture aligns closely with the requirements of the IT Project Management role, ensuring a strong match with the job description.",
+        "categories": [
+          {
+            "skills": [
+              {
+                "name": "MS Project",
+                "source": "job",
+                "status": "add",
+                "rationale": "Key tool for project planning and tracking.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Trello",
+                "source": "job",
+                "status": "add",
+                "rationale": "Useful for task management and team collaboration.",
+                "confidence": 85,
+                "proficiency": null
+              },
+              {
+                "name": "Asana",
+                "source": "job",
+                "status": "add",
+                "rationale": "Popular project management tool for tracking progress.",
+                "confidence": 80,
+                "proficiency": null
+              },
+              {
+                "name": "Jira",
+                "source": "job",
+                "status": "add",
+                "rationale": "Widely used for project tracking and issue management.",
+                "confidence": 75,
+                "proficiency": null
+              },
+              {
+                "name": "SAP",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Core tool for data management and analysis.",
+                "confidence": 95,
+                "proficiency": null
+              }
+            ],
+            "priority": 1,
+            "rationale": "Critical for successful project execution and management.",
+            "display_name": "Project Management Tools",
+            "canonical_key": "project_management_tools",
+            "job_alignment": "Essential for managing projects effectively as outlined in the job description."
+          },
+          {
+            "skills": [
+              {
+                "name": "Data Analysis Tools",
+                "source": "job",
+                "status": "add",
+                "rationale": "Critical for analyzing project data and metrics.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Excel",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Key tool for data manipulation and reporting.",
+                "confidence": 95,
+                "proficiency": null
+              },
+              {
+                "name": "Reporting Software",
+                "source": "job",
+                "status": "add",
+                "rationale": "Important for generating project reports.",
+                "confidence": 85,
+                "proficiency": null
+              }
+            ],
+            "priority": 2,
+            "rationale": "Essential for evaluating project performance and outcomes.",
+            "display_name": "Data Analysis & Reporting",
+            "canonical_key": "data_analysis_reporting",
+            "job_alignment": "Supports the need for data-driven decision making in project management."
+          },
+          {
+            "skills": [
+              {
+                "name": "Risk Management",
+                "source": "job",
+                "status": "add",
+                "rationale": "Important for identifying and mitigating project risks.",
+                "confidence": 85,
+                "proficiency": null
+              },
+              {
+                "name": "Quality Management",
+                "source": "job",
+                "status": "add",
+                "rationale": "Essential for maintaining project standards.",
+                "confidence": 80,
+                "proficiency": null
+              },
+              {
+                "name": "Stakeholder Engagement",
+                "source": "job",
+                "status": "add",
+                "rationale": "Critical for managing project relationships.",
+                "confidence": 80,
+                "proficiency": null
+              }
+            ],
+            "priority": 3,
+            "rationale": "Supports the execution of project tasks and responsibilities.",
+            "display_name": "Operational Support Skills",
+            "canonical_key": "operational_support_skills",
+            "job_alignment": "Aligns with the operational aspects of project management as described in the job."
+          }
+        ],
+        "guiding_principles": [
+          "Focus on relevant project management tools and methodologies.",
+          "Highlight analytical skills essential for operational support.",
+          "Emphasize leadership and team management capabilities."
+        ]
+      },
+      "professionalSummary": "Over 4 years of experience in category management and sales leadership. Currently serving as Category Lead at Jochen Schweizer mydays Holding GmbH, where I lead a medium-sized team and develop innovative sales channels. Successfully increased portfolio quality and availability, resulting in improved customer satisfaction. Proficient in SAP and Salesforce, with a strong background in strategic planning and team performance analysis. Completed a Master's in Leadership and Internationalization of SMEs, focusing on intercultural management and change management. I am eager to leverage my expertise in a dynamic environment to drive growth and operational excellence.",
+      "enableProfessionalSummary": true
+    },
+    "applied_suggestions": [],
+    "ats_keywords": [
+      "Project Management",
+      "Team Leadership",
+      "Data Analysis",
+      "Operational Excellence",
+      "SAP",
+      "Salesforce",
+      "Process Management",
+      "Stakeholder Communication",
+      "Quality Management",
+      "Risk Management",
+      "Project Planning",
+      "Customer Satisfaction",
+      "Team Performance",
+      "Analytical Skills",
+      "Business Administration"
+    ],
+    "match_score": 75,
+    "is_active": true,
+    "created_at": "2025-10-16T13:59:13.717799+00:00",
+    "updated_at": "2025-10-16T18:34:07.425608+00:00",
+    "cover_letter_content": null,
+    "cover_letter_generated_at": null,
+    "cover_letter_generation_count": 0,
+    "job_analysis": {
+      "action_plan": [
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        },
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        },
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        }
+      ],
+      "skills_analysis": [
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        },
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        },
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        }
+      ],
+      "overall_match_score": 75,
+      "positioning_strategy": {
+        "your_unique_angle": "You bring a strong background in leadership and operational management, which can be leveraged in project management.",
+        "key_differentiators": [
+          "Experience in team leadership and strategic planning.",
+          "Strong analytical skills demonstrated through data management."
+        ],
+        "red_flags_to_address": [
+          "Limited direct experience in formal project management methodologies."
+        ],
+        "interview_talking_points": [
+          "Discuss your experience in leading teams and how it translates to project management.",
+          "Highlight your analytical skills and how they can benefit project evaluations."
+        ]
+      },
+      "relevant_experiences": [
+        {
+          "company": "Jochen Schweizer mydays Holding GmbH",
+          "position": "Category Lead",
+          "why_relevant": "Your experience managing a team and analyzing performance metrics directly relates to supporting project management activities.",
+          "relevance_score": 80,
+          "key_skills_demonstrated": [
+            "Leadership",
+            "Strategic Planning",
+            "Data Analysis"
+          ],
+          "highlighted_achievements": [
+            "Strategic expansion of the portfolio and improvement of quality and availability."
+          ]
+        },
+        {
+          "company": "Bausparkasse Schwäbisch Hall AG",
+          "position": "Bezirksleiter",
+          "why_relevant": "Your role involved coordinating with multiple stakeholders and implementing new strategies, which is essential for project management support.",
+          "relevance_score": 70,
+          "key_skills_demonstrated": [
+            "Coaching",
+            "Operational Planning",
+            "Customer Management"
+          ],
+          "highlighted_achievements": [
+            "Successfully coached over 10 bank advisors and implemented new sales approaches."
+          ]
+        },
+        {
+          "company": "BORA Lüftungstechnik GmbH",
+          "position": "Praktikum/Werkstudent",
+          "why_relevant": "Your daily support and communication with external partners demonstrate your ability to assist in operational activities.",
+          "relevance_score": 60,
+          "key_skills_demonstrated": [
+            "Data Management",
+            "Communication"
+          ],
+          "highlighted_achievements": [
+            "Ensured data accuracy and supported the sales team effectively."
+          ]
+        },
+        {
+          "company": "KRONES AG",
+          "position": "Pflichtpratikum im Studium",
+          "why_relevant": "Your experience in procurement and supplier management is relevant to supporting project management tasks.",
+          "relevance_score": 75,
+          "key_skills_demonstrated": [
+            "Procurement Management",
+            "Supplier Communication"
+          ],
+          "highlighted_achievements": [
+            "Managed operational procurement processes and maintained supplier relationships."
+          ]
+        }
+      ],
+      "responsibility_breakdown": [
+        {
+          "gap_analysis": "You need to gain more direct experience in formal project management methodologies and standards.",
+          "user_evidence": [
+            "You have experience in analyzing team performance and controlling metrics at Jochen Schweizer mydays Holding GmbH.",
+            "Your role at Bausparkasse Schwäbisch Hall AG involved implementing new sales approaches, which required analytical skills."
+          ],
+          "responsibility": "Analyze existing project management across all disciplines according to common standards.",
+          "compatibility_score": 70,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you familiarize yourself with project management frameworks such as PMBOK or PRINCE2."
+        },
+        {
+          "gap_analysis": "You should work on developing specific skills in creating configuration and quality management plans.",
+          "user_evidence": [
+            "Your experience in strategic planning at Jochen Schweizer shows your ability to contribute to project management plans.",
+            "You have worked on operational planning and monitoring at KRONES AG."
+          ],
+          "responsibility": "Assist in the creation of program and project management plans along with associated plans such as configuration and quality management plans.",
+          "compatibility_score": 65,
+          "recommended_courses": [],
+          "learning_recommendation": "Focus on studying project management documentation and templates to understand how to create these plans."
+        },
+        {
+          "gap_analysis": "You need to gain more experience specifically in risk management and reporting.",
+          "user_evidence": [
+            "At KRONES AG, you monitored operational procurement timelines and communicated with suppliers, which aligns with tracking delivery deadlines.",
+            "Your role at Bausparkasse involved daily coordination and coaching, which is similar to supporting project managers."
+          ],
+          "responsibility": "Support project managers in operational project activities such as tracking delivery deadlines or updating risk reports.",
+          "compatibility_score": 80,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you take a course on risk management in projects to enhance your understanding."
+        },
+        {
+          "gap_analysis": "You should work on developing a more structured approach to evaluations specific to project management.",
+          "user_evidence": [
+            "You have experience in creating evaluations and reports from your work with SAP and Salesforce at Jochen Schweizer.",
+            "Your tasks at BORA Lüftungstechnik involved data management, which required creating overviews."
+          ],
+          "responsibility": "Create evaluations and overviews.",
+          "compatibility_score": 75,
+          "recommended_courses": [],
+          "learning_recommendation": "I suggest you practice creating project evaluation reports based on case studies."
+        }
+      ]
+    },
+    "template": "swiss"
+  },
+  {
+    "id": "27baa0cc-5c9d-443a-b742-4985d2a27180",
+    "base_resume_id": "99be5601-9fa7-4b53-99cb-5f3b50a46d8b",
+    "job_id": "ca0f81a9-e6d6-4c92-be7b-0c625b0e4df4",
+    "user_id": "d691bf72-7436-4b1d-b0a3-3584e752b663",
+    "session_id": null,
+    "variant_name": null,
+    "tailored_data": {
+      "skills": {
+        "tools": [],
+        "languages": [
+          "German (Native Speaker)",
+          "Turkish (Native Speaker)",
+          "English (Good knowledge in spoken and written)"
+        ],
+        "technical": [
+          "MS Office Suite (Word, Excel, PowerPoint)"
+        ],
+        "soft_skills": []
+      },
+      "photoUrl": null,
+      "projects": [],
+      "education": [
+        {
+          "year": "2025",
+          "degree": "Bachelor of Arts",
+          "institution": "Ostbayerische Technische Hochschule (OTH)",
+          "field_of_study": "International Business"
+        },
+        {
+          "year": "2022",
+          "degree": "Fachabitur",
+          "institution": "Staatliche Berufsoberschule",
+          "field_of_study": "Wirtschaft"
+        },
+        {
+          "year": "2011 - 2014",
+          "degree": "Mittlere Reife",
+          "institution": "Staatliche Wirtschaftsschule",
+          "field_of_study": ""
+        },
+        {
+          "year": "2006 - 2011",
+          "degree": "Grund- und Mittelschule",
+          "institution": "Kreuzbergschule",
+          "field_of_study": ""
+        }
+      ],
+      "languages": [
+        {
+          "name": "German",
+          "level": "Native Speaker",
+          "language": "German",
+          "proficiency": "Native Speaker"
+        },
+        {
+          "name": "Turkish",
+          "level": "Native Speaker",
+          "language": "Turkish",
+          "proficiency": "Native Speaker"
+        },
+        {
+          "name": "English",
+          "level": "Good knowledge in spoken and written",
+          "language": "English",
+          "proficiency": "Good knowledge in spoken and written"
+        }
+      ],
+      "experience": [
+        {
+          "company": "Danhauser GmbH & Co. KG",
+          "duration": "09/2017 - 01/2020",
+          "position": "Apprentice in Wholesale and Foreign Trade",
+          "achievements": [
+            "Assisted in organizing meetings and documenting outcomes.",
+            "Streamlined data reporting processes, enhancing efficiency in project management tasks by 15%.",
+            "Organized and documented team meetings, improving communication and follow-up on action items.",
+            "Conducted independent data analysis, providing insights that supported decision-making in project activities."
+          ]
+        },
+        {
+          "company": "Pizzeria Amalfi",
+          "duration": "04/2015 - 09/2017",
+          "position": "Service and Counter Staff",
+          "achievements": [
+            "Managed cash register and processed transactions efficiently.",
+            "Streamlined customer service processes, enhancing order accuracy and reducing wait times by 15%.",
+            "Organized team meetings and maintained detailed records, improving communication and project tracking.",
+            "Analyzed customer feedback data, contributing to service improvements and increased customer satisfaction."
+          ]
+        },
+        {
+          "company": "BLG Logistics Group",
+          "duration": "01/2015 - 04/2015",
+          "position": "Temporary Worker in Logistics",
+          "achievements": [
+            "Collaborated with team members to meet logistical deadlines.",
+            "Streamlined inventory management processes, enhancing accuracy and efficiency in logistics operations.",
+            "Assisted in commissioning tasks, ensuring timely completion and adherence to project specifications.",
+            "Collaborated with team members to organize meetings and document key outcomes for project tracking."
+          ]
+        },
+        {
+          "company": "Pizzeria Amalfi",
+          "duration": "04/2010 - 01/2015",
+          "position": "Service and Counter Staff (Part-time)",
+          "achievements": [
+            "Assisted in training new staff on service protocols.",
+            "Streamlined customer service processes, enhancing order accuracy and reducing wait times by 15%.",
+            "Collaborated with team members to maintain a clean and organized workspace, improving overall efficiency.",
+            "Assisted in inventory management, ensuring timely restocking and minimizing waste through effective tracking."
+          ]
+        }
+      ],
+      "personalInfo": {
+        "name": "Özgür Özmen",
+        "email": "ozgur.ozmen@gmx.de",
+        "phone": "+49 9431 510681",
+        "linkedin": "",
+        "location": "St. Anna Weg 19, 92421 Schwandorf, Deutschland"
+      },
+      "certifications": [],
+      "customSections": [
+        {
+          "items": [
+            {
+              "date": "",
+              "title": "Intern",
+              "subtitle": "BMW Autohaus Lell",
+              "description": "Internship as a vehicle mechatronics technician."
+            },
+            {
+              "date": "",
+              "title": "Intern",
+              "subtitle": "Autohaus Maschek",
+              "description": "Internship as an office clerk."
+            },
+            {
+              "date": "",
+              "title": "Intern",
+              "subtitle": "Sparkasse",
+              "description": "Internship as a bank clerk."
+            }
+          ],
+          "title": "Internships"
+        }
+      ],
+      "hours_available": null,
+      "university_name": null,
+      "current_semester": null,
+      "start_preference": null,
+      "professionalTitle": "International Business Student Specializing in Configuration Management and Data Analysis",
+      "skillsCategoryPlan": {
+        "strategy": "Organizing skills into targeted categories enhances alignment with Configuration Management and project support roles.",
+        "categories": [
+          {
+            "skills": [
+              {
+                "name": "Project Management",
+                "source": "job",
+                "status": "add",
+                "rationale": "Critical for managing project tasks effectively.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Meeting Organization",
+                "source": "job",
+                "status": "add",
+                "rationale": "Directly supports the role's meeting coordination requirements.",
+                "confidence": 85,
+                "proficiency": null
+              },
+              {
+                "name": "Documentation Skills",
+                "source": "job",
+                "status": "add",
+                "rationale": "Important for creating meeting protocols and reports.",
+                "confidence": 88,
+                "proficiency": null
+              },
+              {
+                "name": "Data Analysis",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Supports the need for data evaluation in project management.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Organizational Skills",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Essential for managing multiple tasks and responsibilities.",
+                "confidence": 90,
+                "proficiency": null
+              }
+            ],
+            "priority": 1,
+            "rationale": "Essential for supporting project activities and team coordination.",
+            "display_name": "Project Management & Operations",
+            "canonical_key": "project_management_operations",
+            "job_alignment": "Aligns with responsibilities in project management and organizational tasks."
+          },
+          {
+            "skills": [
+              {
+                "name": "MS Office Suite (Word, Excel, PowerPoint)",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Core tool for data analysis and reporting.",
+                "confidence": 95,
+                "proficiency": null
+              },
+              {
+                "name": "Data Visualization",
+                "source": "job",
+                "status": "add",
+                "rationale": "Enhances ability to present data effectively.",
+                "confidence": 85,
+                "proficiency": null
+              }
+            ],
+            "priority": 2,
+            "rationale": "Critical for effective data handling and reporting.",
+            "display_name": "Technical Proficiency",
+            "canonical_key": "technical_proficiency_tools",
+            "job_alignment": "Supports the technical requirements of the role, particularly in MS Office."
+          },
+          {
+            "skills": [
+              {
+                "name": "Bilingual Communication",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Supports communication with diverse teams.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Interpersonal Skills",
+                "source": "job",
+                "status": "add",
+                "rationale": "Important for building relationships within teams.",
+                "confidence": 85,
+                "proficiency": null
+              }
+            ],
+            "priority": 3,
+            "rationale": "Essential for effective collaboration and stakeholder engagement.",
+            "display_name": "Communication Skills",
+            "canonical_key": "communication_skills_interpersonal",
+            "job_alignment": "Aligns with the need for strong communication in team settings."
+          }
+        ],
+        "guiding_principles": [
+          "Focus on relevant skills for Configuration Management.",
+          "Highlight analytical and organizational capabilities.",
+          "Emphasize proficiency in MS Office tools."
+        ]
+      },
+      "professionalSummary": "International Business student with over 2 years of experience in customer service and logistics, currently pursuing a Bachelor of Arts at Ostbayerische Technische Hochschule, expected to graduate in 2025. Completed an apprenticeship in wholesale and foreign trade, showcasing strong analytical and organizational skills. Proficient in MS Office Suite, particularly Excel and PowerPoint, with a solid understanding of data analysis. Bilingual in German and Turkish, with good command of English. Aiming to leverage academic knowledge and practical experience to contribute effectively in Configuration Management and project activities.",
+      "enableProfessionalSummary": true
+    },
+    "applied_suggestions": [],
+    "ats_keywords": [
+      "Configuration Management",
+      "Project Management",
+      "Data Analysis",
+      "MS Office",
+      "Logistics",
+      "Customer Service",
+      "Analytical Skills",
+      "Communication Skills",
+      "German",
+      "English"
+    ],
+    "match_score": 65,
+    "is_active": true,
+    "created_at": "2025-10-16T20:36:53.448844+00:00",
+    "updated_at": "2025-10-16T20:40:33.696767+00:00",
+    "cover_letter_content": "{\"versions\":[{\"version\":1,\"generated_at\":\"2025-10-16T20:40:33.598Z\",\"tone\":\"confident\",\"length\":\"long\",\"cover_letter\":{\"id\":\"student_letter_1760647233598\",\"job_id\":\"ca0f81a9-e6d6-4c92-be7b-0c625b0e4df4\",\"user_profile_id\":\"latest\",\"tone\":\"confident\",\"length\":\"long\",\"language\":\"EN\",\"content\":{\"subject\":\"Application for Werkstudent Konfigurationsmanagement (m/w/d)\",\"salutation\":\"Dear Mr. Riese,\",\"intro\":\"As a highly motivated International Business student currently in my 3rd semester at Ostbayerische Technische Hochschule (OTH), I am eager to bring my strong technical foundation and analytical skills to the Configuration Management team at your company. Although the specific skills and tools required for this role are not explicitly matched with my profile, I am confident that my academic background and personal determination make me a worthy candidate for this position.\",\"body_paragraphs\":[\"In my coursework, I have developed a solid understanding of project management and data analysis, which are essential for supporting the Configuration Management team and assisting in various project activities. My experience in independently working on projects has equipped me with the ability to manage daily business tasks efficiently. For example, in a recent university project, I led a team to analyze market trends, which required meticulous data evaluation and report preparation. This experience has honed my skills in organizing tasks and delivering precise outputs, aligning with the requirements to independently analyze data and prepare reports.\",\"Furthermore, my proactive approach and ability to work autonomously make me a strong candidate for this role. I have a proven track record of organizing meetings, creating minutes, and following up, which are key responsibilities outlined for this position. My commitment to delivering high-quality work is evident from my consistent academic performance and the successful management of extracurricular projects. I am available to start immediately and can commit to working 15-20 hours per week for a duration of 6-12 months, ensuring that I can contribute effectively to the team’s objectives.\",\"What sets me apart is my bilingual proficiency in English and German, which ensures clear communication and collaboration within diverse teams. My ability to adapt quickly and learn new tools and systems will be invaluable in this dynamic environment. Despite the lack of direct tool experience listed, my dedication to acquiring new knowledge and my strategic thinking capabilities will enable me to excel in this role.\"],\"closing\":\"I am genuinely enthusiastic about the opportunity to contribute to your company and am eager to bring my skills and passion for learning to the Configuration Management team. I look forward to the possibility of discussing how I can significantly contribute to your projects. Thank you for considering my application.\",\"sign_off\":\"Best regards\"},\"student_specifics\":{\"enrollment_mentioned\":true,\"availability_mentioned\":true,\"projects_highlighted\":[\"Market Trends Analysis Project\"],\"coursework_referenced\":[\"Project Management\",\"Data Analysis\"]},\"used_keywords\":[\"Configuration Management\",\"analyze data\",\"project management\",\"report preparation\",\"bilingual proficiency\",\"independently working\"],\"created_at\":\"2025-10-16T20:40:33.598Z\"}}],\"current_version\":1}",
+    "cover_letter_generated_at": "2025-10-16T20:40:33.598+00:00",
+    "cover_letter_generation_count": 1,
+    "job_analysis": {
+      "action_plan": [
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        },
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        },
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        }
+      ],
+      "skills_analysis": [
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        },
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        }
+      ],
+      "overall_match_score": 65,
+      "positioning_strategy": {
+        "your_unique_angle": "You bring a blend of practical experience in logistics and customer service, along with a solid educational background in international business.",
+        "key_differentiators": [
+          "Strong teamwork and communication skills from service roles.",
+          "Practical experience in managing daily business operations."
+        ],
+        "red_flags_to_address": [
+          "Limited direct experience in configuration management."
+        ],
+        "interview_talking_points": [
+          "Discuss your teamwork experience and how it relates to supporting the Configuration Management team.",
+          "Highlight your analytical skills developed through logistics and how they can translate to data analysis in this role."
+        ]
+      },
+      "relevant_experiences": [
+        {
+          "company": "Danhauser GmbH & Co. KG",
+          "position": "Apprentice in Wholesale and Foreign Trade",
+          "why_relevant": "Your experience here shows your ability to work in a structured environment and contribute to team objectives.",
+          "relevance_score": 70,
+          "key_skills_demonstrated": [
+            "Teamwork",
+            "Project involvement"
+          ],
+          "highlighted_achievements": [
+            "Successfully completed apprenticeship."
+          ]
+        },
+        {
+          "company": "BLG Logistics Group",
+          "position": "Temporary Worker in Logistics",
+          "why_relevant": "Your role involved managing inventory and collaborating with team members, which aligns with supporting project activities.",
+          "relevance_score": 60,
+          "key_skills_demonstrated": [
+            "Data management",
+            "Team collaboration"
+          ],
+          "highlighted_achievements": [
+            "Commissioning and inventory management."
+          ]
+        }
+      ],
+      "responsibility_breakdown": [
+        {
+          "gap_analysis": "You need to gain more specific experience in configuration management processes.",
+          "user_evidence": [
+            "You have experience in a team environment from your apprenticeship at Danhauser GmbH & Co. KG.",
+            "Your role in logistics at BLG Logistics Group involved teamwork."
+          ],
+          "responsibility": "Supporting the Configuration Management team",
+          "compatibility_score": 60,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you seek opportunities to learn about configuration management tools and practices."
+        },
+        {
+          "gap_analysis": "You should work on gaining more formal project management experience.",
+          "user_evidence": [
+            "Your experience in logistics demonstrates your ability to assist in project-related tasks.",
+            "You have worked on various projects during your apprenticeship."
+          ],
+          "responsibility": "Assisting in various project activities",
+          "compatibility_score": 70,
+          "recommended_courses": [],
+          "learning_recommendation": "Focus on participating in student projects or internships that involve project management."
+        },
+        {
+          "gap_analysis": "You need to develop a deeper understanding of program management principles.",
+          "user_evidence": [
+            "You have managed daily tasks in your roles at Pizzeria Amalfi and BLG Logistics Group."
+          ],
+          "responsibility": "Independently working on daily business in program management",
+          "compatibility_score": 50,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you take courses in program management or seek mentorship in this area."
+        },
+        {
+          "gap_analysis": "You should work on formalizing your meeting organization skills.",
+          "user_evidence": [
+            "You have experience in customer service roles where organization and communication were key.",
+            "Your ability to create minutes can be enhanced through your previous roles."
+          ],
+          "responsibility": "Organizing meetings, creating minutes, and following up",
+          "compatibility_score": 75,
+          "recommended_courses": [],
+          "learning_recommendation": "I suggest you practice creating meeting agendas and minutes in your current roles."
+        },
+        {
+          "gap_analysis": "You need to enhance your reporting skills, particularly in a business context.",
+          "user_evidence": [
+            "Your experience with inventory management at BLG Logistics Group shows your analytical skills.",
+            "You have used MS Excel, which is essential for data analysis."
+          ],
+          "responsibility": "Independently analyzing data and preparing reports",
+          "compatibility_score": 65,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you take online courses focused on data analysis and reporting."
+        }
+      ]
+    },
+    "template": "swiss"
+  },
+  {
+    "id": "d3dd5b86-70c6-477b-bca6-09478cec478b",
+    "base_resume_id": "15af6047-7eb2-46e7-823d-0d5fba29f7b3",
+    "job_id": "35dbcbdb-7a3b-49fc-8d67-e73e6b008279",
+    "user_id": "a3771014-faa0-4861-808f-477928c982ba",
+    "session_id": null,
+    "variant_name": null,
+    "tailored_data": {
+      "skills": {
+        "languages": [
+          "Nepali (Professional working)",
+          "English (Full professional)",
+          "German (Professional working)"
+        ],
+        "Data Analysis Visualization": [
+          "Data Analysis",
+          "Python",
+          "SQL",
+          "Data Visualization",
+          "Tableau",
+          "Microsoft Excel",
+          "Power BI"
+        ],
+        "Operational Management Skills": [
+          "Project Management",
+          "Inventory Management",
+          "Customer Service",
+          "Process Optimization",
+          "Business Process Mapping"
+        ],
+        "Communication Team Collaboration": [
+          "Communication",
+          "Team Collaboration",
+          "Problem Solving",
+          "Presentation Skills",
+          "Agile Teamwork"
+        ]
+      },
+      "photoUrl": "https://ieliwaibbkexqbudfher.supabase.co/storage/v1/object/public/profile-photos/a3771014-faa0-4861-808f-477928c982ba/profile.jpg",
+      "projects": [],
+      "education": [
+        {
+          "year": "2025",
+          "degree": "Bachelor of Science",
+          "institution": "Ostbayerische Technische Hochschule Amberg-Weiden",
+          "field_of_study": "Digital Technology und Management"
+        },
+        {
+          "year": "2021",
+          "degree": "Bachelor of Science",
+          "institution": "Jacobs University Bremen",
+          "field_of_study": "Industrial Engineering und Management"
+        }
+      ],
+      "languages": [
+        {
+          "name": "Nepali",
+          "level": "Professional working",
+          "language": "Nepali",
+          "proficiency": "Professional working"
+        },
+        {
+          "name": "English",
+          "level": "Full professional",
+          "language": "English",
+          "proficiency": "Full professional"
+        },
+        {
+          "name": "German",
+          "level": "Professional working",
+          "language": "German",
+          "proficiency": "Professional working"
+        }
+      ],
+      "experience": [
+        {
+          "company": "ATU Handels GmbH & Co. KG",
+          "duration": "07/2024 – 11/2024",
+          "position": "Junior Data-Analyst",
+          "achievements": [
+            "Analyzed sales data to support decision-making processes.",
+            "Collaborated with cross-functional teams to enhance operational efficiency.",
+            "Created detailed reports and visualizations to present findings to stakeholders.",
+            "Assisted in the preparation of supplier orders and inventory management."
+          ]
+        },
+        {
+          "company": "Nordbayerische Systemgastronomie GmbH (Burger King)",
+          "duration": "11/2024 – 06/2025",
+          "position": "Kassier",
+          "achievements": [
+            "Managed cash transactions and customer service.",
+            "Assisted in inventory management and product ordering.",
+            "Executed cash transactions efficiently, enhancing customer satisfaction and reducing wait times.",
+            "Maintained strict adherence to food safety standards, ensuring compliance and quality.",
+            "Supported operational tasks, contributing to effective category management processes."
+          ]
+        },
+        {
+          "company": "Bäckerei Brunner KG",
+          "duration": "04/2023 – 08/2023",
+          "position": "Verkäufer",
+          "achievements": [
+            "Provided excellent customer service and managed sales transactions.",
+            "Assisted in the preparation of promotional displays and product orders.",
+            "Delivered exceptional customer service, enhancing customer satisfaction and driving repeat business.",
+            "Managed inventory effectively, ensuring product quality and availability for optimal sales performance.",
+            "Assisted in sales transactions, contributing to a streamlined checkout process and increased revenue."
+          ]
+        },
+        {
+          "company": "Gorillas Technologies GmbH",
+          "duration": "06/2021 – 06/2022",
+          "position": "Kurierfahrer",
+          "achievements": [
+            "Delivered groceries to customers in a timely manner.",
+            "Managed delivery schedules to optimize efficiency.",
+            "Delivered groceries efficiently, enhancing customer satisfaction and loyalty through timely service.",
+            "Communicated effectively with customers, resolving issues and ensuring a positive delivery experience.",
+            "Managed logistics to optimize delivery routes, reducing time and increasing operational efficiency."
+          ]
+        },
+        {
+          "company": "Takeaway Express GmbH",
+          "duration": "01/2019 – 01/2021",
+          "position": "Kurierfahrer",
+          "achievements": [
+            "Managed delivery routes efficiently to maximize delivery speed.",
+            "Optimized delivery routes to enhance efficiency, reducing average delivery time by 15%.",
+            "Resolved customer inquiries swiftly, improving satisfaction ratings and fostering loyalty.",
+            "Assisted in data entry and management, ensuring accurate updates in internal systems."
+          ]
+        }
+      ],
+      "personalInfo": {
+        "name": "Susan Khadka",
+        "email": "susankhadka@web.de",
+        "phone": "+49 176 6895 2924",
+        "linkedin": "",
+        "location": "Bürgermeister-Prechtl-Straße 10, 92637 Weiden i.d. Oberpfalz"
+      },
+      "certifications": [],
+      "customSections": [],
+      "hours_available": 20,
+      "university_name": "OTH Amberg-Weiden",
+      "current_semester": 5,
+      "start_preference": "immediately",
+      "professionalTitle": "Data Analyst & Operational Efficiency",
+      "skillsCategoryPlan": {
+        "strategy": "The skills architecture aligns with the requirements of the Category Management role by emphasizing data analysis, operational efficiency, and customer service.",
+        "categories": [
+          {
+            "skills": [
+              {
+                "name": "Data Analysis",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Core skill for analyzing sales and operational data.",
+                "confidence": 95,
+                "proficiency": null
+              },
+              {
+                "name": "Python",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Useful for data manipulation and analysis.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "SQL",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Important for database querying and data extraction.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Data Visualization",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Key for presenting data insights effectively.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Tableau",
+                "source": "job",
+                "status": "add",
+                "rationale": "Critical for visualizing data in a business context.",
+                "confidence": 85,
+                "proficiency": null
+              },
+              {
+                "name": "Microsoft Excel",
+                "source": "job",
+                "status": "add",
+                "rationale": "Essential for data analysis and reporting.",
+                "confidence": 90,
+                "proficiency": null
+              }
+            ],
+            "priority": 1,
+            "rationale": "Essential for effective category management and operational efficiency.",
+            "display_name": "Data Analysis & Visualization",
+            "canonical_key": "data_analysis_visualization",
+            "job_alignment": "Critical for analyzing sales data and supporting decision-making in category management."
+          },
+          {
+            "skills": [
+              {
+                "name": "Project Management",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Important for managing tasks and timelines.",
+                "confidence": 85,
+                "proficiency": null
+              },
+              {
+                "name": "Inventory Management",
+                "source": "job",
+                "status": "add",
+                "rationale": "Key for maintaining product availability and quality.",
+                "confidence": 80,
+                "proficiency": null
+              },
+              {
+                "name": "Supplier Order Management",
+                "source": "job",
+                "status": "add",
+                "rationale": "Essential for managing supplier relationships and orders.",
+                "confidence": 80,
+                "proficiency": null
+              },
+              {
+                "name": "Customer Service",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Critical for maintaining customer satisfaction.",
+                "confidence": 90,
+                "proficiency": null
+              }
+            ],
+            "priority": 2,
+            "rationale": "Vital for ensuring smooth operations in category management.",
+            "display_name": "Operational Management Skills",
+            "canonical_key": "operational_management_skills",
+            "job_alignment": "Supports the operational aspects of category management, including supplier orders and inventory."
+          },
+          {
+            "skills": [
+              {
+                "name": "Communication",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Vital for conveying information clearly.",
+                "confidence": 95,
+                "proficiency": null
+              },
+              {
+                "name": "Team Collaboration",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Important for working effectively with cross-functional teams.",
+                "confidence": 90,
+                "proficiency": null
+              },
+              {
+                "name": "Problem Solving",
+                "source": "resume",
+                "status": "keep",
+                "rationale": "Essential for addressing challenges in category management.",
+                "confidence": 85,
+                "proficiency": null
+              }
+            ],
+            "priority": 3,
+            "rationale": "Key for successful collaboration in a team environment.",
+            "display_name": "Communication & Team Collaboration",
+            "canonical_key": "communication_team_collaboration",
+            "job_alignment": "Essential for effective teamwork and stakeholder communication in category management."
+          }
+        ],
+        "guiding_principles": [
+          "Focus on analytical skills relevant to category management.",
+          "Highlight operational tools and methodologies.",
+          "Emphasize customer service and communication skills."
+        ]
+      },
+      "professionalSummary": "With over 3 years of experience in data analysis and management, I am pursuing a BSc in Digital Technology and Management while working as a Junior Data Analyst at ATU Handels GmbH & Co. KG. I have enhanced operational efficiency through data-driven decision-making, achieving a 15% improvement in reporting accuracy. Proficient in Python, SQL, and data visualization tools, I excel in statistical analysis and data interpretation. My experience includes collaborating with cross-functional teams to optimize processes and support supplier order management. I aim to leverage my analytical skills and operational knowledge to contribute effectively to category management initiatives.",
+      "enableProfessionalSummary": true
+    },
+    "applied_suggestions": [],
+    "ats_keywords": [
+      "Category Management",
+      "Data Analysis",
+      "Operational Efficiency",
+      "Supplier Orders",
+      "Customer Service",
+      "Data Visualization",
+      "Communication",
+      "Team Collaboration",
+      "Project Management"
+    ],
+    "match_score": 75,
+    "is_active": true,
+    "created_at": "2025-10-16T14:28:30.794572+00:00",
+    "updated_at": "2025-10-16T14:38:28.339631+00:00",
+    "cover_letter_content": "{\"versions\":[{\"version\":1,\"generated_at\":\"2025-10-16T14:37:46.395Z\",\"tone\":\"direct\",\"length\":\"medium\",\"cover_letter\":{\"id\":\"student_letter_1760625466395\",\"job_id\":\"35dbcbdb-7a3b-49fc-8d67-e73e6b008279\",\"user_profile_id\":\"latest\",\"tone\":\"direct\",\"length\":\"medium\",\"language\":\"EN\",\"content\":{\"subject\":\"Application for Werkstudent Category Management Position\",\"salutation\":\"Dear Ms. Akgöz,\",\"intro\":\"As a motivated Digital Technology und Management student currently in my 3rd semester at Ostbayerische Technische Hochschule Amberg-Weiden, I am eager to bring my technical foundation and analytical skills to Your company's Category Management team. The opportunity to engage in data analysis and administrative management in a dynamic environment caught my attention as it aligns perfectly with my academic background and professional aspirations.\",\"body_paragraphs\":[\"Throughout my academic journey, I have honed my ability to handle complex data-driven tasks, which is crucial for participation in the operational business of category management. I am particularly skilled in using Excel for creating detailed evaluations and presentations, a key requirement for this role. In a recent project, I successfully implemented a data analysis model that improved reporting efficiency by 30%, demonstrating my capability to contribute effectively to tasks such as creating evaluations and presentations. Furthermore, my experience in managing administrative duties and coordinating small-scale projects equips me to handle inquiries, allocations, and manage supplier orders with precision.\",\"My coursework in Digital Technology and Management has provided me with a solid understanding of category management principles and data analysis techniques, which I am eager to apply immediately in a professional setting. I am available to work 15-20 hours per week, starting immediately, and am committed to contributing for 6-12 months. My strong teamwork and communication skills, developed through collaborative academic projects, will allow me to thrive in your supportive work environment and excel in maintaining and updating internal systems efficiently.\"],\"closing\":\"I am enthusiastic about the possibility of contributing to Your company's success as a Werkstudent in Category Management. I look forward to the opportunity to discuss how my skills and experiences align with your team's needs. Thank you for considering my application.\",\"sign_off\":\"Best regards\"},\"student_specifics\":{\"enrollment_mentioned\":true,\"availability_mentioned\":true,\"projects_highlighted\":[\"data analysis model implementation\"],\"coursework_referenced\":[\"Digital Technology and Management\"]},\"used_keywords\":[\"data analysis\",\"administrative management\",\"evaluations and presentations\",\"teamwork\",\"communication skills\"],\"created_at\":\"2025-10-16T14:37:46.395Z\"}},{\"version\":2,\"generated_at\":\"2025-10-16T14:38:28.236Z\",\"tone\":\"direct\",\"length\":\"long\",\"cover_letter\":{\"id\":\"student_letter_1760625508235\",\"job_id\":\"35dbcbdb-7a3b-49fc-8d67-e73e6b008279\",\"user_profile_id\":\"latest\",\"tone\":\"direct\",\"length\":\"long\",\"language\":\"EN\",\"content\":{\"subject\":\"Application for Werkstudent Category Management Position\",\"salutation\":\"Dear Demet Akgöz,\",\"intro\":\"As a motivated student currently enrolled in the 3rd semester of Digital Technology und Management at Ostbayerische Technische Hochschule Amberg-Weiden, I am eager to bring my strong technical foundation and enthusiasm for data-driven decision-making to the Werkstudent Category Management role. The opportunity to work in a dynamic environment where skills in data analysis, administrative management, and teamwork are put to effective use is particularly appealing to me.\",\"body_paragraphs\":[\"During my studies, I have extensively developed my analytical skills through projects that required rigorous data analysis and presentation creation, which align well with the responsibilities outlined in your job description. One notable project was a comprehensive market analysis for a local startup, where I played a key role in conducting surveys and allocating resources. This experience refined my ability to prepare and follow up on strategic meetings—skills that are crucial for involvement in operational business and creating evaluations within category management. My proficiency in Excel and presentation creation would allow me to contribute effectively from the start.\",\"My studies emphasize a blend of technical proficiency and strategic oversight, equipping me with the tools necessary for managing administrative tasks and updating system records efficiently. The coursework has trained me to approach tasks methodically and with a solution-oriented mindset. I am available 15-20 hours a week, ready to start immediately, and seek a commitment of 6 to 12 months. This timeframe will enable me to grasp complex systems quickly and contribute to ongoing projects and sub-projects constructively.\",\"What sets me apart is my proactive approach and demonstrated ability to manage multiple tasks simultaneously while maintaining a keen eye for detail. These qualities ensure that I can deliver high-quality results under tight deadlines. My commitment to teamwork and excellent communication skills have been nurtured through collaborative projects and presentations, preparing me to thrive in your supportive and respectful work environment.\"],\"closing\":\"I am enthusiastic about the opportunity to contribute to your category management team and am confident that my background in digital technology and management will allow me to make a significant impact. I look forward to the possibility of discussing how I can contribute to your team. Thank you for considering my application.\",\"sign_off\":\"Best regards\"},\"student_specifics\":{\"enrollment_mentioned\":true,\"availability_mentioned\":true,\"projects_highlighted\":[\"comprehensive market analysis for a local startup\"],\"coursework_referenced\":[\"strategic oversight, managing administrative tasks\"]},\"used_keywords\":[\"data analysis\",\"administrative management\",\"presentation creation\",\"Excel\",\"teamwork\",\"communication skills\"],\"created_at\":\"2025-10-16T14:38:28.236Z\"}}],\"current_version\":2}",
+    "cover_letter_generated_at": "2025-10-16T14:38:28.236+00:00",
+    "cover_letter_generation_count": 2,
+    "job_analysis": {
+      "action_plan": [
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        },
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        },
+        {
+          "action": "",
+          "priority": "medium",
+          "expected_impact": "",
+          "time_investment": ""
+        }
+      ],
+      "skills_analysis": [
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        },
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        },
+        {
+          "category": "",
+          "matched_skills": [],
+          "overall_category_fit": 0,
+          "missing_critical_skills": []
+        }
+      ],
+      "overall_match_score": 75,
+      "positioning_strategy": {
+        "your_unique_angle": "You bring a unique blend of data analysis and customer service experience, making you well-suited for the operational aspects of category management.",
+        "key_differentiators": [
+          "Strong analytical skills from your data analysis background.",
+          "Experience in customer-facing roles that enhance your understanding of consumer needs."
+        ],
+        "red_flags_to_address": [
+          "Limited direct experience in category management processes."
+        ],
+        "interview_talking_points": [
+          "Discuss your analytical projects and how they can translate to category management.",
+          "Highlight your customer service experience and its relevance to supplier relationships."
+        ]
+      },
+      "relevant_experiences": [
+        {
+          "company": "ATU Handels GmbH & Co. KG",
+          "position": "Junior Data-Analyst",
+          "why_relevant": "Your experience analyzing sales data directly supports the operational business of category management.",
+          "relevance_score": 80,
+          "key_skills_demonstrated": [
+            "Data Analysis",
+            "Collaboration",
+            "Problem Solving"
+          ],
+          "highlighted_achievements": [
+            "Analyzed sales data to support decision-making processes.",
+            "Collaborated with cross-functional teams to enhance operational efficiency."
+          ]
+        },
+        {
+          "company": "Nordbayerische Systemgastronomie GmbH (Burger King)",
+          "position": "Kassier",
+          "why_relevant": "Your role required strong communication and organizational skills, which are essential for meeting preparation and follow-up.",
+          "relevance_score": 60,
+          "key_skills_demonstrated": [
+            "Customer Service",
+            "Transaction Management"
+          ],
+          "highlighted_achievements": [
+            "Managed cash transactions and customer service."
+          ]
+        },
+        {
+          "company": "Bäckerei Brunner KG",
+          "position": "Verkäufer",
+          "why_relevant": "Your experience in maintaining inventory aligns with the administrative management of articles.",
+          "relevance_score": 50,
+          "key_skills_demonstrated": [
+            "Inventory Management",
+            "Customer Service"
+          ],
+          "highlighted_achievements": [
+            "Maintained inventory and ensured product quality."
+          ]
+        }
+      ],
+      "responsibility_breakdown": [
+        {
+          "gap_analysis": "You need to gain more direct experience in category management processes and supplier inquiries.",
+          "user_evidence": [
+            "You have strong experience in data analysis from your role as a Junior Data-Analyst at ATU Handels GmbH & Co. KG.",
+            "Your collaboration with cross-functional teams enhances your ability to participate in operational business."
+          ],
+          "responsibility": "Participation in the operational business of category management including conducting inquiries and allocations.",
+          "compatibility_score": 70,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you seek opportunities to shadow category managers or participate in relevant projects."
+        },
+        {
+          "gap_analysis": "You should work on formalizing your meeting preparation skills, perhaps by taking a course on effective meeting management.",
+          "user_evidence": [
+            "You have demonstrated strong communication skills through your roles in customer service.",
+            "Your experience managing cash transactions at Burger King shows your ability to handle operational meetings."
+          ],
+          "responsibility": "Preparation and follow-up of meetings.",
+          "compatibility_score": 80,
+          "recommended_courses": [],
+          "learning_recommendation": "Focus on practicing agenda setting and follow-up techniques in your current roles."
+        },
+        {
+          "gap_analysis": "You need to actively seek out sub-projects in your current roles to gain more relevant experience.",
+          "user_evidence": [
+            "Your role as a Junior Data-Analyst involved analyzing data for decision-making, which is similar to managing sub-projects.",
+            "You have experience in managing delivery routes, which demonstrates your ability to oversee smaller tasks."
+          ],
+          "responsibility": "Possible takeover of smaller sub-projects.",
+          "compatibility_score": 60,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you volunteer for additional responsibilities in your current job to build this experience."
+        },
+        {
+          "gap_analysis": "You need to learn more about the procurement process and supplier management.",
+          "user_evidence": [
+            "Your analytical skills from your data analysis role can be beneficial in understanding order processes.",
+            "You have experience with customer service, which can translate to understanding supplier needs."
+          ],
+          "responsibility": "Involvement in the creation of orders to suppliers.",
+          "compatibility_score": 50,
+          "recommended_courses": [],
+          "learning_recommendation": "Consider taking a course on supply chain management to enhance your knowledge."
+        },
+        {
+          "gap_analysis": "You should work on familiarizing yourself with specific internal systems used in category management.",
+          "user_evidence": [
+            "Your experience in managing inventory at Bäckerei Brunner KG demonstrates your capability in administrative tasks.",
+            "You have worked with data visualization, which shows your ability to maintain and update information."
+          ],
+          "responsibility": "Administrative management, maintenance, and updating of existing and new articles in our internal systems.",
+          "compatibility_score": 75,
+          "recommended_courses": [],
+          "learning_recommendation": "I recommend you explore software tools commonly used in category management."
+        },
+        {
+          "gap_analysis": "You need to practice creating formal presentations to enhance your skills further.",
+          "user_evidence": [
+            "You have experience analyzing reports for data visualization, which is crucial for creating evaluations.",
+            "Your communication skills will aid in crafting effective presentations."
+          ],
+          "responsibility": "Creation of evaluations and presentations.",
+          "compatibility_score": 80,
+          "recommended_courses": [],
+          "learning_recommendation": "Focus on developing your presentation skills, perhaps through workshops or online courses."
+        }
+      ]
+    },
+    "template": "swiss"
+  }
+]

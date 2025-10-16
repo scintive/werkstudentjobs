@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-16T23:30:43.085Z",
+  "tables": [
+    "user_profiles",
+    "user_sessions",
+    "resume_data",
+    "resume_variants",
+    "resume_suggestions",
+    "companies",
+    "jobs",
+    "job_match_results",
+    "ai_cache",
+    "link_verifications",
+    "cover_letters"
+  ],
+  "supabaseUrl": "https://ieliwaibbkexqbudfher.supabase.co",
+  "backupCompleted": true
+}
