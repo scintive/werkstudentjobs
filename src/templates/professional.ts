@@ -27,18 +27,18 @@ export function generateProfessionalResumeHTML(data: any): string {
 
         @page {
             size: A4;
-            margin: 0;
+            margin: 8mm 0 8mm 0;
         }
         
-        /* Page break optimization */
+        /* Page break optimization - Let sections flow naturally */
         .experience-item, .project-item, .education-item, .certification-item {
             page-break-inside: avoid;
             break-inside: avoid;
         }
         
-        .section {
-            page-break-inside: avoid;
-            break-inside: avoid;
+        .section-header {
+            page-break-after: avoid;
+            break-after: avoid;
         }
         
         .sidebar-header {
@@ -119,12 +119,12 @@ export function generateProfessionalResumeHTML(data: any): string {
             }
         }
         .sidebar {
-            padding: 10mm 8mm 10mm 8mm;
+            padding: 0 8mm;
             position: relative;
             z-index: 2;
         }
         .main-content {
-            padding: 10mm 12mm 10mm 12mm;
+            padding: 0 12mm;
             position: relative;
             z-index: 2;
         }

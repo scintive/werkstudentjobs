@@ -22,18 +22,18 @@ export function generateClassicResumeHTML(data: any): string {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page {
             size: A4;
-            margin: 15mm 15mm 15mm 15mm;
+            margin: 10mm 0 10mm 0;
         }
         
-        /* Page break optimization */
-        .section {
+        /* Page break optimization - Let sections flow naturally */
+        .experience-item, .education-item, .project-item, .certification-item {
             page-break-inside: avoid;
             break-inside: avoid;
         }
         
-        .experience-item, .education-item, .project-item {
-            page-break-inside: avoid;
-            break-inside: avoid;
+        .section-header {
+            page-break-after: avoid;
+            break-after: avoid;
         }
         
         body {
@@ -54,7 +54,7 @@ export function generateClassicResumeHTML(data: any): string {
             width: 100%;
             max-width: none;
             min-height: 297mm;
-            padding: 0;
+            padding: 0 15mm;
             margin: 0;
         }
         
@@ -64,7 +64,7 @@ export function generateClassicResumeHTML(data: any): string {
                 width: 210mm;
                 max-width: 210mm;
                 margin: 0 auto;
-                padding: 0;
+                padding: 0 15mm;
             }
         }
         
