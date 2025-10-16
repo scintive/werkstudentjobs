@@ -1,0 +1,109 @@
+╔══════════════════════════════════════════════════════════════╗
+║     GOOGLE OAUTH DEPLOYMENT - FINAL CHECKLIST              ║
+╚══════════════════════════════════════════════════════════════╝
+
+📋 CODE REVIEW - ALL CHANGES VERIFIED:
+
+✅ Login Page (src/app/login/page.tsx)
+   - handleGoogleLogin function added
+   - Google Sign-in button with proper styling
+   - Redirects to: window.location.origin/auth/callback
+   - Error handling implemented
+
+✅ Register Page (src/app/register/page.tsx)  
+   - handleGoogleSignUp function added
+   - Google Sign-up button with proper styling
+   - Same OAuth flow as login
+   - Error handling implemented
+
+✅ OAuth Callback Handler (src/app/auth/callback/route.ts)
+   - Receives OAuth code from Google
+   - Exchanges code for Supabase session
+   - Sets httpOnly cookies for security
+   - Redirects to /dashboard on success
+   - Redirects to /login on failure
+
+⚠️  BEFORE DEPLOYING - YOU MUST COMPLETE:
+
+Step 1: Google Cloud Console
+  □ Go to https://console.cloud.google.com/
+  □ Create OAuth 2.0 credentials
+  □ Add these redirect URIs:
+    - https://ieliwaibbkexqbudfher.supabase.co/auth/v1/callback
+    - https://werkstudentjobs.com/auth/callback
+    - https://www.werkstudentjobs.com/auth/callback
+  □ Copy Client ID (format: xxxxxx.apps.googleusercontent.com)
+  □ Copy Client Secret (format: GOCSPX-xxxxxxxx)
+
+Step 2: Supabase Dashboard
+  □ Open https://app.supabase.com/project/ieliwaibbkexqbudfher
+  □ Go to Authentication → Providers → Google
+  □ Enable Google (toggle ON)
+  □ Paste Client ID
+  □ Paste Client Secret
+  □ Click SAVE
+
+Step 3: Verify Configuration
+  □ Check all redirect URIs are correct
+  □ Verify Client ID & Secret are saved in Supabase
+  □ Confirm Google provider shows as "Enabled"
+
+═══════════════════════════════════════════════════════════════
+
+🚀 READY TO DEPLOY?
+
+Once ALL checkboxes above are checked, run:
+
+    vercel --prod
+
+═══════════════════════════════════════════════════════════════
+
+📊 WHAT USERS WILL SEE:
+
+Login Page:
+  ┌─────────────────────────────┐
+  │ Email: _________           │
+  │ Password: ______           │
+  │ [Sign in]                  │
+  │                            │
+  │ ──── Or continue with ──── │
+  │                            │
+  │ [🔵 Sign in with Google]   │
+  └─────────────────────────────┘
+
+Register Page:
+  ┌─────────────────────────────┐
+  │ Email: _________           │
+  │ Password: ______           │
+  │ [Sign up]                  │
+  │                            │
+  │ ──── Or continue with ──── │
+  │                            │
+  │ [🔵 Sign up with Google]   │
+  └─────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+
+🎯 TESTING AFTER DEPLOYMENT:
+
+1. Visit: https://werkstudentjobs.com/login
+2. Click: "Sign in with Google"
+3. Complete Google authentication
+4. Verify: Redirected to /dashboard
+5. Check: User is logged in
+
+═══════════════════════════════════════════════════════════════
+
+⚠️  IMPORTANT NOTES:
+
+❌ DON'T use Firebase config values - They won't work!
+   Wrong: apiKey, authDomain, projectId
+   Right: OAuth Client ID & Secret
+
+✅ DO use exact redirect URIs - Any mismatch will fail!
+   Must be: https://ieliwaibbkexqbudfher.supabase.co/auth/v1/callback
+
+✅ DO test with your email first
+   Add yourself as test user in Google Cloud Console
+
+═══════════════════════════════════════════════════════════════
