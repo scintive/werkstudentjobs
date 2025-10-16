@@ -351,7 +351,9 @@ export function useSupabaseResumeActions() {
     saveNow: async (template?: string) => {
       if (mode === 'tailor' && variantId) {
         const { resumeVariantService } = await import('@/lib/services/resumeVariantService')
-        await resumeVariantService.updateVariant(variantId, resumeData)
+        // CRITICAL FIX: Pass template to updateVariant so it's saved in resume_variants.template column
+        await resumeVariantService.updateVariant(variantId, resumeData, undefined, template)
+        console.log(`💾 Template "${template}" saved to variant ${variantId}`)
       } else {
         await resumeService.current.saveResumeData(resumeData, template)
       }

@@ -239,56 +239,59 @@ export async function POST(request: NextRequest) {
     
     if (!student_profile && user_profile_id) {
       if (user_profile_id === 'latest') {
-        // Use the profile API to get the latest profile
-        const baseUrl = process.env.NEXTJS_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        // CRITICAL FIX: Instead of calling /api/profile/latest via fetch (which loses auth context),
+        // directly query the database using the same Supabase client
+        console.log('🎓 COVER LETTER: Fetching profile directly from database (authenticated user:', authUserId, ')');
 
-        // Forward all relevant headers (auth, cookies)
-        const authHeader = request.headers.get('authorization');
-        const cookieHeader = request.headers.get('cookie');
+        // Get resume data for authenticated user
+        const { data: resumeDataList, error: resumeError } = await supabase
+          .from('resume_data')
+          .select('*')
+          .eq('user_id', authUserId as any)
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
-        console.log('🎓 COVER LETTER: Calling /api/profile/latest');
-        console.log('🎓 COVER LETTER: Auth header received:', authHeader ? `${authHeader.substring(0, 20)}...` : 'NONE');
-        console.log('🎓 COVER LETTER: Cookie header received:', cookieHeader ? `${cookieHeader.length} bytes` : 'NONE');
+        if (resumeError || !resumeDataList || resumeDataList.length === 0) {
+          console.error('🎓 COVER LETTER: Failed to fetch resume data:', resumeError);
+          return NextResponse.json(
+            { error: 'User profile not found', details: 'No resume data found for user' },
+            { status: 404 }
+          );
+        }
 
-        const fetchHeaders: Record<string, string> = {
-          'Content-Type': 'application/json'
+        const resumeRecord = resumeDataList[0] as any;
+        console.log('🎓 COVER LETTER: Found resume data for user');
+
+        // Get photo and student info from user_profiles
+        let photoUrl = resumeRecord.photo_url || null;
+        const { data: userProfileData } = await supabase
+          .from('user_profiles')
+          .select('photo_url, hours_available, current_semester, university_name, start_preference')
+          .eq('user_id', authUserId as any)
+          .single();
+
+        if (userProfileData && (userProfileData as any).photo_url) {
+          photoUrl = (userProfileData as any).photo_url;
+        }
+
+        const dbProfile = {
+          personalInfo: resumeRecord.personal_info || {},
+          professionalTitle: resumeRecord.professional_title || '',
+          professionalSummary: resumeRecord.professional_summary || '',
+          skills: resumeRecord.skills || {},
+          experience: resumeRecord.experience || [],
+          education: resumeRecord.education || [],
+          projects: resumeRecord.projects || [],
+          certifications: resumeRecord.certifications || [],
+          customSections: resumeRecord.custom_sections || [],
+          photoUrl: photoUrl,
+          hours_available: (userProfileData as any)?.hours_available,
+          current_semester: (userProfileData as any)?.current_semester,
+          university_name: (userProfileData as any)?.university_name,
+          start_preference: (userProfileData as any)?.start_preference
         };
-        if (authHeader) {
-          fetchHeaders['Authorization'] = authHeader;
-          console.log('🎓 COVER LETTER: Forwarding Authorization header');
-        }
-        if (cookieHeader) {
-          fetchHeaders['Cookie'] = cookieHeader;
-          console.log('🎓 COVER LETTER: Forwarding Cookie header');
-        }
 
-        console.log('🎓 COVER LETTER: Fetch headers:', Object.keys(fetchHeaders));
-
-        const profileResponse = await fetch(`${baseUrl}/api/profile/latest`, {
-          headers: fetchHeaders,
-          cache: 'no-store'
-        });
-
-        if (!profileResponse.ok) {
-          console.error('🎓 STUDENT COVER LETTER: Profile API failed:', profileResponse.status);
-          return NextResponse.json(
-            { error: 'User profile not found', details: 'Profile API request failed' },
-            { status: 404 }
-          );
-        }
-
-        const profileResponse_data = await profileResponse.json();
-
-        if (!profileResponse_data.success || !profileResponse_data.profile) {
-          console.error('🎓 STUDENT COVER LETTER: No profile in response');
-          return NextResponse.json(
-            { error: 'User profile not found', details: 'No profile data in response' },
-            { status: 404 }
-          );
-        }
-
-        console.log('🎓 STUDENT COVER LETTER: Found profile via API');
-        const dbProfile = profileResponse_data.profile;
+        console.log('🎓 COVER LETTER: Profile loaded successfully');
 
         // Extract user's actual name from profile
         const userName = dbProfile.personalInfo?.name ||
@@ -296,7 +299,7 @@ export async function POST(request: NextRequest) {
                         dbProfile.name ||
                         '';
 
-        console.log('🎓 STUDENT COVER LETTER: Extracted user name:', userName);
+        console.log('🎓 COVER LETTER: Extracted user name:', userName);
 
         // Extract CURRENT (latest) education from education array
         const currentEducation = dbProfile.education && dbProfile.education.length > 0
