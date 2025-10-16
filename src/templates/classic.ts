@@ -16,13 +16,13 @@ export function generateClassicResumeHTML(data: any): string {
             --text-primary: #1a1a1a;
             --text-secondary: #4a4a4a;
             --accent-color: #8b7355;
-            --bg-primary: #fffef8;
+            --bg-primary: #ffffff;
             --border-color: #2c2c2c;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page {
             size: A4;
-            margin: 10mm 10mm 10mm 10mm;
+            margin: 15mm 15mm 15mm 15mm;
         }
         
         /* Page break optimization */
@@ -54,7 +54,7 @@ export function generateClassicResumeHTML(data: any): string {
             width: 100%;
             max-width: none;
             min-height: 297mm;
-            padding: 10mm 10mm 10mm 10mm;
+            padding: 0;
             margin: 0;
         }
         
@@ -64,6 +64,7 @@ export function generateClassicResumeHTML(data: any): string {
                 width: 210mm;
                 max-width: 210mm;
                 margin: 0 auto;
+                padding: 0;
             }
         }
         

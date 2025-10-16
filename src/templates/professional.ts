@@ -78,7 +78,7 @@ export function generateProfessionalResumeHTML(data: any): string {
             position: absolute;
             top: 0;
             left: 0;
-            width: 38%;
+            width: 32%;
             height: 100%;
             background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--accent-subtle) 100%);
             z-index: 0;
@@ -88,7 +88,7 @@ export function generateProfessionalResumeHTML(data: any): string {
             content: '';
             position: absolute;
             top: 0;
-            left: 38%;
+            left: 32%;
             width: 3px;
             height: 100%;
             background: var(--primary-color);
@@ -99,32 +99,32 @@ export function generateProfessionalResumeHTML(data: any): string {
             position: relative;
             z-index: 2;
             display: grid;
-            grid-template-columns: 38% 62%;
+            grid-template-columns: 32% 68%;
             min-height: 100vh;
         }
 
         /* For PDF generation, use exact measurements */
         @media print {
             .resume-container::before {
-                width: 75mm;
+                width: 67mm;
             }
             .resume-container::after {
-                left: 75mm;
+                left: 67mm;
             }
             .content-wrapper {
                 width: 210mm;
                 max-width: 210mm;
-                grid-template-columns: 75mm 135mm;
+                grid-template-columns: 67mm 143mm;
                 margin: 0 auto;
             }
         }
         .sidebar {
-            padding: 8mm 6mm 10mm 6mm;
+            padding: 10mm 8mm 10mm 8mm;
             position: relative;
             z-index: 2;
         }
         .main-content {
-            padding: 8mm 8mm 10mm 8mm;
+            padding: 10mm 12mm 10mm 12mm;
             position: relative;
             z-index: 2;
         }

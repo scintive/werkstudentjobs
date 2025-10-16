@@ -701,6 +701,14 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
               continue;
             }
 
+            // PATTERN 5: Filter out "used keywords" paragraphs (metadata that shouldn't be in content)
+            if (itemStr.match(/^(used[\s_-]*keywords|keywords[\s_-]*used|naturally[\s_-]*integrated[\s_-]*keywords)/i) ||
+                itemStr.match(/^\[.*keyword.*\]$/i) ||
+                itemStr.match(/^["']?(used_keywords|keywords_used)["']?[\s:]*\[/i)) {
+              console.log(`🚫 CLEANUP: Skipping keywords metadata: ${itemStr.substring(0, 50)}`);
+              continue;
+            }
+
             // If it's a real paragraph (substantive content), keep it
             if (itemStr.length > 50) {
               cleanedParagraphs.push(itemStr);
