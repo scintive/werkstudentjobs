@@ -18,7 +18,8 @@ async function getPuppeteer() {
 async function getChromium() {
   if (_chromium) return _chromium;
   try {
-    _chromium = await import('@sparticuz/chromium');
+    const chromiumModule = await import('@sparticuz/chromium');
+    _chromium = chromiumModule.default;
   } catch (e) {
     console.log('⚠️ @sparticuz/chromium not available, using default Chrome');
     return null;
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Use serverless Chrome executable on Vercel
     if (chromium) {
-      launchOptions.executablePath = await chromium.executablePath();
+      launchOptions.executablePath = await chromium.executablePath;
     }
 
     browser = await puppeteer.launch(launchOptions);
