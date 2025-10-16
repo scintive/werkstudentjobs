@@ -11,7 +11,7 @@ import {
   Wand2, Zap, Crown, Diamond, Eye, Edit3, Users, Globe2,
   Award, Star, MessageCircle, Brain, Lightbulb, ChevronDown,
   ChevronUp, PenTool, Layers, Palette, Layout, Search, Filter,
-  Settings, Loader2
+  Settings, Loader2, ExternalLink
 } from 'lucide-react';
 
 import type { JobStrategy, CoverLetter, ResumePatch } from '@/lib/types/jobStrategy';
@@ -2973,6 +2973,33 @@ function DownloadKitTab({
       zip.file(resumeData.filename, resumeData.blob);
       zip.file(coverLetterData.filename, coverLetterData.blob);
 
+      // Add application link as README.txt
+      if (job) {
+        const applicationLink = job.application_link || job.job_description_link || job.portal_link || job.linkedin_url;
+        if (applicationLink) {
+          const readmeContent = `APPLICATION INFORMATION
+======================
+
+Company: ${job.companies?.name || job.company_name || 'N/A'}
+Position: ${job.title || 'N/A'}
+
+APPLICATION LINK:
+${applicationLink}
+
+INSTRUCTIONS:
+1. Visit the link above to submit your application
+2. Attach the Resume PDF from this kit
+3. Attach the Cover Letter PDF from this kit
+4. Complete any additional application form fields
+
+Good luck with your application!
+
+Generated: ${new Date().toLocaleString()}
+`;
+          zip.file('_APPLICATION_LINK.txt', readmeContent);
+        }
+      }
+
       setDownloadProgress('Finalizing download...');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
 
@@ -3029,6 +3056,9 @@ function DownloadKitTab({
     }
   };
 
+  // Get application link
+  const applicationLink = job?.application_link || job?.job_description_link || job?.portal_link || job?.linkedin_url;
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
@@ -3037,6 +3067,59 @@ function DownloadKitTab({
           Download your complete application package or individual documents
         </p>
       </div>
+
+      {/* Application Link - Prominently Display */}
+      {applicationLink && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="bg-blue-500 text-white p-3 rounded-lg">
+              <ExternalLink className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Ready to Apply?
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Submit your application to {job?.companies?.name || job?.company_name || 'the company'} using the link below.
+              </p>
+              <div className="bg-white rounded-lg p-4 mb-4 border border-blue-200">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Application Portal:</p>
+                    <a 
+                      href={applicationLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline break-all text-sm"
+                    >
+                      {applicationLink}
+                    </a>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(applicationLink);
+                      alert('Application link copied to clipboard!');
+                    }}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2 shrink-0"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <a
+                href={applicationLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-lg hover:shadow-xl transition-all font-medium"
+              >
+                <ExternalLink className="w-5 h-5" />
+                Open Application Portal
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Completion Status */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
