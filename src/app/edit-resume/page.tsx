@@ -7,6 +7,9 @@ import { PerfectStudio } from '@/components/resume-editor/PerfectStudio'
 import { SupabaseResumeProvider } from '@/lib/contexts/SupabaseResumeContext'
 import { EditModeProvider } from '@/lib/contexts/EditModeContext'
 
+// Force dynamic rendering to prevent build-time errors with auth
+export const dynamic = 'force-dynamic'
+
 export default function EditResumePage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(true)

@@ -8,6 +8,9 @@ import { EditModeProvider } from '@/lib/contexts/EditModeContext'
 import { RequireAuth } from '@/components/auth/RequireAuth'
 import type { UserProfile } from '@/lib/types'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // This page now uses the full-featured JobBrowser component
 // instead of the basic job list
 function JobsContent() {
