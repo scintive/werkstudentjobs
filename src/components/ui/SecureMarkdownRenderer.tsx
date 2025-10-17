@@ -2,7 +2,7 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import DOMPurify from 'isomorphic-dompurify';
+import { sanitizeHtml } from '@/lib/utils/htmlSanitizer';
 import { cn } from '@/lib/utils';
 
 interface SecureMarkdownRendererProps {
@@ -22,27 +22,8 @@ export function SecureMarkdownRenderer({
   const sanitizedContent = React.useMemo(() => {
     if (!content) return '';
 
-    // Configure DOMPurify for strict sanitization
-    const cleanHtml = DOMPurify.sanitize(content, {
-      ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'blockquote', 'a', 'span'
-      ],
-      ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
-      ALLOW_DATA_ATTR: false,
-      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input', 'button'],
-      FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover'],
-      // Force all links to open in new tab with secure attributes
-      RETURN_DOM_FRAGMENT: false,
-      RETURN_DOM: false,
-      SANITIZE_DOM: true,
-      KEEP_CONTENT: false,
-      IN_PLACE: false,
-      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    });
-
-    return cleanHtml;
+    // Use our custom sanitizer to prevent XSS
+    return sanitizeHtml(content);
   }, [content]);
 
   const baseStyles = {

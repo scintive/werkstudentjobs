@@ -4,7 +4,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bold, Italic, Underline, Highlighter, Type, Trash2, Undo, Redo, Link } from "lucide-react"
 import { cn } from "@/lib/utils"
-import DOMPurify from 'isomorphic-dompurify'
+import { sanitizeHtml as sanitizeHtmlUtil } from '@/lib/utils/htmlSanitizer'
 
 interface EnhancedRichTextProps {
   value: string
@@ -40,13 +40,8 @@ export const EnhancedRichText = ({
 
   // Sanitize HTML content to prevent XSS
   const sanitizeHtml = React.useCallback((html: string): string => {
-    return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'span', 'br', 'p', 'div', 'a', 'mark'],
-      ALLOWED_ATTR: ['href', 'style', 'class'],
-      ALLOW_DATA_ATTR: false,
-      FORBID_TAGS: ['script', 'iframe', 'form', 'input', 'button'],
-      FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover'],
-    })
+    // Use our custom sanitizer to prevent XSS
+    return sanitizeHtmlUtil(html)
   }, [])
 
   // Sync with props only when not editing

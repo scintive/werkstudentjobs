@@ -2,7 +2,7 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import DOMPurify from 'isomorphic-dompurify';
+import { sanitizeHtml } from '@/lib/utils/htmlSanitizer';
 import { cn } from '@/lib/utils';
 
 interface MarkdownRendererProps {
@@ -16,18 +16,8 @@ export function MarkdownRenderer({ content, className, variant = 'default' }: Ma
   const sanitizedContent = React.useMemo(() => {
     if (!content) return '';
 
-    // Configure DOMPurify for markdown content
-    return DOMPurify.sanitize(content, {
-      ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'blockquote', 'a', 'span'
-      ],
-      ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
-      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input'],
-      FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover', 'onmouseout'],
-      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    });
+    // Use our custom sanitizer to prevent XSS
+    return sanitizeHtml(content);
   }, [content]);
   const baseStyles = {
     default: "prose prose-sm max-w-none",
