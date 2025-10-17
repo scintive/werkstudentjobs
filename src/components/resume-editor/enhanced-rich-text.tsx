@@ -4,6 +4,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bold, Italic, Underline, Highlighter, Type, Trash2, Undo, Redo, Link } from "lucide-react"
 import { cn } from "@/lib/utils"
+import DOMPurify from 'isomorphic-dompurify'
 
 interface EnhancedRichTextProps {
   value: string
@@ -37,13 +38,25 @@ export const EnhancedRichText = ({
   const debounceTimerRef = React.useRef<NodeJS.Timeout | undefined>(undefined)
   const [selectedText, setSelectedText] = React.useState('')
 
+  // Sanitize HTML content to prevent XSS
+  const sanitizeHtml = React.useCallback((html: string): string => {
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'span', 'br', 'p', 'div', 'a', 'mark'],
+      ALLOWED_ATTR: ['href', 'style', 'class'],
+      ALLOW_DATA_ATTR: false,
+      FORBID_TAGS: ['script', 'iframe', 'form', 'input', 'button'],
+      FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover'],
+    })
+  }, [])
+
   // Sync with props only when not editing
   React.useEffect(() => {
     if (!isEditing) {
-      setLocalValue(value)
-      setLastSavedValue(value)
+      const sanitized = sanitizeHtml(value)
+      setLocalValue(sanitized)
+      setLastSavedValue(sanitized)
     }
-  }, [value, isEditing])
+  }, [value, isEditing, sanitizeHtml])
   
   // Cleanup on unmount
   React.useEffect(() => {
@@ -139,7 +152,8 @@ export const EnhancedRichText = ({
     }
     
     if (editorRef.current) {
-      const newValue = editorRef.current.innerHTML
+      const rawValue = editorRef.current.innerHTML
+      const newValue = sanitizeHtml(rawValue) // Sanitize before saving
       // Only update if value actually changed to prevent unnecessary re-renders
       if (newValue !== value) {
         pushToUndoStack(localValue)
@@ -149,7 +163,7 @@ export const EnhancedRichText = ({
     }
     setIsEditing(false)
     setShowToolbar(false)
-  }, [onChange, pushToUndoStack, localValue, value])
+  }, [onChange, pushToUndoStack, localValue, value, sanitizeHtml])
 
   const applyFormatting = React.useCallback((command: string, value?: string) => {
     if (!editorRef.current || !isEditing) return
@@ -194,12 +208,13 @@ export const EnhancedRichText = ({
       
       if (result) {
         // Update local value after successful formatting
-        const newContent = editorRef.current.innerHTML
+        const rawContent = editorRef.current.innerHTML
+        const newContent = sanitizeHtml(rawContent) // Sanitize after formatting
         setLocalValue(newContent)
-        
+
         // Trigger onChange to update parent component
         onChange(newContent)
-        
+
         // Keep focus on editor
         editorRef.current.focus()
       }
@@ -210,7 +225,7 @@ export const EnhancedRichText = ({
         editorRef.current.focus()
       }
     }
-  }, [isEditing, onChange])
+  }, [isEditing, onChange, sanitizeHtml])
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     // CRITICAL: Prevent all default behaviors that could cause page refresh

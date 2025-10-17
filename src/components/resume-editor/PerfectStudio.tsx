@@ -664,6 +664,7 @@ export function PerfectStudio({
   const [localData, setLocalData] = React.useState(resumeData)
   const [localSkillsPlan, setLocalSkillsPlan] = React.useState<any>(resumeData?.skillsCategoryPlan || null)
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
+  const [showPreviewOnMobile, setShowPreviewOnMobile] = React.useState(false)
 
   // Debug logging for photoUrl
   React.useEffect(() => {
@@ -1243,11 +1244,41 @@ export function PerfectStudio({
         variantId={variantId}
       />
 
+      {/* Mobile Preview Toggle - Sticky */}
+      <div className="lg:hidden sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">
+            {showPreviewOnMobile ? 'Preview' : 'Edit Resume'}
+          </h3>
+          <Button
+            onClick={() => setShowPreviewOnMobile(!showPreviewOnMobile)}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            {showPreviewOnMobile ? (
+              <>
+                <Edit3 className="w-4 h-4" />
+                Edit
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4" />
+                Preview
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
       {/* Main Editor Layout */}
-      <div className="flex w-full" style={{ height: 'calc(100vh - 80px)' }}>
+      <div className="flex flex-col lg:flex-row w-full" style={{ height: 'calc(100vh - 80px)' }}>
         {/* Editor Panel */}
-        <div className="w-[45%] bg-white overflow-y-auto border-r" style={{ borderColor: 'var(--border, #e5e7eb)' }}>
-          <div className="p-6 space-y-4">
+        <div className={cn(
+          "w-full lg:w-[45%] bg-white overflow-y-auto border-b lg:border-b-0 lg:border-r",
+          showPreviewOnMobile && "hidden lg:block"
+        )} style={{ borderColor: 'var(--border, #e5e7eb)' }}>
+          <div className="p-4 sm:p-6 space-y-4">
             
             {/* Suggestions Summary Banner */}
             {suggestionsEnabled && suggestions.length > 0 && (
@@ -1883,8 +1914,11 @@ export function PerfectStudio({
         </div>
 
         {/* Preview Panel */}
-        <div className="w-[55%] bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
-          <div className="p-8">
+        <div className={cn(
+          "w-full lg:w-[55%] bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto",
+          !showPreviewOnMobile && "hidden lg:block"
+        )}>
+          <div className="p-4 sm:p-8">
             <div className="bg-white rounded-lg shadow-xl mx-auto" style={{ maxWidth: '850px' }}>
               {previewHtml ? (
                 <iframe

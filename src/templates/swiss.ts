@@ -2,6 +2,7 @@
 // Used for both preview and PDF generation
 
 import { ResumeData } from '@/lib/types';
+import { escapeHtml, sanitizeUrl, sanitizeEmail, sanitizePhone } from '@/lib/utils/htmlSanitizer';
 
 export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInResume?: boolean }): string {
   const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
@@ -366,20 +367,20 @@ export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInRe
     <div class="resume-container">
         <div class="content-wrapper">
             <aside class="sidebar">
-            ${photoUrl ? `<img src="${photoUrl}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
+            ${photoUrl ? `<img src="${sanitizeUrl(photoUrl)}" alt="Profile Photo" class="profile-photo" crossorigin="anonymous" />` : ''}
             <header>
-                <h1 class="name" data-section="name">${personalInfo.name || ''}</h1>
-                <div class="title" data-section="title">${professionalTitle || 'Professional'}</div>
-                ${personalInfo.customHeader ? `<div style="font-size: 8px; color: var(--text-secondary); margin-top: 2mm; font-style: italic;">${personalInfo.customHeader}</div>` : ''}
+                <h1 class="name" data-section="name">${escapeHtml(personalInfo.name) || ''}</h1>
+                <div class="title" data-section="title">${escapeHtml(professionalTitle) || 'Professional'}</div>
+                ${personalInfo.customHeader ? `<div style="font-size: 8px; color: var(--text-secondary); margin-top: 2mm; font-style: italic;">${escapeHtml(personalInfo.customHeader)}</div>` : ''}
             </header>
             
             <section>
                 <h2 class="section-header">Contact</h2>
-                ${personalInfo.phone ? `<div class="contact-item">${personalInfo.phone}</div>` : ''}
-                ${personalInfo.email ? `<div class="contact-item">${personalInfo.email}</div>` : ''}
-                ${personalInfo.location ? `<div class="contact-item">${personalInfo.location}</div>` : ''}
-                ${personalInfo.linkedin ? `<div class="contact-item">${personalInfo.linkedin}</div>` : ''}
-                ${personalInfo.website ? `<div class="contact-item">${personalInfo.website}</div>` : ''}
+                ${personalInfo.phone ? `<div class="contact-item">${sanitizePhone(personalInfo.phone)}</div>` : ''}
+                ${personalInfo.email ? `<div class="contact-item">${sanitizeEmail(personalInfo.email)}</div>` : ''}
+                ${personalInfo.location ? `<div class="contact-item">${escapeHtml(personalInfo.location)}</div>` : ''}
+                ${personalInfo.linkedin ? `<div class="contact-item">${escapeHtml(personalInfo.linkedin)}</div>` : ''}
+                ${personalInfo.website ? `<div class="contact-item">${escapeHtml(personalInfo.website)}</div>` : ''}
             </section>
             
             ${Object.keys(skills).length > 0 ? `

@@ -5,30 +5,46 @@ import ReactMarkdown from 'react-markdown';
 import DOMPurify from 'isomorphic-dompurify';
 import { cn } from '@/lib/utils';
 
-interface MarkdownRendererProps {
+interface SecureMarkdownRendererProps {
   content: string;
   className?: string;
   variant?: 'default' | 'compact' | 'elegant';
+  allowHtml?: boolean; // Default false for security
 }
 
-export function MarkdownRenderer({ content, className, variant = 'default' }: MarkdownRendererProps) {
-  // Sanitize content before rendering to prevent XSS attacks
+export function SecureMarkdownRenderer({
+  content,
+  className,
+  variant = 'default',
+  allowHtml = false
+}: SecureMarkdownRendererProps) {
+  // Sanitize content before rendering to prevent XSS
   const sanitizedContent = React.useMemo(() => {
     if (!content) return '';
 
-    // Configure DOMPurify for markdown content
-    return DOMPurify.sanitize(content, {
+    // Configure DOMPurify for strict sanitization
+    const cleanHtml = DOMPurify.sanitize(content, {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'a', 'span'
       ],
       ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
-      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input'],
-      FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover', 'onmouseout'],
-      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+      ALLOW_DATA_ATTR: false,
+      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input', 'button'],
+      FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover'],
+      // Force all links to open in new tab with secure attributes
+      RETURN_DOM_FRAGMENT: false,
+      RETURN_DOM: false,
+      SANITIZE_DOM: true,
+      KEEP_CONTENT: false,
+      IN_PLACE: false,
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     });
+
+    return cleanHtml;
   }, [content]);
+
   const baseStyles = {
     default: "prose prose-sm max-w-none",
     compact: "prose prose-xs max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-li:my-0.5 prose-li:text-xs prose-p:text-xs",
@@ -42,17 +58,19 @@ export function MarkdownRenderer({ content, className, variant = 'default' }: Ma
     prose-em:text-gray-600 prose-em:italic
     prose-ul:list-none prose-ul:pl-0
     prose-li:relative prose-li:pl-6 prose-li:mb-2
-    prose-li:before:content-['•'] prose-li:before:absolute prose-li:before:left-0 
+    prose-li:before:content-['•'] prose-li:before:absolute prose-li:before:left-0
     prose-li:before:text-blue-500 prose-li:before:font-bold prose-li:before:text-lg
     prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
     prose-code:text-sm prose-code:font-medium prose-code:text-gray-800
+    prose-a:text-blue-600 prose-a:underline prose-a:underline-offset-2
   `;
 
   return (
     <div className={cn(baseStyles[variant], customStyles, className)}>
       <ReactMarkdown
+        skipHtml={!allowHtml}
         components={{
-          // Custom heading styling
+          // Custom heading styling with security
           h3: ({ children }) => (
             <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
               {children}
@@ -93,7 +111,25 @@ export function MarkdownRenderer({ content, className, variant = 'default' }: Ma
             <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-medium text-gray-800">
               {children}
             </code>
-          )
+          ),
+          // Secure link handling
+          a: ({ href, children, ...props }) => {
+            // Validate URL to prevent javascript: protocol XSS
+            const isValidUrl = href && !href.toLowerCase().startsWith('javascript:');
+            const sanitizedHref = isValidUrl ? href : '#';
+
+            return (
+              <a
+                href={sanitizedHref}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                {...props}
+              >
+                {children}
+              </a>
+            );
+          }
         }}
       >
         {sanitizedContent}

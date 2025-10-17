@@ -27,7 +27,9 @@ import {
   LayoutDashboard,
   PenTool,
   Target,
-  Bell
+  Bell,
+  Menu,
+  X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -42,6 +44,7 @@ export default function AppHeader() {
   const [email, setEmail] = React.useState<string | null>(null)
   const [userName, setUserName] = React.useState<string>('')
   const [photoUrl, setPhotoUrl] = React.useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -155,16 +158,16 @@ export default function AppHeader() {
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo and Desktop Navigation */}
+          {/* Logo */}
           <div className="flex items-center">
-            <Link href={email ? "/dashboard" : "/"} className="flex items-center space-x-3 group">
+            <Link href={email ? "/dashboard" : "/"} className="flex items-center space-x-2 sm:space-x-3 group">
               <img
                 src="/werkstudentjobslogo.png"
                 alt="WerkStudentJobs"
-                className="h-12 w-auto transition-transform duration-300 group-hover:scale-105"
+                className="h-10 sm:h-12 w-auto transition-transform duration-300 group-hover:scale-105"
               />
               <div className="hidden sm:flex items-center gap-2">
-                <span className="text-2xl font-semibold tracking-normal leading-none text-blue-600">
+                <span className="text-xl sm:text-2xl font-semibold tracking-normal leading-none text-blue-600">
                   WerkStudentJobs
                 </span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50/50 text-blue-600/60 border border-blue-200/30">
@@ -175,7 +178,7 @@ export default function AppHeader() {
 
             {/* Desktop Navigation - Only show when authenticated */}
             {email && (
-              <nav className="hidden md:ml-8 md:flex md:space-x-1">
+              <nav className="hidden lg:ml-8 lg:flex lg:space-x-1">
                 {navigationItems.map((item) => {
                   const Icon = item.icon
                   const isActive = isActiveRoute(item.href)
@@ -206,20 +209,29 @@ export default function AppHeader() {
           </div>
 
           {/* Right side - User menu or Auth buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {email ? (
               <>
-                {/* Edit Resume Button */}
-                <Link href="/edit-resume" prefetch={true}>
+                {/* Edit Resume Button - Desktop */}
+                <Link href="/edit-resume" prefetch={true} className="hidden md:block">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="hidden sm:flex"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Edit Resume
                   </Button>
                 </Link>
+
+                {/* Mobile Menu Button - Mobile Only */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lg:hidden"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </Button>
 
                 {/* User Dropdown */}
                 <DropdownMenu>
@@ -239,13 +251,13 @@ export default function AppHeader() {
                             </span>
                           </div>
                         )}
-                        <div className="hidden sm:block text-left">
+                        <div className="hidden md:block text-left">
                           <p className="text-sm font-medium text-gray-900">
                             {userName || 'User'}
                           </p>
                           <p className="text-xs text-gray-500">{email}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-gray-400 rotate-90" />
+                        <ChevronRight className="hidden md:block w-4 h-4 text-gray-400 rotate-90" />
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -267,7 +279,7 @@ export default function AppHeader() {
                 </DropdownMenu>
               </>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Link href="/login" prefetch={true}>
                   <Button
                     variant="ghost"
@@ -282,13 +294,56 @@ export default function AppHeader() {
                     size="sm"
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 border-0"
                   >
-                    Register
+                    <span className="hidden sm:inline">Register</span>
+                    <span className="sm:hidden">Sign Up</span>
                   </Button>
                 </Link>
               </div>
             )}
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {email && mobileMenuOpen && (
+          <div className="lg:hidden border-t border-gray-200 py-3 space-y-1">
+            {navigationItems.map((item) => {
+              const Icon = item.icon
+              const isActive = isActiveRoute(item.href)
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 text-base font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-orange-50 text-orange-600"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                  {item.label}
+                  {item.badge && (
+                    <Badge variant="secondary" className="ml-auto px-1.5 py-0 h-5 text-xs">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </Link>
+              )
+            })}
+
+            {/* Edit Resume in Mobile Menu */}
+            <Link
+              href="/edit-resume"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 text-base font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors md:hidden"
+            >
+              <FileText className="w-5 h-5" />
+              Edit Resume
+            </Link>
+          </div>
+        )}
       </div>
 
     </header>

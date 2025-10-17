@@ -1033,7 +1033,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
   return (
     <div className={cn("w-full h-screen flex flex-col bg-gray-50", className)}>
       {/* Header Section - Ultra Compact */}
-      <div className="bg-white border-b border-gray-200 px-6 py-2 flex-shrink-0 w-full">
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2 flex-shrink-0 w-full">
         <div className="flex items-center justify-between mb-2">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Find Your Perfect Role</h2>
@@ -1055,14 +1055,14 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
           </div>
 
           {/* Modern Filter Row */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-medium text-gray-600">Filter by:</span>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Filter by:</span>
 
             {/* Work Mode Filter */}
             <Select value={selectedWorkMode} onValueChange={setSelectedWorkMode}>
-              <SelectTrigger className="h-9 w-[140px] bg-white border-gray-200 text-sm">
-                <div className="flex items-center gap-2">
-                  <Laptop className="w-4 h-4 text-gray-500" />
+              <SelectTrigger className="h-9 w-[110px] sm:w-[140px] bg-white border-gray-200 text-xs sm:text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Laptop className="w-3 sm:w-4 h-3 sm:h-4 text-gray-500" />
                   <SelectValue placeholder="Any mode" />
                 </div>
               </SelectTrigger>
@@ -1076,9 +1076,9 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
             {/* Job Type Filter */}
             <Select value={selectedJobType} onValueChange={setSelectedJobType}>
-              <SelectTrigger className="h-9 w-[160px] bg-white border-gray-200 text-sm">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-gray-500" />
+              <SelectTrigger className="h-9 w-[130px] sm:w-[160px] bg-white border-gray-200 text-xs sm:text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Briefcase className="w-3 sm:w-4 h-3 sm:h-4 text-gray-500" />
                   <SelectValue placeholder="All types" />
                 </div>
               </SelectTrigger>
@@ -1091,9 +1091,9 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
             {/* Time Filter (Latest Jobs) */}
             <Select value={selectedTimeFilter} onValueChange={setSelectedTimeFilter}>
-              <SelectTrigger className="h-9 w-[160px] bg-white border-gray-200 text-sm">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-gray-500" />
+              <SelectTrigger className="h-9 w-[130px] sm:w-[160px] bg-white border-gray-200 text-xs sm:text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Clock className="w-3 sm:w-4 h-3 sm:h-4 text-gray-500" />
                   <SelectValue placeholder="All time" />
                 </div>
               </SelectTrigger>
@@ -1245,9 +1245,12 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
       )}
 
       {/* LinkedIn-style Layout: Jobs List + Job Details */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel: Jobs List - Compact */}
-        <div className="w-1/3 min-w-0 bg-white border-r border-gray-200 overflow-y-auto">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Left Panel: Jobs List - Compact - Full width on mobile, 1/3 on desktop */}
+        <div className={cn(
+          "w-full md:w-1/3 min-w-0 bg-white border-b md:border-b-0 md:border-r border-gray-200 overflow-y-auto",
+          selectedJob && "hidden md:block"
+        )}>
           <div className="p-2">
             <div className="text-xs text-gray-600 mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1572,12 +1575,24 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         </div>
 
         {/* Right Panel: Job Details */}
-        <div className="flex-1 min-w-0 overflow-y-auto bg-white">
+        <div className={cn(
+          "flex-1 min-w-0 overflow-y-auto bg-white",
+          !selectedJob && "hidden md:block"
+        )}>
           {selectedJob ? (
             <div className="h-full">
+              {/* Back Button - Mobile Only */}
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="md:hidden sticky top-0 z-10 w-full flex items-center gap-2 px-4 py-3 bg-white border-b border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5 rotate-180" />
+                <span className="font-medium">Back to Jobs</span>
+              </button>
+
               {/* Job Header - Enhanced with match score emphasis */}
               <motion.div
-                className="border-b border-gray-200 p-3 relative overflow-hidden bg-white"
+                className="border-b border-gray-200 p-3 sm:p-4 relative overflow-hidden bg-white"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}

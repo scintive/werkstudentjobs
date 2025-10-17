@@ -12,7 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <CookieConsentProvider>
       <div className="min-h-screen flex flex-col">
         <AppHeader />
-        <main className="flex-1" style={{ background: 'var(--background)' }}>
+        <main className="flex-1 w-full" style={{ background: 'var(--background)' }}>
           {children}
         </main>
         <Footer />

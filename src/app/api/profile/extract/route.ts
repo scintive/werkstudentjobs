@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { llmService } from '@/lib/services/llmService';
+import { validateFile, checkRateLimit } from '@/lib/utils/apiValidation';
 // Lazy import puppeteer to avoid bundling/runtime issues
 let _puppeteer: any = null;
 async function getPuppeteer() {
@@ -69,6 +70,15 @@ async function extractTextFromPDF(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting for expensive PDF extraction operation
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`pdf-extract:${ip}`, 10, 300000)) { // 10 requests per 5 minutes
+      return NextResponse.json(
+        { error: 'Too many extraction requests. Please wait a few minutes and try again.' },
+        { status: 429, headers: { 'Retry-After': '300' } }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -76,9 +86,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    if (file.type && file.type !== 'application/pdf') {
-      // Some browsers omit type; only enforce when present
-      return NextResponse.json({ error: `Only PDF files are supported (received ${file.type})` }, { status: 400 });
+    // Validate file upload for security
+    const validation = validateFile(file, {
+      maxSizeMB: 10,
+      allowedTypes: ['application/pdf'],
+      allowedExtensions: ['.pdf']
+    });
+
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Extract text from PDF
