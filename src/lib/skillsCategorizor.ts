@@ -268,16 +268,16 @@ export function autoCategorizeSkills(skills: string[]): SkillCategories {
  * Migrate existing skills structure to new universal categories
  * Handles both legacy (technical, tools, soft_skills, languages) and new format
  */
-export function migrateSkillsStructure(currentSkills: any): SkillCategories {
+export function migrateSkillsStructure(currentSkills: unknown): SkillCategories {
   // Handle different possible skill structures
   let allSkills: string[] = []
-  
+
   if (Array.isArray(currentSkills)) {
     // Simple array of skills
     allSkills = currentSkills
   } else if (typeof currentSkills === 'object' && currentSkills !== null) {
     // Object structure - collect all skills from all categories
-    Object.values(currentSkills).forEach((skillList: any) => {
+    Object.values(currentSkills as Record<string, unknown>).forEach((skillList: unknown) => {
       if (Array.isArray(skillList)) {
         allSkills.push(...skillList)
       }

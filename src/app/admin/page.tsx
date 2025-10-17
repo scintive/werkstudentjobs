@@ -19,7 +19,7 @@ export default function AdminPage() {
       } else {
         setMessage('Error checking profiles')
       }
-    } catch (error) {
+    } catch {
       setMessage('Error checking profiles')
     }
     setLoading(false)
@@ -40,7 +40,7 @@ export default function AdminPage() {
       } else {
         setMessage('Error deleting profiles')
       }
-    } catch (error) {
+    } catch {
       setMessage('Error deleting profiles')
     }
     setLoading(false)
@@ -64,7 +64,7 @@ export default function AdminPage() {
       } else {
         setMessage('Error clearing session')
       }
-    } catch (error) {
+    } catch {
       setMessage('Error clearing session')
     }
     setLoading(false)

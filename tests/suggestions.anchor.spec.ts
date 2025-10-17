@@ -1,8 +1,20 @@
 import { test, expect } from '@playwright/test'
 
-test('experience suggestions fallback anchor produces targetPath in UI transform', async ({ request }) => {
+test('experience suggestions fallback anchor produces targetPath in UI transform', async () => {
   // This test simulates DB row shape and ensures our client transform creates canonical targetPath
-  const row = {
+  const row: {
+    id: string;
+    variant_id: string;
+    section: string;
+    suggestion_type: string;
+    target_id: string;
+    original_content: string;
+    suggested_content: string;
+    rationale: string;
+    keywords: string[];
+    confidence: number;
+    impact: string;
+  } = {
     id: '00000000-0000-0000-0000-000000000001',
     variant_id: '00000000-0000-0000-0000-000000000002',
     section: 'experience',
@@ -14,7 +26,7 @@ test('experience suggestions fallback anchor produces targetPath in UI transform
     keywords: [],
     confidence: 90,
     impact: 'high'
-  } as any
+  }
 
   // Reuse the same normalization logic as hook
   const canonicalizePath = (raw?: string | null): string | undefined => {

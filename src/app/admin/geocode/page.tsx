@@ -5,10 +5,38 @@ import { useState } from 'react';
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic';
 
+interface GeocodeStats {
+  stats?: {
+    total_jobs?: number;
+    jobs_with_coordinates?: number;
+    jobs_without_coordinates?: number;
+    geocoding_completion?: string;
+  };
+}
+
+interface GeocodeResult {
+  id: string;
+  location: string;
+  status: string;
+  coordinates?: [number, number];
+}
+
+interface GeocodeResults {
+  stats?: {
+    processed: number;
+    updated: number;
+    errors: number;
+    success_rate: string;
+  };
+  results?: GeocodeResult[];
+  error?: string;
+  details?: string;
+}
+
 export default function GeocodePage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [stats, setStats] = useState<any>(null);
-  const [results, setResults] = useState<any>(null);
+  const [stats, setStats] = useState<GeocodeStats | null>(null);
+  const [results, setResults] = useState<GeocodeResults | null>(null);
 
   const checkStats = async () => {
     try {
@@ -185,7 +213,7 @@ export default function GeocodePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {results.results.map((result: any, index: number) => (
+                        {results.results.map((result, index) => (
                           <tr key={index} className={
                             result.status === 'success' ? 'bg-green-50' :
                             result.status === 'error' ? 'bg-red-50' :

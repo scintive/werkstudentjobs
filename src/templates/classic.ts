@@ -1,8 +1,10 @@
 // Classic Resume Template - Harvard Style
 // Single Source of Truth for both preview and PDF generation
 
-export function generateClassicResumeHTML(data: any): string {
-  const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
+import { ResumeData } from '@/lib/types';
+
+export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsInResume?: boolean }): string {
+  const { personalInfo, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume } = data;
   
   return `<!DOCTYPE html>
 <html lang="en">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { 
@@ -63,23 +63,7 @@ export default function FeedbackAdminPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    checkAuthorization()
-  }, [])
-
-  const checkAuthorization = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user || user.email !== 'varunmisra@gmail.com') {
-      router.push('/dashboard')
-      return
-    }
-
-    setIsAuthorized(true)
-    loadFeedback()
-  }
-
-  const loadFeedback = async () => {
+  const loadFeedback = useCallback(async () => {
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -94,7 +78,23 @@ export default function FeedbackAdminPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  const checkAuthorization = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user || user.email !== 'varunmisra@gmail.com') {
+      router.push('/dashboard')
+      return
+    }
+
+    setIsAuthorized(true)
+    loadFeedback()
+  }, [router, loadFeedback])
+
+  useEffect(() => {
+    checkAuthorization()
+  }, [checkAuthorization])
 
   const updateStatus = async (id: string, newStatus: FeedbackStatus) => {
     setUpdatingId(id)

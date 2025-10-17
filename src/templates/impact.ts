@@ -1,7 +1,9 @@
 // Impact Resume Template - Bold, Colorful, Eye-catching
 // Designed to make a memorable impression on recruiters
 
-export function generateImpactResumeHTML(data: any): string {
+import { ResumeData } from '@/lib/types';
+
+export function generateImpactResumeHTML(data: ResumeData & { showSkillLevelsInResume?: boolean }): string {
   const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
   
   // Dynamic color palette - vibrant but professional (no purple!)
@@ -825,7 +827,7 @@ export function generateImpactResumeHTML(data: any): string {
                         </div>
                         <h2 class="section-title" style="color: ${colors.success};">Certifications</h2>
                     </div>
-                    ${certifications.map((cert, idx) => `
+                    ${certifications.map((cert) => `
                         <div class="certification-item">
                             <div class="cert-badge">✓</div>
                             <div class="cert-content">

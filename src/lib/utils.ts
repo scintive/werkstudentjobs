@@ -45,7 +45,7 @@ export function truncate(text: string, length: number): string {
 /**
  * Debounce function for input handling
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: never[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -70,7 +70,7 @@ export function generateId(): string {
 export function safeJsonParse<T>(json: string, fallback: T): T {
   try {
     return JSON.parse(json);
-  } catch (error) {
+  } catch {
     return fallback;
   }
 }

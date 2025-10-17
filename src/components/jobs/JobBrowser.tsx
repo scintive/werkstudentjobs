@@ -358,6 +358,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
   const [locationSearch, setLocationSearch] = React.useState<string>('')
   const [distanceRadius, setDistanceRadius] = React.useState<number>(100)
   const [selectedJobType, setSelectedJobType] = React.useState<string>('all')
+  const [selectedTimeFilter, setSelectedTimeFilter] = React.useState<string>('all') // Latest jobs filter
   const [tailoredFilter, setTailoredFilter] = React.useState<'all' | 'only' | 'hide'>('all')
   const [sortBy, setSortBy] = React.useState<string>('date') // Default to latest jobs first
   const [savedJobs, setSavedJobs] = React.useState<Set<string>>(new Set())
@@ -981,6 +982,18 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
       })
     }
 
+    // Time filter (Latest jobs only)
+    if (selectedTimeFilter !== 'all') {
+      const now = new Date()
+      const cutoffDays = parseInt(selectedTimeFilter)
+      const cutoffDate = new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000)
+
+      filtered = filtered.filter(job => {
+        const jobDate = new Date(job.posted_at || job.created_at || 0)
+        return jobDate >= cutoffDate
+      })
+    }
+
     // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -1004,7 +1017,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
     })
 
     return filtered
-  }, [enhancedJobs, searchQuery, selectedTab, selectedWorkMode, selectedLocation, locationSearch, distanceRadius, selectedJobType, tailoredFilter, sortBy, savedJobs, appliedJobs, tailoredJobs])
+  }, [enhancedJobs, searchQuery, selectedTab, selectedWorkMode, selectedLocation, locationSearch, distanceRadius, selectedJobType, selectedTimeFilter, tailoredFilter, sortBy, savedJobs, appliedJobs, tailoredJobs])
 
   // Get unique locations for filter
   const locations = React.useMemo(() => {
@@ -1073,6 +1086,23 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                 <SelectItem value="all">All types</SelectItem>
                 <SelectItem value="internship">Internships</SelectItem>
                 <SelectItem value="werkstudent">Werkstudent</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Time Filter (Latest Jobs) */}
+            <Select value={selectedTimeFilter} onValueChange={setSelectedTimeFilter}>
+              <SelectTrigger className="h-9 w-[160px] bg-white border-gray-200 text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <SelectValue placeholder="All time" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All time</SelectItem>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="14">Last 14 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="60">Last 60 days</SelectItem>
               </SelectContent>
             </Select>
 

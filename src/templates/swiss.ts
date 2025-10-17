@@ -1,7 +1,9 @@
 // Swiss Resume Template - Single Source of Truth
 // Used for both preview and PDF generation
 
-export function generateSwissResumeHTML(data: any): string {
+import { ResumeData } from '@/lib/types';
+
+export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInResume?: boolean }): string {
   const { personalInfo, professionalTitle, professionalSummary, enableProfessionalSummary, skills, experience, projects, education, certifications, customSections, languages, showSkillLevelsInResume, photoUrl } = data;
 
   console.log('📸 SWISS TEMPLATE: Received photoUrl =', photoUrl);

@@ -4,9 +4,7 @@ export const maxDuration = 300; // 5 minutes for Vercel Pro
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { llmService } from '@/lib/services/llmService';
-import { fastMatchingService } from '@/lib/services/fastMatchingService';
-import type { StudentJobStrategy, StudentProfile } from '@/lib/types/studentProfile';
-import type { UserProfile } from '@/lib/types';
+import type { StudentJobStrategy } from '@/lib/types/studentProfile';
 
 // Cache for student strategies
 const studentStrategyCache = new Map<string, { strategy: StudentJobStrategy; timestamp: number }>();
@@ -15,7 +13,7 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 /**
  * Generate profile hash for cache
  */
-function generateProfileHash(profile: any): string {
+function generateProfileHash(profile: Record<string, unknown>): string {
   const key = JSON.stringify({
     skills: profile.skills,
     coursework: profile.relevant_coursework,
@@ -59,8 +57,21 @@ export async function POST(request: NextRequest) {
       .single();
 
     // Type assertion for jobData to fix Vercel build issues
-    // Using 'as any' because Supabase's type inference doesn't handle nested select fields properly
-    const jobDataTyped = jobData as any;
+    // Using type assertion because Supabase's type inference doesn't handle nested select fields properly
+    const jobDataTyped = jobData as Record<string, unknown> & {
+      title?: string;
+      company_name?: string;
+      skills?: string[];
+      tools?: string[];
+      responsibilities?: string[];
+      nice_to_have?: string[];
+      work_mode?: string;
+      location_city?: string;
+      location_country?: string;
+      language_required?: string;
+      german_required?: string;
+      hours_per_week?: string;
+    };
 
     if (jobError || !jobData) {
       return NextResponse.json(
@@ -70,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Fetch or use provided student profile
-    let profileData: any = student_profile;
+    let profileData: Record<string, unknown> = student_profile;
     
     if (!profileData && user_profile_id) {
       const { data: dbProfile, error: profileError } = await supabase
@@ -126,15 +137,15 @@ export async function POST(request: NextRequest) {
         degree: profileData.degree_program || 'Computer Science',
         year: profileData.current_year || 3,
         graduation: profileData.expected_graduation || '2025-06',
-        coursework: (profileData.relevant_coursework || []).slice(0, 5).map((c: any) => ({
+        coursework: (Array.isArray(profileData.relevant_coursework) ? profileData.relevant_coursework : []).slice(0, 5).map((c: Record<string, unknown>) => ({
           name: c.course_name,
-          topics: c.relevant_topics?.slice(0, 3),
-          project: c.projects?.[0]
+          topics: Array.isArray(c.relevant_topics) ? c.relevant_topics.slice(0, 3) : undefined,
+          project: Array.isArray(c.projects) ? c.projects[0] : undefined
         })),
-        projects: (profileData.academic_projects || []).slice(0, 3).map((p: any) => ({
+        projects: (Array.isArray(profileData.academic_projects) ? profileData.academic_projects : []).slice(0, 3).map((p: Record<string, unknown>) => ({
           title: p.title,
-          tech: p.technologies?.slice(0, 4),
-          metrics: p.metrics?.slice(0, 2)
+          tech: Array.isArray(p.technologies) ? p.technologies.slice(0, 4) : undefined,
+          metrics: Array.isArray(p.metrics) ? p.metrics.slice(0, 2) : undefined
         })),
         skills: profileData.skills || [],
         tools: profileData.tools || [],

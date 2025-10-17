@@ -96,7 +96,7 @@ export interface ExtractedJob {
 }
 
 export interface JobData {
-  raw: any;
+  raw: Record<string, unknown>;
   extracted: ExtractedJob;
 }
 
@@ -174,7 +174,9 @@ export interface ResumeData {
       details?: string[];
     }>;
   }>;
-  skillsCategoryPlan?: any;
+  skillsCategoryPlan?: {
+    categories: Array<{ key: string; name: string; skills: string[] }>;
+  };
 }
 
 export interface TemplateConfig {

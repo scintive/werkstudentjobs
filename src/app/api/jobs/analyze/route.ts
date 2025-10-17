@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   return NextResponse.json(
     { error: 'Method not allowed. Use POST to analyze jobs.' },
     { status: 405 }

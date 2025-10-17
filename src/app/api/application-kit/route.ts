@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { variantId, jobId, userName, companyName, jobTitle } = body;
+    const { variantId, userName, companyName, jobTitle } = body;
 
     if (!variantId) {
       return NextResponse.json({ error: 'Variant ID is required' }, { status: 400 });

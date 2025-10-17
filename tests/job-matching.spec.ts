@@ -100,8 +100,8 @@ test.describe('Job Matching and Filtering', () => {
     const data = await response.json()
 
     // Skill-heavy job should score higher (skills have 50% weight vs tools 20%)
-    const skillJobScore = data.find((j: any) => j.id === 'skill-job')?.match_score
-    const toolJobScore = data.find((j: any) => j.id === 'tool-job')?.match_score
+    const skillJobScore = data.find((j: { id: string }) => j.id === 'skill-job')?.match_score
+    const toolJobScore = data.find((j: { id: string }) => j.id === 'tool-job')?.match_score
 
     expect(skillJobScore).toBeGreaterThan(toolJobScore)
   })
@@ -177,8 +177,8 @@ test.describe('Job Matching and Filtering', () => {
     expect(response.ok()).toBeTruthy()
     const data = await response.json()
 
-    const remoteScore = data.find((j: any) => j.id === 'remote-job')
-    const onsiteScore = data.find((j: any) => j.id === 'onsite-job')
+    const remoteScore = data.find((j: { id: string }) => j.id === 'remote-job')
+    const onsiteScore = data.find((j: { id: string }) => j.id === 'onsite-job')
 
     expect(remoteScore.matchCalculation.locationFit).toBeDefined()
     expect(onsiteScore.matchCalculation.locationFit).toBeDefined()
@@ -226,17 +226,17 @@ test.describe('Job Matching and Filtering', () => {
 })
 
 test.describe('Job Filtering', () => {
-  test.skip('should filter jobs by location', async ({ page }) => {
+  test.skip('should filter jobs by location', async () => {
     // This would require setting up test data in the database
     // Placeholder for future implementation
   })
 
-  test.skip('should filter jobs by remote option', async ({ page }) => {
+  test.skip('should filter jobs by remote option', async () => {
     // This would require setting up test data in the database
     // Placeholder for future implementation
   })
 
-  test.skip('should sort jobs by match score', async ({ page }) => {
+  test.skip('should sort jobs by match score', async () => {
     // This would require setting up test data in the database
     // Placeholder for future implementation
   })
