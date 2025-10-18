@@ -66,7 +66,7 @@ export async function validateBody<T>(
         error: NextResponse.json(
           {
             error: 'Validation failed',
-            details: error.errors.map(e => ({
+            details: error.issues.map((e: z.ZodIssue) => ({
               path: e.path.join('.'),
               message: e.message,
             })),
@@ -242,7 +242,7 @@ export async function validateAuth(
  * Create a secure response with proper headers
  */
 export function secureResponse(
-  data: any,
+  data: unknown,
   status: number = 200,
   headers: Record<string, string> = {}
 ): NextResponse {

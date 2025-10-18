@@ -85,15 +85,16 @@ export async function POST(request: NextRequest) {
           companyId = existingCompany.id;
         } else {
           // Create company
+          const research = companyResearch.research as Record<string, unknown> | null | undefined;
           const { data: newCompany, error: companyError } = await supabaseAdmin
             .from('companies')
             .insert({
               name: job.company,
-              description: companyResearch.research?.overview || '',
-              industry: companyResearch.research?.industry || '',
-              size: companyResearch.research?.size || '',
-              website: companyResearch.research?.website || '',
-              logo_url: companyResearch.research?.logo_url || null,
+              description: (research?.overview as string | undefined) || '',
+              industry: (research?.industry as string | undefined) || '',
+              size: (research?.size as string | undefined) || '',
+              website: (research?.website as string | undefined) || '',
+              logo_url: (research?.logo_url as string | null | undefined) || null,
             })
             .select('id')
             .single();
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 5: Insert job into database
+        const extractedJobData = extractedJob as unknown as Record<string, unknown>;
         const { data: newJob, error: jobError } = await supabaseAdmin
           .from('jobs')
           .insert({
@@ -128,19 +130,19 @@ export async function POST(request: NextRequest) {
             company_name: job.company,
             description: job.description,
             description_original: job.description,
-            location: (extractedJob as any).location || job.location,
-            location_city: (extractedJob as any).city || '',
-            work_mode: job.workMode || (extractedJob as any).work_mode || 'Unknown',
+            location: (extractedJobData.location as string | undefined) || job.location,
+            location_city: (extractedJobData.city as string | undefined) || '',
+            work_mode: job.workMode || (extractedJobData.work_mode as string | undefined) || 'Unknown',
             url: job.url,
-            salary_range: job.salary || (extractedJob as any).salary_range || '',
-            employment_type: (extractedJob as any).employment_type || 'Werkstudent',
+            salary_range: job.salary || (extractedJobData.salary_range as string | undefined) || '',
+            employment_type: (extractedJobData.employment_type as string | undefined) || 'Werkstudent',
             posted_at: job.postedDate ? new Date(job.postedDate).toISOString() : new Date().toISOString(),
 
             // Normalized arrays
-            requirements_original: (extractedJob as any).requirements || [],
-            responsibilities_original: (extractedJob as any).responsibilities || [],
-            qualifications_original: (extractedJob as any).qualifications || [],
-            skills_original: (extractedJob as any).skills || [],
+            requirements_original: extractedJobData.requirements || [],
+            responsibilities_original: extractedJobData.responsibilities || [],
+            qualifications_original: extractedJobData.qualifications || [],
+            skills_original: extractedJobData.skills || [],
 
             // Source tracking
             source: job.source,

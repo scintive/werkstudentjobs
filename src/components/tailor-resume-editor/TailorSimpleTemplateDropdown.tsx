@@ -84,7 +84,7 @@ export function TailorSimpleTemplateDropdown({
           />
           <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
             <div className="p-1">
-              {templates.map((template) => (
+              {templates.map((template: any) => (
                 <button
                   key={template.id}
                   onClick={() => {

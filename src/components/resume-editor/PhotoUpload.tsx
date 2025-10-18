@@ -130,7 +130,7 @@ export function PhotoUpload({ currentPhotoUrl, onPhotoUpdate, userId }: PhotoUpl
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: any) => e.stopPropagation()}
             >
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
                 {/* Header */}

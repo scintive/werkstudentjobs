@@ -10,15 +10,15 @@ import { SuggestionIndicator, SuggestionBadge } from '../SuggestionIndicator'
 
 interface PersonalInfoSectionProps {
   localData: ResumeData & { photoUrl?: string | null }
-  setLocalData: (data: any) => void
-  updateField: (field: string, value: any) => void
+  setLocalData: (data: unknown) => void
+  updateField: (field: string, value: unknown) => void
   saveNow: () => Promise<void>
   setImageToCrop: (url: string) => void
   suggestionsEnabled: boolean
-  getSuggestionForField: (field: string) => any
+  getSuggestionForField: (field: string) => unknown
   acceptSuggestion: (id: string) => void
   declineSuggestion: (id: string) => void
-  getSuggestionsForSection: (section: string) => any[]
+  getSuggestionsForSection: (section: string) => unknown[]
   InlineSummarySuggestions: React.ComponentType
 }
 
@@ -37,8 +37,8 @@ export const PersonalInfoSection = React.memo(({
 }: PersonalInfoSectionProps) => {
   // Debug logging
   React.useEffect(() => {
-    console.log('🖼️ PersonalInfoSection - photoUrl:', (localData as any).photoUrl)
-  }, [(localData as any).photoUrl])
+    console.log('🖼️ PersonalInfoSection - photoUrl:', (localData as unknown).photoUrl)
+  }, [(localData as unknown).photoUrl])
 
   return (
     <>
@@ -46,10 +46,10 @@ export const PersonalInfoSection = React.memo(({
       <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
         <div className="flex items-center gap-4">
-          {(localData as any).photoUrl ? (
+          {(localData as unknown).photoUrl ? (
             <div className="relative">
               <img
-                src={(localData as any).photoUrl}
+                src={(localData as unknown).photoUrl}
                 alt="Profile"
                 className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
               />
@@ -57,8 +57,8 @@ export const PersonalInfoSection = React.memo(({
                 onClick={async () => {
                   try {
                     // Delete photo - let the context handle saving to variant or base resume
-                    setLocalData({ ...localData, photoUrl: null } as any)
-                    updateField('photoUrl' as any, null)
+                    setLocalData({ ...localData, photoUrl: null } as unknown)
+                    updateField('photoUrl' as unknown, null)
 
                     // Force immediate save (context will save to variant in tailor mode, or base resume in base mode)
                     await saveNow()
@@ -81,7 +81,7 @@ export const PersonalInfoSection = React.memo(({
             <input
               type="file"
               accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-              onChange={async (e) => {
+              onChange={async (e: any) => {
                 const file = e.target.files?.[0]
                 if (!file) return
 
@@ -106,7 +106,7 @@ export const PersonalInfoSection = React.memo(({
               className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
             >
               <Upload className="w-4 h-4" />
-              {(localData as any).photoUrl ? 'Change Photo' : 'Upload Photo'}
+              {(localData as unknown).photoUrl ? 'Change Photo' : 'Upload Photo'}
             </label>
             <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP or GIF • Max 10MB</p>
           </div>
@@ -117,7 +117,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Full Name"
           value={localData.personalInfo.name}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               personalInfo: { ...localData.personalInfo, name: value }
@@ -132,7 +132,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Professional Title"
           value={localData.professionalTitle}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               professionalTitle: value
@@ -156,7 +156,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Email"
           value={localData.personalInfo.email}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               personalInfo: { ...localData.personalInfo, email: value }
@@ -171,7 +171,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Phone"
           value={localData.personalInfo.phone}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               personalInfo: { ...localData.personalInfo, phone: value }
@@ -186,7 +186,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Location"
           value={localData.personalInfo.location}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               personalInfo: { ...localData.personalInfo, location: value }
@@ -201,7 +201,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="LinkedIn Profile"
           value={localData.personalInfo.linkedin || ''}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               personalInfo: { ...localData.personalInfo, linkedin: value }
@@ -217,7 +217,7 @@ export const PersonalInfoSection = React.memo(({
         <CleanInput
           label="Portfolio/Website"
           value={localData.personalInfo.website || ''}
-          onChange={(value) => {
+          onChange={(value: any) => {
             setLocalData({
               ...localData,
               personalInfo: { ...localData.personalInfo, website: value }
@@ -248,7 +248,7 @@ export const PersonalInfoSection = React.memo(({
             {suggestionsEnabled && <InlineSummarySuggestions />}
             <EnhancedRichText
               value={localData.professionalSummary}
-              onChange={(value) => setLocalData({
+              onChange={(value: any) => setLocalData({
                 ...localData,
                 professionalSummary: value
               })}

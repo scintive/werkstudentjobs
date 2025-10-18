@@ -389,17 +389,17 @@ export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInRe
                 ${Object.entries(skills).map(([category, skillList]) => `
                     <div class="skills-category" data-category="${category}">
                         <div class="skills-category-title">${category}</div>
-                        <div>${skillList.map((skill, i) => {
+                        <div>${skillList.map((skill: Record<string, any>, i) => {
                             // Handle both string skills and skill objects with proficiency
                             if (typeof skill === 'string') {
                                 return `<span class="skill-chip" data-section="skills" data-category="${category}" data-index="${i}">${skill}</span>`;
-                            } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
+                            } else if (skill?.skill && showSkillLevelsInResume && skill?.proficiency) {
                                 // Show proficiency as text
-                                const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' : 
-                                                 skill.proficiency === 'Advanced' ? 'ADV' : 
+                                const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' :
+                                                 skill.proficiency === 'Advanced' ? 'ADV' :
                                                  skill.proficiency === 'Intermediate' ? 'INT' : 'BEG';
                                 return `<span class="skill-chip with-proficiency" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill} <span class="skill-level">${levelAbbr}</span></span>`;
-                            } else if (skill.skill) {
+                            } else if (skill?.skill) {
                                 return `<span class="skill-chip" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill}</span>`;
                             }
                             return '';
@@ -409,7 +409,7 @@ export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInRe
             </section>
             ` : ''}
             
-            ${certifications.length > 0 ? `
+            ${certifications && certifications.length > 0 ? `
             <section>
                 <h2 class="section-header">Certifications</h2>
                 ${certifications.map(cert => `
@@ -426,8 +426,8 @@ export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInRe
                 <h2 class="section-header">Languages</h2>
                 ${languages.map(lang => `
                     <div class="language-item">
-                        <span class="language-name">${(lang.language || lang.name || '').toString()}</span>
-                        <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
+                        <span class="language-name">${lang.name || ''}</span>
+                        <span class="language-proficiency">${lang.level || ''}</span>
                     </div>
                 `).join('')}
             </section>
@@ -488,7 +488,7 @@ export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInRe
             </section>
             ` : ''}
 
-            ${projects.length > 0 ? `
+            ${projects && projects.length > 0 ? `
             <section data-section="projects">
                 <h2 class="section-header">Projects</h2>
                 ${projects.map((project, pIndex) => `
@@ -517,7 +517,7 @@ export function generateSwissResumeHTML(data: ResumeData & { showSkillLevelsInRe
                                 <div class="job-company">${edu.field_of_study || ''}</div>
                                 <div class="job-company">${edu.institution}</div>
                             </div>
-                            <div class="job-duration">${edu.year || edu.duration || ''}</div>
+                            <div class="job-duration">${edu.year || (edu as unknown).duration || ''}</div>
                         </div>
                     </article>
                 `).join('')}

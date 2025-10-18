@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
     if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
       try {
         const sample = matchedJobsWithDetails[0];
+        const matchCalc = sample?.matchCalculation as Record<string, unknown> | undefined;
+        const skillsOverlap = matchCalc?.skillsOverlap as Record<string, unknown> | undefined;
+        const toolsOverlap = matchCalc?.toolsOverlap as Record<string, unknown> | undefined;
         const dbg = {
           kind: 'match.debug',
           jobs: jobs.length,
@@ -66,47 +69,58 @@ export async function POST(request: NextRequest) {
           sample: sample ? {
             id: sample.id,
             score: sample.match_score,
-            skillsMatched: sample.matchCalculation?.skillsOverlap?.matched?.length || 0,
-            toolsMatched: sample.matchCalculation?.toolsOverlap?.matched?.length || 0
+            skillsMatched: (skillsOverlap?.matched as unknown[] | undefined)?.length || 0,
+            toolsMatched: (toolsOverlap?.matched as unknown[] | undefined)?.length || 0
           } : null
         };
-         
+
         console.log(JSON.stringify(dbg));
       } catch {}
     }
     
     console.log('🎯 Matching complete. Top 3 matches:',
-      matchedJobsWithDetails.slice(0, 3).map(j => 
-        `${j.title}: ${j.match_score}% (Skills: ${Math.round(j.matchCalculation?.skillsOverlap?.score * 100 || 0)}%)`
-      ).join(', ')
+      matchedJobsWithDetails.slice(0, 3).map(j => {
+        const matchCalc = j.matchCalculation as Record<string, unknown> | undefined;
+        const skillsOverlap = matchCalc?.skillsOverlap as Record<string, unknown> | undefined;
+        const skillScore = Math.round((skillsOverlap?.score as number | undefined || 0) * 100);
+        return `${j.title}: ${j.match_score}% (Skills: ${skillScore}%)`;
+      }).join(', ')
     );
     
     // Extract detailed explanations for top matches
-    const topMatchExplanations = matchedJobsWithDetails.slice(0, 5).map(job => ({
-      jobId: job.id,
-      jobTitle: job.title,
-      matchScore: job.match_score,
-      breakdown: {
-        skills: {
-          score: Math.round((job.matchCalculation?.skillsOverlap?.score || 0) * 100),
-          matched: job.matchCalculation?.skillsOverlap?.matched || [],
-          missing: job.matchCalculation?.skillsOverlap?.missing || []
-        },
-        tools: {
-          score: Math.round((job.matchCalculation?.toolsOverlap?.score || 0) * 100),
-          matched: job.matchCalculation?.toolsOverlap?.matched || [],
-          missing: job.matchCalculation?.toolsOverlap?.missing || []
-        },
-        language: {
-          score: Math.round((job.matchCalculation?.languageFit?.score || 0) * 100),
-          explanation: job.matchCalculation?.languageFit?.explanation || 'Unknown'
-        },
-        location: {
-          score: Math.round((job.matchCalculation?.locationFit?.score || 0) * 100),
-          explanation: job.matchCalculation?.locationFit?.explanation || 'Unknown'
+    const topMatchExplanations = matchedJobsWithDetails.slice(0, 5).map(job => {
+      const matchCalc = job.matchCalculation as Record<string, unknown> | undefined;
+      const skillsOverlap = matchCalc?.skillsOverlap as Record<string, unknown> | undefined;
+      const toolsOverlap = matchCalc?.toolsOverlap as Record<string, unknown> | undefined;
+      const languageFit = matchCalc?.languageFit as Record<string, unknown> | undefined;
+      const locationFit = matchCalc?.locationFit as Record<string, unknown> | undefined;
+
+      return {
+        jobId: job.id,
+        jobTitle: job.title,
+        matchScore: job.match_score,
+        breakdown: {
+          skills: {
+            score: Math.round((skillsOverlap?.score as number | undefined || 0) * 100),
+            matched: skillsOverlap?.matched || [],
+            missing: skillsOverlap?.missing || []
+          },
+          tools: {
+            score: Math.round((toolsOverlap?.score as number | undefined || 0) * 100),
+            matched: toolsOverlap?.matched || [],
+            missing: toolsOverlap?.missing || []
+          },
+          language: {
+            score: Math.round((languageFit?.score as number | undefined || 0) * 100),
+            explanation: languageFit?.explanation || 'Unknown'
+          },
+          location: {
+            score: Math.round((locationFit?.score as number | undefined || 0) * 100),
+            explanation: locationFit?.explanation || 'Unknown'
+          }
         }
-      }
-    }));
+      };
+    });
     
     return NextResponse.json({
       success: true,

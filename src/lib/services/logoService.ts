@@ -76,7 +76,7 @@ async function checkImageUrl(url: string): Promise<boolean> {
       signal: AbortSignal.timeout(3000), // 3 second timeout
     });
 
-    return response.ok && response.headers.get('content-type')?.startsWith('image/');
+    return !!response.ok && !!response.headers.get('content-type')?.startsWith('image/');
   } catch {
     return false;
   }

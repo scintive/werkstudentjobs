@@ -327,7 +327,7 @@ export const EnhancedRichText = ({
         ref={editorRef}
         contentEditable={isEditing}
         suppressContentEditableWarning={true}
-        onClick={!isEditing && !readOnly ? (e) => {
+        onClick={!isEditing && !readOnly ? (e: any) => {
           e.preventDefault()
           e.stopPropagation()
           startEditing()
@@ -368,8 +368,8 @@ export const EnhancedRichText = ({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('bold')
@@ -381,8 +381,8 @@ export const EnhancedRichText = ({
               </button>
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('italic')
@@ -394,8 +394,8 @@ export const EnhancedRichText = ({
               </button>
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('underline')
@@ -409,8 +409,8 @@ export const EnhancedRichText = ({
               {showHighlight && (
                 <button
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
+                  onMouseDown={(e: any) => e.preventDefault()}
+                  onClick={(e: any) => {
                     e.preventDefault()
                     e.stopPropagation()
                     applyFormatting('highlight')
@@ -425,8 +425,8 @@ export const EnhancedRichText = ({
               {showLink && (
                 <button
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
+                  onMouseDown={(e: any) => e.preventDefault()}
+                  onClick={(e: any) => {
                     e.preventDefault()
                     e.stopPropagation()
                     const url = prompt('Enter URL:')
@@ -447,8 +447,8 @@ export const EnhancedRichText = ({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('removeFormat')
@@ -461,8 +461,8 @@ export const EnhancedRichText = ({
               
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   handleUndo()
@@ -479,8 +479,8 @@ export const EnhancedRichText = ({
               
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   handleRedo()

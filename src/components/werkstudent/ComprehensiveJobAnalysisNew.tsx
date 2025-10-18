@@ -11,8 +11,8 @@ import type { IntelligentJobAnalysis } from '@/lib/services/intelligentJobAnalys
 
 interface ComprehensiveJobAnalysisProps {
   analysis: IntelligentJobAnalysis;
-  userProfile: any;
-  jobData: any;
+  userProfile: unknown;
+  jobData: unknown;
   onNavigateToSkills?: () => void;
 }
 
@@ -105,7 +105,7 @@ export function ComprehensiveJobAnalysis({
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as unknown)}
             className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-white text-gray-900 shadow-sm'

@@ -225,7 +225,7 @@ export function CompanyIntelligencePanel({ company, jobSpecificInsights }: Compa
                   src={company.logo_url}
                   alt={`${company.name} logo`}
                   className="w-full h-full object-contain"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  onError={(e: any) => { e.currentTarget.style.display = 'none'; }}
                 />
               </div>
             )}

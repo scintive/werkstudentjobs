@@ -10,8 +10,8 @@ interface ProjectsSectionProps {
   localData: ResumeData
   setLocalData: (data: ResumeData) => void
   suggestionsEnabled: boolean
-  getSuggestionsForSection: (section: string) => any[]
-  getSuggestionForField: (field: string) => any
+  getSuggestionsForSection: (section: string) => unknown[]
+  getSuggestionForField: (field: string) => unknown
   acceptSuggestion: (id: string) => void
   declineSuggestion: (id: string) => void
 }
@@ -45,7 +45,7 @@ export const ProjectsSection = React.memo(({
             <CleanInput
               label="Project Name"
               value={project.name}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newProjects = [...(localData.projects || [])]
                 newProjects[index].name = value
                 setLocalData({ ...localData, projects: newProjects })
@@ -55,7 +55,7 @@ export const ProjectsSection = React.memo(({
             <CleanInput
               label="Date/Duration"
               value={project.date || ''}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newProjects = [...(localData.projects || [])]
                 newProjects[index].date = value
                 setLocalData({ ...localData, projects: newProjects })
@@ -93,7 +93,7 @@ export const ProjectsSection = React.memo(({
             )}
             <CleanInput
               value={project.description}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newProjects = [...(localData.projects || [])]
                 newProjects[index].description = value
                 setLocalData({ ...localData, projects: newProjects })
@@ -129,7 +129,7 @@ export const ProjectsSection = React.memo(({
                 type="text"
                 placeholder="Add technology (press Enter)"
                 className="flex-1 px-3 py-1 border border-gray-200 rounded-lg text-xs"
-                onKeyPress={(e) => {
+                onKeyPress={(e: any) => {
                   if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
                     const newProjects = [...(localData.projects || [])]
                     newProjects[index].technologies = [...(newProjects[index].technologies || []), (e.target as HTMLInputElement).value.trim()]

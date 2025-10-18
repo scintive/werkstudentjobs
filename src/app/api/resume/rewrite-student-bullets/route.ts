@@ -38,14 +38,15 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 /**
  * Generate cache key for bullet rewrite requests
  */
-function generateCacheKey(bullets: string[], context: any): string {
+function generateCacheKey(bullets: string[], context: unknown): string {
+  const contextData = context as BulletRewriteRequest['context'];
   const key = JSON.stringify({
     bullets: bullets.sort(),
     context: {
-      degree: context.student_profile?.degree_program,
-      role: context.target_role,
-      industry: context.industry,
-      language: context.language
+      degree: contextData.student_profile?.degree_program,
+      role: contextData.target_role,
+      industry: contextData.industry,
+      language: contextData.language
     }
   });
   return Buffer.from(key).toString('base64').slice(0, 16);

@@ -109,7 +109,7 @@ export default function DashboardPage() {
         .eq('user_id', userId)
         .single()
 
-      const onboardingProfile = profileData as any;
+      const onboardingProfile = profileData as Record<string, unknown> | null;
 
       if (!onboardingProfile?.onboarding_completed) {
         router.push('/onboarding')
@@ -137,17 +137,20 @@ export default function DashboardPage() {
         .limit(1)
 
       if (resumeData && resumeData[0]) {
-        const latestResume = resumeData[0] as any;
-        const firstName = latestResume.personal_info?.name?.split(' ')[0] || 'there'
+        const latestResume = resumeData[0] as Record<string, unknown>;
+        const personalInfo = latestResume.personal_info as Record<string, unknown> | undefined;
+        const name = personalInfo?.name as string | undefined;
+        const firstName = name?.split(' ')[0] || 'there'
         setUserName(firstName)
 
         // Calculate profile completion
         let completion = 0
-        if (latestResume.personal_info?.name) completion += 20
-        if (latestResume.personal_info?.email) completion += 20
+        if (personalInfo?.name) completion += 20
+        if (personalInfo?.email) completion += 20
         if (latestResume.professional_title) completion += 20
-        if (latestResume.skills && Object.keys(latestResume.skills).length > 0) completion += 20
-        if (latestResume.personal_info?.phone) completion += 20
+        const skills = latestResume.skills as Record<string, unknown> | undefined;
+        if (skills && Object.keys(skills).length > 0) completion += 20
+        if (personalInfo?.phone) completion += 20
 
         setStats(prev => ({ ...prev, profileCompletion: completion }))
       }
@@ -174,7 +177,7 @@ export default function DashboardPage() {
         .order('updated_at', { ascending: false })
         .limit(5)
 
-      const variantRows = (variants as any[]) || [];
+      const variantRows = (variants as unknown[]) || [];
 
       if (variantRows.length > 0) {
         setTailoredResumes(variantRows as TailoredResume[])
@@ -200,8 +203,11 @@ export default function DashboardPage() {
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
 
       if (allVariants && allVariants.length > 0) {
-        const variantScores = allVariants as any[];
-        const avgScore = variantScores.reduce((acc, v) => acc + (v.match_score || 0), 0) / variantScores.length
+        const variantScores = allVariants as unknown[];
+        const avgScore = variantScores.reduce((acc: number, v: unknown) => {
+          const variant = v as Record<string, unknown>;
+          return acc + (typeof variant.match_score === 'number' ? variant.match_score : 0);
+        }, 0) / variantScores.length
         setStats(prev => ({ ...prev, avgMatchScore: Math.round(avgScore) }))
       }
 
@@ -226,14 +232,19 @@ export default function DashboardPage() {
         .limit(5)
 
       if (highMatches) {
-        const highMatchRows = highMatches as any[];
-        const formattedHighMatches: HighMatchJob[] = highMatchRows.map(m => ({
-          id: m.jobs?.id || '',
-          title: m.jobs?.title || '',
-          company: m.jobs?.companies?.name || '',
-          match_score: m.match_score || 0,
-          posted_date: m.jobs?.posted_at || new Date().toISOString()
-        }))
+        const highMatchRows = highMatches as unknown[];
+        const formattedHighMatches: HighMatchJob[] = highMatchRows.map(m => {
+          const match = m as Record<string, unknown>;
+          const jobs = match.jobs as Record<string, unknown> | undefined;
+          const companies = jobs?.companies as Record<string, unknown> | undefined;
+          return {
+            id: (jobs?.id as string) || '',
+            title: (jobs?.title as string) || '',
+            company: (companies?.name as string) || '',
+            match_score: (typeof match.match_score === 'number' ? match.match_score : 0),
+            posted_date: (jobs?.posted_at as string) || new Date().toISOString()
+          };
+        })
         setHighMatchJobs(formattedHighMatches)
       }
 
@@ -242,13 +253,16 @@ export default function DashboardPage() {
 
       // Add tailored resume activities
       if (variantRows.length > 0) {
-        variantRows.slice(0, 5).forEach((v: any) => {
+        variantRows.slice(0, 5).forEach(v => {
+          const variant = v as Record<string, unknown>;
+          const jobs = variant.jobs as Record<string, unknown> | undefined;
+          const companies = jobs?.companies as Record<string, unknown> | undefined;
           recentActivities.push({
-            id: v.id,
+            id: (variant.id as string) || '',
             type: 'tailor',
-            title: `Resume tailored for ${v.jobs?.companies?.name || 'Company'}`,
-            description: v.jobs?.title || 'Position',
-            timestamp: v.updated_at,
+            title: `Resume tailored for ${(companies?.name as string) || 'Company'}`,
+            description: (jobs?.title as string) || 'Position',
+            timestamp: (variant.updated_at as string) || new Date().toISOString(),
             icon: 'info'
           })
         })
@@ -307,7 +321,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-500">Jobs with 90%+ match score</p>
               </div>
               <div className="max-h-96 overflow-y-auto">
-                {highMatchJobs.map((job) => (
+                {highMatchJobs.map((job: any) => (
                   <div
                     key={job.id}
                     className="p-4 border-b hover:bg-gray-50 cursor-pointer"
@@ -426,7 +440,7 @@ export default function DashboardPage() {
 
             <div className="space-y-3">
               {tailoredResumes.length > 0 ? (
-                tailoredResumes.map((resume) => (
+                tailoredResumes.map((resume: any) => (
                   <div
                     key={resume.id}
                     className="resume-item cursor-pointer"
@@ -453,7 +467,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="resume-actions" onClick={(e) => e.stopPropagation()}>
+                    <div className="resume-actions" onClick={(e: any) => e.stopPropagation()}>
                       <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 font-medium">
                         Tailored
                       </span>
@@ -511,7 +525,7 @@ export default function DashboardPage() {
 
             <div className="space-y-4">
               {activities.length > 0 ? (
-                activities.map((activity) => {
+                activities.map((activity: any) => {
                   const getActivityIcon = () => {
                     switch (activity.type) {
                       case 'application': return <Send className="w-4 h-4" />

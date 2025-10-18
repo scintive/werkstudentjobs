@@ -163,7 +163,7 @@ export function ElegantTemplateBar({
       }))
 
       // Convert profile to ResumeData format (same as upload page)
-      const resumeData: any = {
+      const resumeData: Record<string, any> = {
         personalInfo: {
           name: data.profile.personal_details?.name || 'Unknown',
           email: data.profile.personal_details?.contact?.email || '',
@@ -185,11 +185,11 @@ export function ElegantTemplateBar({
           duration: exp.duration,
           achievements: exp.responsibilities
         })),
-        education: (data.profile.education || []).map((edu: any) => ({
+        education: (data.profile.education || []).map((edu: Record<string, any>) => ({
           degree: edu.degree,
           field_of_study: edu.field_of_study,
           institution: edu.institution,
-          year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
+          year: (edu.year ? String(edu.year) : edu.duration) || ''
         })),
         projects: (data.profile.projects || []).map((proj: any) => ({
           name: proj.title,
@@ -197,7 +197,7 @@ export function ElegantTemplateBar({
           technologies: [],
           date: "2023"
         })),
-        languages: (data.profile.languages || []).map((lang: any) => {
+        languages: (data.profile.languages || []).map((lang: string | Record<string, any>) => {
           if (typeof lang === 'string') {
             const match = lang.match(/^(.+?)\s*\((.+?)\)$/)
             if (match) {
@@ -222,7 +222,7 @@ export function ElegantTemplateBar({
             proficiency: lang.proficiency || lang.level || 'Not specified'
           }
         }),
-        certifications: (data.profile.certifications || []).map((cert: any) => ({
+        certifications: (data.profile.certifications || []).map((cert: Record<string, any>) => ({
           name: cert.title,
           issuer: cert.issuer || '',
           date: cert.date || '',
@@ -235,7 +235,7 @@ export function ElegantTemplateBar({
       const { ResumeDataService } = await import('@/lib/services/resumeDataService')
       const resumeService = ResumeDataService.getInstance()
       await resumeService.getOrCreateResumeData() // Initialize
-      await resumeService.saveResumeData(resumeData, activeTemplate)
+      await resumeService.saveResumeData(resumeData as any, activeTemplate)
 
       setUploadState({
         status: 'success',
@@ -355,7 +355,7 @@ export function ElegantTemplateBar({
                       </div>
 
                       <div className="mt-4 flex gap-3">
-                        {templates.map((template) => (
+                        {templates.map((template: any) => (
                           <button
                             key={template.id}
                             onClick={() => {

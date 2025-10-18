@@ -10,6 +10,7 @@ export interface Suggestion {
   id: string
   section: string
   suggestion_type: string
+  type?: string  // Normalized type field (skill_add, skill_remove, etc.)
   target_path?: string
   before: string
   after: string
@@ -34,10 +35,10 @@ export function useSuggestionManager() {
   const [error, setError] = useState<string | null>(null)
   
   // Track current variant data for optimistic updates
-  const currentVariantData = useRef<any>(null)
+  const currentVariantData = useRef<unknown>(null)
   const variantId = useRef<string | null>(null)
 
-  const loadSuggestions = useCallback((newSuggestions: Suggestion[], tailoredData: any, vId: string) => {
+  const loadSuggestions = useCallback((newSuggestions: Suggestion[], tailoredData: unknown, vId: string) => {
     console.log('📥 Loading suggestions into manager:', {
       suggestionsCount: newSuggestions.length,
       variantId: vId,
@@ -228,7 +229,7 @@ export function useSuggestionManager() {
  * Apply a suggestion to resume data
  * Pure function that doesn't mutate original data
  */
-function applySuggestionToData(data: any, suggestion: Suggestion): any {
+function applySuggestionToData(data: unknown, suggestion: Suggestion): any {
   console.log('🔄 APPLYING SUGGESTION TO DATA:', {
     suggestionId: suggestion.id,
     section: suggestion.section,
@@ -258,7 +259,7 @@ function applySuggestionToData(data: any, suggestion: Suggestion): any {
   return newData
 }
 
-function applyByTargetPath(data: any, targetPath: string, newValue: string): void {
+function applyByTargetPath(data: unknown, targetPath: string, newValue: string): void {
   const parts = targetPath.split('.')
   let current = data
 
@@ -285,7 +286,7 @@ function applyByTargetPath(data: any, targetPath: string, newValue: string): voi
   }
 }
 
-function applyBySection(data: any, suggestion: Suggestion): void {
+function applyBySection(data: unknown, suggestion: Suggestion): void {
   switch (suggestion.section) {
     case 'summary':
       data.professionalSummary = suggestion.after

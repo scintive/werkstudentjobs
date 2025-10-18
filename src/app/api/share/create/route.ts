@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       p_variant_id: variantId || null,
       p_template: template || null,
       p_expires_at: expiresAt
-    })
+    } as never)
 
     if (error) {
       console.error('Error creating share token:', error)
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const shareRecords = shareTokenData as any[] | null
-    const shareToken = shareRecords && shareRecords.length > 0 ? (shareRecords[0] as any) : null
+    const shareRecords = shareTokenData as unknown[] | null
+    const shareToken = shareRecords && shareRecords.length > 0 ? (shareRecords[0] as Record<string, unknown>) : null
 
     if (!shareToken) {
       console.error('No share token returned from database')
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       success: true,
       token,
       shareUrl,
-      expiresAt: (shareToken as any).expires_at
+      expiresAt: shareToken.expires_at
     })
 
   } catch (error) {

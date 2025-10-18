@@ -267,7 +267,7 @@ export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsIn
                 <div class="education-item" data-section="education" data-edu-index="${eIndex}">
                     <div class="item-row">
                         <div class="item-left">
-                            <span class="item-title">${edu.institution}</span>${edu.location ? `, <span class="item-location">${edu.location}</span>` : ''}
+                            <span class="item-title">${edu.institution}</span>${(edu as unknown).location ? `, <span class="item-location">${(edu as unknown).location}</span>` : ''}
                         </div>
                         <div class="item-right">${edu.year}</div>
                     </div>
@@ -289,7 +289,7 @@ export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsIn
                         </div>
                         <div class="item-right">${job.duration}</div>
                     </div>
-                    <div class="item-subtitle">${job.company}${job.location ? `, ${job.location}` : ''}</div>
+                    <div class="item-subtitle">${job.company}${(job as unknown).location ? `, ${(job as unknown).location}` : ''}</div>
                     ${job.achievements && job.achievements.length > 0 ? `
                         <ul class="bullet-list">
                             ${job.achievements.map((achievement, aIndex) => `<li data-section=\"experience\" data-path=\"experience[${jIndex}].achievements[${aIndex}]\">${achievement}</li>`).join('')}
@@ -300,7 +300,7 @@ export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsIn
         </section>
         ` : ''}
 
-        ${projects.length > 0 ? `
+        ${projects && projects.length > 0 ? `
         <!-- Projects Section -->
         <section class="section" data-section="projects">
             <h2 class="section-header">Projects</h2>
@@ -330,15 +330,15 @@ export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsIn
             <div class="skills-inline">
                 ${Object.entries(skills).map(([category, skillList]) => `
                     <div class="skill-category" data-category="${category}">
-                        <span class="skill-label">${category}:</span> ${skillList.map(skill => {
+                        <span class="skill-label">${category}:</span> ${skillList.map((skill: Record<string, any>) => {
                             if (typeof skill === 'string') {
                                 return `<span data-section=\"skills\" data-category=\"${category}\">${skill}</span>`;
-                            } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
-                                const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' : 
-                                                 skill.proficiency === 'Advanced' ? 'ADV' : 
+                            } else if (skill?.skill && showSkillLevelsInResume && skill?.proficiency) {
+                                const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' :
+                                                 skill.proficiency === 'Advanced' ? 'ADV' :
                                                  skill.proficiency === 'Intermediate' ? 'INT' : 'BEG';
                                 return `<span data-section=\"skills\" data-category=\"${category}\">${skill.skill} (${levelAbbr})</span>`;
-                            } else if (skill.skill) {
+                            } else if (skill?.skill) {
                                 return `<span data-section=\"skills\" data-category=\"${category}\">${skill.skill}</span>`;
                             }
                             return '';
@@ -356,14 +356,14 @@ export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsIn
             <div class="skills-inline">
                 ${languages.map(lang => `
                     <div class="language-item">
-                        <span class="language-name">${(lang.language || lang.name || '').toString()}</span>: <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
+                        <span class="language-name">${lang.name || ''}</span>: <span class="language-proficiency">${lang.level || ''}</span>
                     </div>
                 `).join('')}
             </div>
         </section>
         ` : ''}
 
-        ${certifications.length > 0 ? `
+        ${certifications && certifications.length > 0 ? `
         <!-- Certifications Section -->
         <section class="section">
             <h2 class="section-header">Certifications</h2>
@@ -381,19 +381,19 @@ export function generateClassicResumeHTML(data: ResumeData & { showSkillLevelsIn
                 <h2 class="section-header">${section.title}</h2>
                 ${section.items.map(item => `
                     <div class="custom-item">
-                        ${item.title || item.field1 ? `
+                        ${item.title ? `
                             <div class="item-row">
                                 <div class="item-left">
-                                    <span class="item-title">${item.title || item.field1 || ''}</span>
+                                    <span class="item-title">${item.title}</span>
                                 </div>
-                                ${item.date || item.field3 ? `<div class="item-right">${item.date || item.field3 || ''}</div>` : ''}
+                                ${item.date ? `<div class="item-right">${item.date}</div>` : ''}
                             </div>
                         ` : ''}
-                        ${item.subtitle || item.field2 ? `
-                            <div class="item-subtitle">${item.subtitle || item.field2 || ''}</div>
+                        ${item.subtitle ? `
+                            <div class="item-subtitle">${item.subtitle}</div>
                         ` : ''}
-                        ${item.description || item.field4 ? `
-                            <div class="project-description">${item.description || item.field4 || ''}</div>
+                        ${item.description ? `
+                            <div class="project-description">${item.description}</div>
                         ` : ''}
                         ${item.details && item.details.length > 0 ? `
                             <ul class="bullet-list">

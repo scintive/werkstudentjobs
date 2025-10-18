@@ -79,7 +79,7 @@ export function SimpleTemplateDropdown({
           />
           <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
             <div className="p-1">
-              {templates.map((template) => (
+              {templates.map((template: any) => (
                 <button
                   key={template.id}
                   onClick={() => {

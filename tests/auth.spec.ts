@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 
 const EMAIL = process.env.TEST_EMAIL || ''
 const PASSWORD = process.env.TEST_PASSWORD || ''
 
 // Helper: login if credentials are provided
-async function login(page) {
+async function login(page: Page) {
   await page.goto('/login')
   if (await page.locator('text=Welcome Back').count() === 0) return // already authed -> redirected
   await page.getByLabel('Email Address').fill(EMAIL)

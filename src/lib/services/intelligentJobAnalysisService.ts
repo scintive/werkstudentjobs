@@ -82,10 +82,10 @@ class IntelligentJobAnalysisService {
    * This is the ONLY source of analysis - no fallbacks
    */
   async analyzeJobCompatibility(params: {
-    job: any;
-    userProfile: any;
-    userExperience: any[];
-    userProjects?: any[];
+    job: unknown;
+    userProfile: unknown;
+    userExperience: unknown[];
+    userProjects?: unknown[];
     userSkills: Record<string, string[]>;
   }): Promise<IntelligentJobAnalysis> {
 
@@ -102,7 +102,7 @@ class IntelligentJobAnalysisService {
       userSkills
     });
 
-    let response: any = null;
+    let response: unknown = null;
 
     try {
       response = await llmService.createJsonCompletion({
@@ -143,7 +143,7 @@ class IntelligentJobAnalysisService {
    * Validate GPT response and structure it properly
    * Also validates course URLs against verified database
    */
-  private validateAndStructureAnalysis(rawResponse: any): IntelligentJobAnalysis {
+  private validateAndStructureAnalysis(rawResponse: unknown): IntelligentJobAnalysis {
     // Parse if string
     const data = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
 
@@ -161,7 +161,7 @@ class IntelligentJobAnalysisService {
 
     return {
       overall_match_score: clampScore(data.overall_match_score),
-      responsibility_breakdown: (data.responsibility_breakdown || []).map((r: any) => ({
+      responsibility_breakdown: (data.responsibility_breakdown || []).map((r: Record<string, any>) => ({
         responsibility: r.responsibility || '',
         compatibility_score: clampScore(r.compatibility_score || 0),
         user_evidence: Array.isArray(r.user_evidence) ? r.user_evidence : [],
@@ -169,7 +169,7 @@ class IntelligentJobAnalysisService {
         learning_recommendation: r.learning_recommendation || null,
         recommended_courses: Array.isArray(r.recommended_courses)
           ? r.recommended_courses
-              .filter((course: any) => {
+              .filter((course: Record<string, any>) => {
                 // Only include courses with valid URLs
                 const url = course.url?.toLowerCase() || '';
                 if (!url || url === 'null' || !url.startsWith('http')) {
@@ -183,7 +183,7 @@ class IntelligentJobAnalysisService {
                 }
                 return true;
               })
-              .map((course: any) => ({
+              .map((course: Record<string, any>) => ({
                 name: course.name || '',
                 provider: course.provider || '',
                 url: course.url
@@ -191,8 +191,8 @@ class IntelligentJobAnalysisService {
           : []
       })),
       relevant_experiences: (data.relevant_experiences || [])
-        .filter((exp: any) => exp.relevance_score >= 40) // Show experiences with moderate or higher relevance
-        .map((exp: any) => ({
+        .filter((exp: Record<string, any>) => exp.relevance_score >= 40) // Show experiences with moderate or higher relevance
+        .map((exp: Record<string, any>) => ({
           position: exp.position || '',
           company: exp.company || '',
           relevance_score: clampScore(exp.relevance_score || 0),
@@ -200,7 +200,7 @@ class IntelligentJobAnalysisService {
           why_relevant: exp.why_relevant || '',
           highlighted_achievements: Array.isArray(exp.highlighted_achievements) ? exp.highlighted_achievements : []
         })),
-      skills_analysis: (data.skills_analysis || []).map((cat: any) => ({
+      skills_analysis: (data.skills_analysis || []).map((cat: Record<string, any>) => ({
         category: cat.category || '',
         matched_skills: Array.isArray(cat.matched_skills) ? cat.matched_skills : [],
         missing_critical_skills: Array.isArray(cat.missing_critical_skills) ? cat.missing_critical_skills : [],
@@ -215,7 +215,7 @@ class IntelligentJobAnalysisService {
         interview_talking_points: Array.isArray(data.positioning_strategy?.interview_talking_points)
           ? data.positioning_strategy.interview_talking_points : []
       },
-      action_plan: (data.action_plan || []).map((item: any) => ({
+      action_plan: (data.action_plan || []).map((item: unknown) => ({
         priority: item.priority || 'medium',
         action: item.action || '',
         expected_impact: item.expected_impact || '',

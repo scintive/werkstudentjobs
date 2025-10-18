@@ -77,7 +77,7 @@ export default function GeocodePage() {
   // Load stats on component mount
   useEffect(() => {
     checkStats();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   return (

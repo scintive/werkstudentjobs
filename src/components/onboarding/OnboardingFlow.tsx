@@ -165,7 +165,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
             degree: edu.degree,
             field_of_study: edu.field_of_study,
             institution: edu.institution,
-            year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
+            year: ((edu as Record<string, any>).year ? String((edu as Record<string, any>).year) : edu.duration) || ''
           })),
           projects: (result.profile.projects || []).map((proj: any) => ({
             name: proj.title,
@@ -354,13 +354,13 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
 
       let error
       if (existingProfile) {
-        const result = await (supabase as any)
+        const result = await (supabase as Record<string, any>)
           .from('user_profiles')
           .update(profileData)
           .eq('user_id', userId)
         error = result.error
       } else {
-        const result = await (supabase as any)
+        const result = await (supabase as Record<string, any>)
           .from('user_profiles')
           .insert({
             user_id: userId,
@@ -380,7 +380,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
       // (Resume data is already saved immediately after extraction in Step 0)
       if (photoUrl) {
         console.log('📸 Updating photo in resume_data...')
-        const { error: resumePhotoError } = await (supabase as any)
+        const { error: resumePhotoError } = await (supabase as Record<string, any>)
           .from('resume_data')
           .update({ photo_url: photoUrl })
           .eq('user_id', userId)
@@ -445,7 +445,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
         {/* Progress */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
-            {[0, 1, 2, 3, 4, 5].map((s) => (
+            {[0, 1, 2, 3, 4, 5].map((s: any) => (
               <div
                 key={s}
                 className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
@@ -670,7 +670,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
               <p className="text-lg text-gray-600 mb-8">How many hours can you work?</p>
 
               <div className="space-y-3">
-                {[10, 15, 20].map((hours) => (
+                {[10, 15, 20].map((hours: any) => (
                   <button
                     key={hours}
                     onClick={() => setData({ ...data, hoursAvailable: hours })}
@@ -704,7 +704,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                   max="20"
                   placeholder="Or enter custom (1-20)"
                   value={data.hoursAvailable && ![10, 15, 20].includes(data.hoursAvailable) ? data.hoursAvailable : ''}
-                  onChange={(e) => setData({ ...data, hoursAvailable: parseInt(e.target.value) || undefined })}
+                  onChange={(e: any) => setData({ ...data, hoursAvailable: parseInt(e.target.value) || undefined })}
                   className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:outline-none transition-colors text-lg"
                 />
               </div>
@@ -741,7 +741,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                   min="1"
                   max="12"
                   value={data.currentSemester || 1}
-                  onChange={(e) => setData({ ...data, currentSemester: parseInt(e.target.value) })}
+                  onChange={(e: any) => setData({ ...data, currentSemester: parseInt(e.target.value) })}
                   className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   style={{
                     background: `linear-gradient(to right, rgb(37, 99, 235) 0%, rgb(37, 99, 235) ${((data.currentSemester || 1) - 1) / 11 * 100}%, rgb(229, 231, 235) ${((data.currentSemester || 1) - 1) / 11 * 100}%, rgb(229, 231, 235) 100%)`
@@ -766,7 +766,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                     max="20"
                     placeholder="Enter semester (12+)"
                     value={data.currentSemester || ''}
-                    onChange={(e) => setData({ ...data, currentSemester: parseInt(e.target.value) || 12 })}
+                    onChange={(e: any) => setData({ ...data, currentSemester: parseInt(e.target.value) || 12 })}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:outline-none transition-colors text-lg"
                     autoFocus
                   />
@@ -792,7 +792,7 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                   type="text"
                   placeholder="Start typing to search..."
                   value={universitySearch}
-                  onChange={(e) => handleUniversitySearchChange(e.target.value)}
+                  onChange={(e: any) => handleUniversitySearchChange(e.target.value)}
                   onFocus={() => {
                     if (universitySuggestions.length > 0) {
                       setShowSuggestions(true)
@@ -858,10 +858,10 @@ export function OnboardingFlow({ onComplete, userId, userEmail }: OnboardingFlow
                   { value: 'within_month', label: 'Within a month', desc: 'Can start in 2-4 weeks', icon: '📅' },
                   { value: 'within_3_months', label: 'Within 3 months', desc: 'Planning ahead', icon: '🗓️' },
                   { value: 'flexible', label: 'Flexible', desc: 'Open to discussion', icon: '💬' }
-                ].map((option) => (
+                ].map((option: any) => (
                   <button
                     key={option.value}
-                    onClick={() => setData({ ...data, startPreference: option.value as any })}
+                    onClick={() => setData({ ...data, startPreference: option.value })}
                     className={`w-full p-5 rounded-xl border-2 text-left transition-all duration-200 ${
                       data.startPreference === option.value
                         ? 'border-blue-600 bg-blue-50 shadow-lg scale-105'

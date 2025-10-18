@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile to get user_profile_id
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: userProfile } = await (supabase as any)
       .from('user_profiles')
       .select('id')
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
 
     if (applied) {
       // Add interaction record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: insertError } = await (supabase as any)
         .from('user_job_interactions')
         .insert({
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Remove interaction record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: deleteError } = await (supabase as any)
         .from('user_job_interactions')
         .delete()

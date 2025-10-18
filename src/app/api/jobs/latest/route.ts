@@ -38,20 +38,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data to include company info
-    const transformedJobs = jobs?.map(job => ({
-      id: job.id,
-      title: job.title,
-      city: job.city,
-      country: job.country,
-      employment_type: job.employment_type,
-      work_mode: job.work_mode,
-      created_at: job.created_at,
-      company_name: (job.companies as any)?.name || 'Company',
-      company_logo: (job.companies as any)?.logo_url || null,
-      german_required: job.german_required,
-      is_werkstudent: job.is_werkstudent,
-      skills: job.skills || []
-    })) || []
+    const transformedJobs = jobs?.map(job => {
+      const companies = job.companies as unknown as Record<string, unknown> | null | undefined;
+      return {
+        id: job.id,
+        title: job.title,
+        city: job.city,
+        country: job.country,
+        employment_type: job.employment_type,
+        work_mode: job.work_mode,
+        created_at: job.created_at,
+        company_name: companies?.name || 'Company',
+        company_logo: companies?.logo_url || null,
+        german_required: job.german_required,
+        is_werkstudent: job.is_werkstudent,
+        skills: job.skills || []
+      };
+    }) || []
 
     return NextResponse.json({
       success: true,

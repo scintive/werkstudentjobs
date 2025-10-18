@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (llmService as any).client = llmService.initializeClient();
     
     console.log('🎯📂 Generating GPT category-specific suggestions...');

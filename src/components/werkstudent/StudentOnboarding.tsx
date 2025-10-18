@@ -221,7 +221,7 @@ export default function StudentOnboarding({
                   id="degree_program"
                   placeholder="e.g., Computer Science, Business Administration"
                   value={profile.degree_program || ''}
-                  onChange={(e) => updateProfile({ degree_program: e.target.value })}
+                  onChange={(e: any) => updateProfile({ degree_program: e.target.value })}
                   className={errors.degree_program ? 'border-red-500' : ''}
                 />
                 {errors.degree_program && (
@@ -235,7 +235,7 @@ export default function StudentOnboarding({
                   id="university"
                   placeholder="e.g., Technical University of Munich"
                   value={profile.university || ''}
-                  onChange={(e) => updateProfile({ university: e.target.value })}
+                  onChange={(e: any) => updateProfile({ university: e.target.value })}
                   className={errors.university ? 'border-red-500' : ''}
                 />
                 {errors.university && (
@@ -250,7 +250,7 @@ export default function StudentOnboarding({
                 <select
                   id="current_year"
                   value={profile.current_year || ''}
-                  onChange={(e) => updateProfile({ current_year: parseInt(e.target.value) })}
+                  onChange={(e: any) => updateProfile({ current_year: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select year</option>
@@ -270,7 +270,7 @@ export default function StudentOnboarding({
                   id="expected_graduation"
                   type="month"
                   value={profile.expected_graduation || ''}
-                  onChange={(e) => updateProfile({ expected_graduation: e.target.value })}
+                  onChange={(e: any) => updateProfile({ expected_graduation: e.target.value })}
                   className={errors.expected_graduation ? 'border-red-500' : ''}
                 />
                 {errors.expected_graduation && (
@@ -296,7 +296,7 @@ export default function StudentOnboarding({
                     max="40"
                     placeholder="15"
                     value={profile.weekly_availability?.hours_min || ''}
-                    onChange={(e) => updateProfile({
+                    onChange={(e: any) => updateProfile({
                       weekly_availability: {
                         ...profile.weekly_availability,
                         hours_min: parseInt(e.target.value) || 0,
@@ -315,7 +315,7 @@ export default function StudentOnboarding({
                     max="40"
                     placeholder="20"
                     value={profile.weekly_availability?.hours_max || ''}
-                    onChange={(e) => updateProfile({
+                    onChange={(e: any) => updateProfile({
                       weekly_availability: {
                         ...profile.weekly_availability,
                         hours_min: profile.weekly_availability?.hours_min || 15,
@@ -330,7 +330,7 @@ export default function StudentOnboarding({
                 <input
                   type="checkbox"
                   checked={profile.weekly_availability?.flexible ?? true}
-                  onChange={(e) => updateProfile({
+                  onChange={(e: any) => updateProfile({
                     weekly_availability: {
                       hours_min: profile.weekly_availability?.hours_min || 15,
                       hours_max: profile.weekly_availability?.hours_max || 20,
@@ -352,7 +352,7 @@ export default function StudentOnboarding({
                 <select
                   id="start_date"
                   value={profile.earliest_start_date || ''}
-                  onChange={(e) => updateProfile({ earliest_start_date: e.target.value })}
+                  onChange={(e: any) => updateProfile({ earliest_start_date: e.target.value })}
                   className={cn(
                     "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
                     errors.earliest_start_date ? 'border-red-500' : ''
@@ -378,7 +378,7 @@ export default function StudentOnboarding({
                     max="24"
                     placeholder="6"
                     value={profile.preferred_duration?.months_min || ''}
-                    onChange={(e) => updateProfile({
+                    onChange={(e: any) => updateProfile({
                       preferred_duration: {
                         ...profile.preferred_duration,
                         months_min: parseInt(e.target.value) || 0,
@@ -393,7 +393,7 @@ export default function StudentOnboarding({
                     max="24"
                     placeholder="12"
                     value={profile.preferred_duration?.months_max || ''}
-                    onChange={(e) => updateProfile({
+                    onChange={(e: any) => updateProfile({
                       preferred_duration: {
                         months_min: profile.preferred_duration?.months_min || 6,
                         months_max: parseInt(e.target.value) || 0,
@@ -406,7 +406,7 @@ export default function StudentOnboarding({
                   <input
                     type="checkbox"
                     checked={profile.preferred_duration?.open_ended ?? false}
-                    onChange={(e) => updateProfile({
+                    onChange={(e: any) => updateProfile({
                       preferred_duration: {
                         months_min: profile.preferred_duration?.months_min || 6,
                         months_max: profile.preferred_duration?.months_max || 12,
@@ -433,7 +433,7 @@ export default function StudentOnboarding({
                     <input
                       type="checkbox"
                       checked={profile.preferred_locations?.includes(city) ?? false}
-                      onChange={(e) => {
+                      onChange={(e: any) => {
                         const current = profile.preferred_locations || [];
                         if (e.target.checked) {
                           updateProfile({ preferred_locations: [...current, city] });
@@ -469,7 +469,7 @@ export default function StudentOnboarding({
                       name="remote_preference"
                       value={option.value}
                       checked={profile.remote_preference === option.value}
-                      onChange={(e) => updateProfile({ remote_preference: e.target.value as any })}
+                      onChange={(e: any) => updateProfile({ remote_preference: e.target.value as unknown })}
                       className="border-gray-300"
                     />
                     <span className="text-sm">{option.label}</span>
@@ -497,7 +497,7 @@ export default function StudentOnboarding({
                       name="enrollment_status"
                       value={option.value}
                       checked={profile.enrollment_status === option.value}
-                      onChange={(e) => updateProfile({ enrollment_status: e.target.value as any })}
+                      onChange={(e: any) => updateProfile({ enrollment_status: e.target.value as unknown })}
                       className="border-gray-300"
                     />
                     <span className="text-sm">{option.label}</span>
@@ -524,7 +524,7 @@ export default function StudentOnboarding({
                       name="visa_status"
                       value={option.value}
                       checked={profile.visa_status === option.value}
-                      onChange={(e) => updateProfile({ visa_status: e.target.value as any })}
+                      onChange={(e: any) => updateProfile({ visa_status: e.target.value as unknown })}
                       className="border-gray-300"
                     />
                     <span className="text-sm">{option.label}</span>
@@ -538,7 +538,7 @@ export default function StudentOnboarding({
                 type="checkbox"
                 id="immatrikulation_proof"
                 checked={profile.immatrikulation_proof ?? false}
-                onChange={(e) => updateProfile({ immatrikulation_proof: e.target.checked })}
+                onChange={(e: any) => updateProfile({ immatrikulation_proof: e.target.checked })}
                 className="rounded border-gray-300"
               />
               <Label htmlFor="immatrikulation_proof" className="text-sm">
@@ -563,7 +563,7 @@ export default function StudentOnboarding({
                     <Input
                       placeholder="Language (e.g., German, English)"
                       value={lang.language}
-                      onChange={(e) => {
+                      onChange={(e: any) => {
                         const languages = [...(profile.language_proficiencies || [])];
                         languages[index].language = e.target.value;
                         updateProfile({ language_proficiencies: languages });
@@ -572,9 +572,9 @@ export default function StudentOnboarding({
                     />
                     <select
                       value={lang.cefr_level}
-                      onChange={(e) => {
+                      onChange={(e: any) => {
                         const languages = [...(profile.language_proficiencies || [])];
-                        languages[index].cefr_level = e.target.value as any;
+                        languages[index].cefr_level = e.target.value as unknown;
                         updateProfile({ language_proficiencies: languages });
                       }}
                       className="px-3 py-2 border border-gray-300 rounded-md"
@@ -636,7 +636,7 @@ export default function StudentOnboarding({
                         <Input
                           placeholder="Course name (e.g., Database Systems)"
                           value={course.course_name}
-                          onChange={(e) => updateCourseworkModule(index, { course_name: e.target.value })}
+                          onChange={(e: any) => updateCourseworkModule(index, { course_name: e.target.value })}
                           className="flex-1 mr-2"
                         />
                         <Button
@@ -652,19 +652,19 @@ export default function StudentOnboarding({
                         <Input
                           placeholder="Semester (e.g., WS 2024)"
                           value={course.semester}
-                          onChange={(e) => updateCourseworkModule(index, { semester: e.target.value })}
+                          onChange={(e: any) => updateCourseworkModule(index, { semester: e.target.value })}
                         />
                         <Input
                           placeholder="Grade (optional)"
                           value={course.grade || ''}
-                          onChange={(e) => updateCourseworkModule(index, { grade: e.target.value })}
+                          onChange={(e: any) => updateCourseworkModule(index, { grade: e.target.value })}
                         />
                       </div>
 
                       <Textarea
                         placeholder="Relevant topics covered (comma-separated)"
                         value={course.relevant_topics?.join(', ') || ''}
-                        onChange={(e) => updateCourseworkModule(index, { 
+                        onChange={(e: any) => updateCourseworkModule(index, { 
                           relevant_topics: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                         })}
                         rows={2}
@@ -703,7 +703,7 @@ export default function StudentOnboarding({
                         <Input
                           placeholder="Project title"
                           value={project.title}
-                          onChange={(e) => updateProject(index, { title: e.target.value })}
+                          onChange={(e: any) => updateProject(index, { title: e.target.value })}
                           className="flex-1 mr-2"
                         />
                         <Button
@@ -719,13 +719,13 @@ export default function StudentOnboarding({
                         <Input
                           placeholder="Duration (e.g., 3 months)"
                           value={project.duration}
-                          onChange={(e) => updateProject(index, { duration: e.target.value })}
+                          onChange={(e: any) => updateProject(index, { duration: e.target.value })}
                         />
                         <Input
                           placeholder="Team size (optional)"
                           type="number"
                           value={project.team_size || ''}
-                          onChange={(e) => updateProject(index, { 
+                          onChange={(e: any) => updateProject(index, { 
                             team_size: e.target.value ? parseInt(e.target.value) : undefined 
                           })}
                         />
@@ -734,14 +734,14 @@ export default function StudentOnboarding({
                       <Textarea
                         placeholder="Project description"
                         value={project.description}
-                        onChange={(e) => updateProject(index, { description: e.target.value })}
+                        onChange={(e: any) => updateProject(index, { description: e.target.value })}
                         rows={3}
                       />
 
                       <Textarea
                         placeholder="Technologies used (comma-separated)"
                         value={project.technologies?.join(', ') || ''}
-                        onChange={(e) => updateProject(index, { 
+                        onChange={(e: any) => updateProject(index, { 
                           technologies: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                         })}
                         rows={2}

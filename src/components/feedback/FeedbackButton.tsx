@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { MessageCircle, X, Send, Loader2, CheckCircle2, Bug, Lightbulb, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import type { Database } from '@/lib/supabase/types'
 
-type FeedbackType = 'bug' | 'feature' | 'improvement' | 'other'
+type FeedbackType = Database['public']['Tables']['feedback']['Row']['type']
+type FeedbackInsert = Database['public']['Tables']['feedback']['Insert']
 
 const feedbackTypes = [
   { value: 'bug' as FeedbackType, label: 'Bug Report', icon: Bug, color: 'text-red-600 bg-red-50' },
@@ -33,7 +35,7 @@ export function FeedbackButton() {
       const { data: { user } } = await supabase.auth.getUser()
 
       // Submit feedback
-      const { error } = await supabase.from('feedback').insert({
+      const feedbackData: FeedbackInsert = {
         user_id: user?.id || null,
         email: user?.email || null,
         name: user?.user_metadata?.full_name || null,
@@ -43,7 +45,8 @@ export function FeedbackButton() {
         page_url: window.location.href,
         user_agent: navigator.userAgent,
         status: 'new'
-      })
+      }
+      const { error } = await supabase.from('feedback').insert(feedbackData as never)
 
       if (error) throw error
 
@@ -126,7 +129,7 @@ export function FeedbackButton() {
                     What type of feedback is this?
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {feedbackTypes.map((feedbackType) => {
+                    {feedbackTypes.map((feedbackType: any) => {
                       const Icon = feedbackType.icon
                       return (
                         <button
@@ -158,7 +161,7 @@ export function FeedbackButton() {
                   </label>
                   <textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e: any) => setMessage(e.target.value)}
                     placeholder="Tell us what you think or what went wrong..."
                     required
                     rows={5}
@@ -175,7 +178,7 @@ export function FeedbackButton() {
                     How would you rate your experience? (Optional)
                   </label>
                   <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
+                    {[1, 2, 3, 4, 5].map((star: any) => (
                       <button
                         key={star}
                         type="button"

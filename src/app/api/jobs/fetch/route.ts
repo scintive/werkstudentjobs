@@ -184,9 +184,12 @@ export async function GET(request: NextRequest) {
     console.log('🔍 FETCH API: Search query:', searchQuery || 'none');
     console.log('🔍 FETCH API: Jobs returned:', jobsData.length);
     console.log('🔍 FETCH API: Total count:', count);
-    console.log('🔍 FETCH API: First job skills:', (jobsData[0] as any)?.skills?.slice(0, 3));
-    console.log('🔍 FETCH API: First job skills count:', (jobsData[0] as any)?.skills?.length || 0);
-    console.log('🔍 FETCH API: First job title:', (jobsData[0] as any)?.title);
+    if (jobsData.length > 0) {
+      const firstJobObj = jobsData[0] as Record<string, unknown>;
+      console.log('🔍 FETCH API: First job skills:', (firstJobObj.skills as unknown[])?.slice(0, 3));
+      console.log('🔍 FETCH API: First job skills count:', (firstJobObj.skills as unknown[])?.length || 0);
+      console.log('🔍 FETCH API: First job title:', firstJobObj.title as string);
+    }
 
     return NextResponse.json({
       success: true,
@@ -247,19 +250,22 @@ async function fetchAndStoreNewJobs(requestedLimit?: number): Promise<void> {
  * Process a raw job and store it in Supabase with all pipeline fields maintained
  * Uses separated job parsing and company research to reduce token costs
  */
-async function processAndStoreJob(rawJob: any): Promise<void> {
+async function processAndStoreJob(rawJob: unknown): Promise<void> {
   try {
+    // Type assertion for rawJob to enable property access
+    const rawJobObj = rawJob as Record<string, unknown>;
+
     // 1. Parse job information only (cost-efficient, focuses on skills extraction)
     let extractedJob;
-    
+
     try {
-      console.log(`📋 Starting cost-efficient job parsing for: ${rawJob.title} at ${rawJob.companyName}`);
+      console.log(`📋 Starting cost-efficient job parsing for: ${rawJobObj.title as string} at ${rawJobObj.companyName as string}`);
       
       // Use new cost-efficient method that focuses on extracting meaningful skills
       extractedJob = await llmService.parseJobInfoOnly(rawJob);
       console.log(`✅ Job parsing successful - extracted ${extractedJob.named_skills_tools?.length || 0} skills`);
     } catch (error) {
-      console.warn(`⚠️ Cost-efficient parsing failed for job: ${rawJob.title}, using basic extraction:`, error);
+      console.warn(`⚠️ Cost-efficient parsing failed for job: ${rawJobObj.title}, using basic extraction:`, error);
       
       // Fallback to basic extraction if parsing fails
       extractedJob = await llmService.extractJobInfo(rawJob);
@@ -269,15 +275,15 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     let companyResearch = null;
     
     try {
-      const companyName = extractedJob.company_name || rawJob.companyName;
+      const companyName = (extractedJob.company_name || rawJobObj.companyName) as string;
       console.log(`🏢 INITIAL DEBUG: Company name from extracted:`, extractedJob.company_name);
-      console.log(`🏢 INITIAL DEBUG: Company name from raw:`, rawJob.companyName);
+      console.log(`🏢 INITIAL DEBUG: Company name from raw:`, rawJobObj.companyName);
       console.log(`🏢 INITIAL DEBUG: Final company name:`, companyName);
-      
+
       if (companyName && companyName !== 'Unknown Company') {
         console.log(`🏢 Starting separate company research for: ${companyName}`);
-        
-        const smartResearch = await llmService.smartCompanyResearch(companyName, rawJob);
+
+        const smartResearch = await llmService.smartCompanyResearch(companyName, rawJobObj as unknown);
         companyResearch = smartResearch.research;
         
         console.log(`🏢 Company research completed - confidence: ${smartResearch.confidence}, search used: ${smartResearch.searchUsed}, cost: ${smartResearch.cost}`);
@@ -292,13 +298,13 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     
     // 3. Ensure company exists with research data
     const companyId = await ensureCompanyExists(
-      extractedJob.company_name || rawJob.companyName || 'Unknown Company',
+      (extractedJob.company_name || rawJobObj.companyName || 'Unknown Company') as string,
       companyResearch
     );
     
     // 4. Geocode job location if available
     const jobGeoData: { latitude: number | null, longitude: number | null } = { latitude: null, longitude: null };
-    const jobLocation = extractedJob.location_city || rawJob.location;
+    const jobLocation = (extractedJob.location_city || rawJobObj.location) as string;
 
     if (jobLocation && jobLocation.trim() && !jobLocation.toLowerCase().includes('remote')) {
       console.log(`🗺️ Geocoding job location: "${jobLocation}"`);
@@ -322,30 +328,30 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     extractedJob = {
       ...extractedJob,
       // Fix application links - prefer direct application URL, fallback to job page
-      job_description_link: extractedJob.job_description_link || rawJob.link || null,
-      portal_link: extractedJob.portal_link || rawJob.link || null,
-      application_link: rawJob.applicationUrl || rawJob.applyUrl || rawJob.link || null, // Add application link
-      source: rawJob.portal || 'LinkedIn', // Fix source information
+      job_description_link: extractedJob.job_description_link || rawJobObj.link || null,
+      portal_link: extractedJob.portal_link || rawJobObj.link || null,
+      application_link: rawJobObj.applicationUrl || rawJobObj.applyUrl || rawJobObj.link || null, // Add application link
+      source: rawJobObj.portal || 'LinkedIn', // Fix source information
       
       // Basic fallbacks
-      date_posted: extractedJob.date_posted || rawJob.postedAt || null,
-      company_name: extractedJob.company_name || rawJob.companyName || null,
+      date_posted: extractedJob.date_posted || rawJobObj.postedAt || null,
+      company_name: extractedJob.company_name || rawJobObj.companyName || null,
       german_required: extractedJob.german_required || 'unknown',
-      werkstudent: extractedJob.werkstudent !== null ? extractedJob.werkstudent : 
-                  (rawJob.title?.toLowerCase().includes('werkstudent') || 
-                   rawJob.title?.toLowerCase().includes('working student') || false),
-      work_mode: extractedJob.work_mode || 
-                (rawJob.location?.toLowerCase().includes('remote') ? 'Remote' :
-                 rawJob.location?.toLowerCase().includes('hybrid') ? 'Hybrid' : 'Unknown'),
-      location_city: extractedJob.location_city || rawJob.location?.split(',')[0]?.trim() || null,
-      location_country: extractedJob.location_country || (rawJob.location?.includes('Germany') ? 'Germany' : null),
+      werkstudent: extractedJob.werkstudent !== null ? extractedJob.werkstudent :
+                  ((rawJobObj.title as string)?.toLowerCase().includes('werkstudent') ||
+                   (rawJobObj.title as string)?.toLowerCase().includes('working student') || false),
+      work_mode: extractedJob.work_mode ||
+                ((rawJobObj.location as string)?.toLowerCase().includes('remote') ? 'Remote' :
+                 (rawJobObj.location as string)?.toLowerCase().includes('hybrid') ? 'Hybrid' : 'Unknown'),
+      location_city: extractedJob.location_city || (rawJobObj.location as string)?.split(',')[0]?.trim() || null,
+      location_country: extractedJob.location_country || ((rawJobObj.location as string)?.includes('Germany') ? 'Germany' : null),
       
       // Add geocoded coordinates
       latitude: jobGeoData.latitude,
       longitude: jobGeoData.longitude,
       
       // Company research results (from separate call)
-      hiring_manager: companyResearch?.hiring_manager || null,
+      hiring_manager: (companyResearch as Record<string, unknown> | null)?.hiring_manager || null,
       tasks_responsibilities: Array.isArray(extractedJob.tasks_responsibilities) ? extractedJob.tasks_responsibilities : [],
       nice_to_have: Array.isArray(extractedJob.nice_to_have) ? extractedJob.nice_to_have : [],
       benefits: Array.isArray(extractedJob.benefits) ? extractedJob.benefits : [],
@@ -357,20 +363,20 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
     if (extractedJob.hiring_manager) {
       console.log(`👤 Hiring Manager found: ${extractedJob.hiring_manager}`);
     }
-    if (companyResearch?.additional_insights?.length > 0) {
-      console.log(`💡 Additional insights (${companyResearch.additional_insights.length}):`, companyResearch.additional_insights);
+    if (((companyResearch as Record<string, unknown> | null)?.additional_insights as unknown[])?.length > 0) {
+      console.log(`💡 Additional insights (${((companyResearch as Record<string, unknown> | null)?.additional_insights as unknown[])?.length}):`, (companyResearch as Record<string, unknown> | null)?.additional_insights);
     }
-    if (companyResearch?.research_confidence) {
-      console.log(`🔬 Research confidence: ${companyResearch.research_confidence}`);
+    if ((companyResearch as Record<string, unknown> | null)?.research_confidence) {
+      console.log(`🔬 Research confidence: ${(companyResearch as Record<string, unknown> | null)?.research_confidence}`);
     }
 
     // 5. Prepare job data for Supabase with enhanced research fields
     const jobData = {
-      external_id: rawJob.id || rawJob.url || rawJob.link || null,
+      external_id: rawJobObj.id || rawJobObj.url || rawJobObj.link || null,
       company_id: companyId,
-      title: rawJob.title || 'Untitled Position',
-      description: rawJob.description || rawJob.text || null,
-      portal: extractedJob.source || rawJob.portal || 'LinkedIn', // Use fixed source
+      title: rawJobObj.title || 'Untitled Position',
+      description: rawJobObj.description || rawJobObj.text || null,
+      portal: extractedJob.source || rawJobObj.portal || 'LinkedIn', // Use fixed source
       portal_link: extractedJob.portal_link,
       job_description_link: extractedJob.job_description_link,
       application_link: extractedJob.application_link, // Use enhanced application link
@@ -379,12 +385,12 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
       werkstudent: extractedJob.werkstudent,
       is_werkstudent: extractedJob.werkstudent, // Both fields for compatibility
       work_mode: extractedJob.work_mode,
-      contract_type: rawJob.employmentType || 'Unknown',
-      employment_type: rawJob.employmentType, // Pipeline field
-      seniority_level: rawJob.seniorityLevel, // Pipeline field
+      contract_type: rawJobObj.employmentType || 'Unknown',
+      employment_type: rawJobObj.employmentType, // Pipeline field
+      seniority_level: rawJobObj.seniorityLevel, // Pipeline field
       
       // Location Data (using GPT-extracted data)
-      location_raw: rawJob.location || null,
+      location_raw: rawJobObj.location || null,
       city: extractedJob.location_city,
       country: extractedJob.location_country,
       is_remote: extractedJob.work_mode === 'Remote',
@@ -397,15 +403,15 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
       longitude: extractedJob.longitude,
       
       // Salary Information
-      salary_min: rawJob.salaryFrom ? parseInt(rawJob.salaryFrom) : null,
-      salary_max: rawJob.salaryTo ? parseInt(rawJob.salaryTo) : null,
-      salary_info: rawJob.salary || null, // Pipeline field
+      salary_min: rawJobObj.salaryFrom ? parseInt(rawJobObj.salaryFrom as string) : null,
+      salary_max: rawJobObj.salaryTo ? parseInt(rawJobObj.salaryTo as string) : null,
+      salary_info: rawJobObj.salary || null, // Pipeline field
       
       // LinkedIn and Job Details (Pipeline fields)
-      linkedin_url: rawJob.link,
-      job_function: rawJob.jobFunction,
-      industries: rawJob.industries ? [rawJob.industries] : null,
-      applicants_count: parseInt(rawJob.applicantsCount) || null,
+      linkedin_url: rawJobObj.link,
+      job_function: rawJobObj.jobFunction,
+      industries: rawJobObj.industries ? [rawJobObj.industries] : null,
+      applicants_count: parseInt(rawJobObj.applicantsCount as string) || null,
       
       // User Interaction Fields (Pipeline fields)
       user_saved: false,
@@ -427,8 +433,8 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
       responsibilities: Array.isArray(extractedJob.tasks_responsibilities) ? extractedJob.tasks_responsibilities : null,
       nice_to_have: Array.isArray(extractedJob.nice_to_have) ? extractedJob.nice_to_have : null,
       benefits: Array.isArray(extractedJob.benefits) ? extractedJob.benefits : null,
-      who_we_are_looking_for: Array.isArray((extractedJob as any).who_we_are_looking_for) ? (extractedJob as any).who_we_are_looking_for : null,
-      application_requirements: Array.isArray((extractedJob as any).application_requirements) ? (extractedJob as any).application_requirements : null,
+      who_we_are_looking_for: Array.isArray((extractedJob as Record<string, unknown>).who_we_are_looking_for) ? (extractedJob as Record<string, unknown>).who_we_are_looking_for : null,
+      application_requirements: Array.isArray((extractedJob as Record<string, unknown>).application_requirements) ? (extractedJob as Record<string, unknown>).application_requirements : null,
       
       // Store research data in description for now (until schema is updated)
       // hiring_manager: extractedJob.hiring_manager, // TODO: Add to schema
@@ -439,7 +445,7 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
       // research_confidence: extractedJob.research_confidence || null, // TODO: Add to schema
       
       // Metadata
-      posted_at: extractedJob.date_posted ? new Date(extractedJob.date_posted).toISOString() : null,
+      posted_at: extractedJob.date_posted ? new Date(extractedJob.date_posted as string).toISOString() : null,
       source_quality_score: calculateQualityScore(rawJob, extractedJob),
       is_active: true
     };
@@ -453,7 +459,7 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
       });
 
     if (error) {
-      console.error(`Error storing job "${rawJob.title}":`, error.message);
+      console.error(`Error storing job "${rawJobObj.title}":`, error.message);
       throw error;
     }
 
@@ -466,7 +472,7 @@ async function processAndStoreJob(rawJob: any): Promise<void> {
 /**
  * Ensure company exists with enhanced research data, return company ID
  */
-async function ensureCompanyExists(companyName: string, companyResearch?: any): Promise<string> {
+async function ensureCompanyExists(companyName: string, companyResearch?: unknown): Promise<string> {
   if (!companyName || companyName.trim() === '') {
     companyName = 'Unknown Company';
   }
@@ -480,23 +486,24 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
 
   if (existingCompany) {
     // Check if we should update with new research data (update if we have comprehensive research OR more than 7 days old)
+    const companyResearchObj = companyResearch as Record<string, unknown>;
     const shouldUpdate = companyResearch && (
-      !(existingCompany as any).updated_at ||
-      new Date().getTime() - new Date((existingCompany as any).updated_at).getTime() > 7 * 24 * 60 * 60 * 1000 || // 7 days
-      (companyResearch.founded || companyResearch.employee_count || companyResearch.description) // OR has comprehensive data
+      !(existingCompany as Record<string, unknown>).updated_at ||
+      new Date().getTime() - new Date((existingCompany as Record<string, unknown>).updated_at as string).getTime() > 7 * 24 * 60 * 60 * 1000 || // 7 days
+      (companyResearchObj.founded || companyResearchObj.employee_count || companyResearchObj.description) // OR has comprehensive data
     );
 
     if (shouldUpdate) {
       console.log(`🏢 Updating company research for: ${companyName}`);
-      await updateCompanyWithResearch((existingCompany as any).id, companyResearch);
+      await updateCompanyWithResearch((existingCompany as Record<string, unknown>).id as string, companyResearch);
     }
 
-    return (existingCompany as any).id;
+    return (existingCompany as Record<string, unknown>).id as string;
   }
 
   // Create new company with research data
   console.log(`🏢 Creating new company with research: ${companyName}`);
-  const companyData: any = { 
+  const companyData: Record<string, unknown> = {
     name: companyName.trim(),
     industry: 'Technology', // Default, will be updated by research
     size_category: 'medium' // Default, will be updated by research
@@ -504,53 +511,54 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
 
   // Add comprehensive research data if available (map ALL fields to database schema)
   if (companyResearch) {
-    console.log(`🔍 Mapping comprehensive research data for ${companyName}:`, Object.keys(companyResearch));
-    
+    const companyResearchObj = companyResearch as Record<string, unknown>;
+    console.log(`🔍 Mapping comprehensive research data for ${companyName}:`, Object.keys(companyResearchObj));
+
     // Basic company information (use actual web search field names)
-    companyData.website_url = companyResearch.website || companyResearch.official_website || null;
-    companyData.industry_sector = companyResearch.industry || null;
-    companyData.industry = companyResearch.industry || companyData.industry; // Fallback field
-    companyData.headquarters_location = companyResearch.headquarters || null;
-    companyData.description = companyResearch.description || companyResearch.employee_reviews_summary || null;
+    companyData.website_url = companyResearchObj.website || companyResearchObj.official_website || null;
+    companyData.industry_sector = companyResearchObj.industry || null;
+    companyData.industry = companyResearchObj.industry || companyData.industry; // Fallback field
+    companyData.headquarters_location = companyResearchObj.headquarters || null;
+    companyData.description = companyResearchObj.description || companyResearchObj.employee_reviews_summary || null;
     
-    // Foundational information  
-    companyData.founded_year = companyResearch.founded ? parseInt(companyResearch.founded) : null;
-    companyData.careers_page_url = companyResearch.job_specific?.direct_application_link || null;
-    companyData.business_model = companyResearch.business_model || null;
-    companyData.employee_count = companyResearch.employee_count ? parseInt(companyResearch.employee_count) : null;
+    // Foundational information
+    companyData.founded_year = companyResearchObj.founded ? parseInt(companyResearchObj.founded as string) : null;
+    companyData.careers_page_url = (companyResearchObj.job_specific as Record<string, unknown>)?.direct_application_link || null;
+    companyData.business_model = companyResearchObj.business_model || null;
+    companyData.employee_count = companyResearchObj.employee_count ? parseInt(companyResearchObj.employee_count as string) : null;
     
     // Arrays of detailed information (using actual web search field names)
-    companyData.office_locations = Array.isArray(companyResearch.office_locations) ? companyResearch.office_locations : null;
-    companyData.key_products_services = Array.isArray(companyResearch.products_services) ? companyResearch.products_services : null;
-    companyData.notable_investors = Array.isArray(companyResearch.notable_investors) ? companyResearch.notable_investors : null;
-    companyData.leadership_team = Array.isArray(companyResearch.leadership_team) ? companyResearch.leadership_team : null;
-    companyData.company_values = companyResearch.company_culture ? [companyResearch.company_culture] : null;
-    companyData.culture_highlights = companyResearch.company_culture ? [companyResearch.company_culture] : null;
-    companyData.competitors = Array.isArray(companyResearch.competitors) ? companyResearch.competitors : null;
-    companyData.diversity_initiatives = Array.isArray(companyResearch.diversity_initiatives) ? companyResearch.diversity_initiatives : null;
-    companyData.awards_recognition = Array.isArray(companyResearch.awards_recognition) ? companyResearch.awards_recognition : null;
-    companyData.recent_news = Array.isArray(companyResearch.recent_news) ? companyResearch.recent_news : null;
+    companyData.office_locations = Array.isArray(companyResearchObj.office_locations) ? companyResearchObj.office_locations : null;
+    companyData.key_products_services = Array.isArray(companyResearchObj.products_services) ? companyResearchObj.products_services : null;
+    companyData.notable_investors = Array.isArray(companyResearchObj.notable_investors) ? companyResearchObj.notable_investors : null;
+    companyData.leadership_team = Array.isArray(companyResearchObj.leadership_team) ? companyResearchObj.leadership_team : null;
+    companyData.company_values = companyResearchObj.company_culture ? [companyResearchObj.company_culture] : null;
+    companyData.culture_highlights = companyResearchObj.company_culture ? [companyResearchObj.company_culture] : null;
+    companyData.competitors = Array.isArray(companyResearchObj.competitors) ? companyResearchObj.competitors : null;
+    companyData.diversity_initiatives = Array.isArray(companyResearchObj.diversity_initiatives) ? companyResearchObj.diversity_initiatives : null;
+    companyData.awards_recognition = Array.isArray(companyResearchObj.awards_recognition) ? companyResearchObj.awards_recognition : null;
+    companyData.recent_news = Array.isArray(companyResearchObj.recent_news) ? companyResearchObj.recent_news : null;
     
     // Text fields with detailed information (using actual web search field names)
-    companyData.funding_status = companyResearch.funding || null;
-    companyData.employee_reviews_summary = companyResearch.employee_reviews_summary || null;
-    companyData.remote_work_policy = companyResearch.remote_work_policy || null;
+    companyData.funding_status = companyResearchObj.funding || null;
+    companyData.employee_reviews_summary = companyResearchObj.employee_reviews_summary || null;
+    companyData.remote_work_policy = companyResearchObj.remote_work_policy || null;
     
     // Glassdoor rating (parse if string)
-    if (companyResearch.glassdoor_rating) {
-      const rating = parseFloat(companyResearch.glassdoor_rating);
+    if (companyResearchObj.glassdoor_rating) {
+      const rating = parseFloat(companyResearchObj.glassdoor_rating as string);
       companyData.glassdoor_rating = !isNaN(rating) ? rating : null;
     }
     
     // Additional insights  
-    companyData.recent_news = Array.isArray(companyResearch.additional_insights) ? 
-      companyResearch.additional_insights : companyData.recent_news;
+    companyData.recent_news = Array.isArray(companyResearchObj.additional_insights) ? 
+      companyResearchObj.additional_insights : companyData.recent_news;
     
     // Note: Domain field removed as it doesn't exist in schema
     
     // Determine size category from employee count
-    if (companyResearch.employee_count) {
-      const count = parseInt(companyResearch.employee_count);
+    if (companyResearchObj.employee_count) {
+      const count = parseInt(companyResearchObj.employee_count as string);
       if (count < 50) companyData.company_size_category = 'startup';
       else if (count < 200) companyData.company_size_category = 'small';
       else if (count < 1000) companyData.company_size_category = 'medium';
@@ -559,7 +567,7 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
     }
     
     // Research metadata  
-    companyData.research_confidence = companyResearch.research_confidence || 'medium';
+    companyData.research_confidence = companyResearchObj.research_confidence || 'medium';
     companyData.research_last_updated = new Date().toISOString();
     companyData.research_source = 'gpt_web_search';
     
@@ -578,7 +586,7 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
 
   const { data: newCompany, error } = await supabase
     .from('companies')
-    .insert(companyData)
+    .insert(companyData as any)
     .select('id')
     .single();
 
@@ -595,12 +603,12 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
         .single();
       
       if (existingCompany) {
-        return (existingCompany as any).id;
+        return (existingCompany as Record<string, unknown>).id as string;
       }
 
       throw new Error(`Failed to find existing company "${companyName}": ${selectError?.message || 'Unknown error'}`);
     }
-    
+
     throw new Error(`Failed to create company "${companyName}": ${error?.message || 'Unknown error'}`);
   }
 
@@ -608,68 +616,70 @@ async function ensureCompanyExists(companyName: string, companyResearch?: any): 
     throw new Error(`Failed to create company "${companyName}": No data returned`);
   }
 
-  return (newCompany as any).id;
+  return (newCompany as Record<string, unknown>).id as string;
 }
 
 /**
  * Update existing company with comprehensive new research data
  */
-async function updateCompanyWithResearch(companyId: string, companyResearch: any): Promise<void> {
-  console.log(`🔍 Updating company with comprehensive research data:`, Object.keys(companyResearch));
-  
-  const updateData: any = {
+async function updateCompanyWithResearch(companyId: string, companyResearch: unknown): Promise<void> {
+  const companyResearchObj = companyResearch as Record<string, unknown>;
+  console.log(`🔍 Updating company with comprehensive research data:`, Object.keys(companyResearchObj));
+
+  const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString()
   };
 
   // Comprehensive data mapping (using actual web search field names)
-  if (companyResearch.website || companyResearch.official_website) {
-    updateData.website_url = companyResearch.website || companyResearch.official_website;
+  if (companyResearchObj.website || companyResearchObj.official_website) {
+    updateData.website_url = companyResearchObj.website || companyResearchObj.official_website;
   }
-  if (companyResearch.industry) {
-    updateData.industry_sector = companyResearch.industry;
-    updateData.industry = companyResearch.industry; // Fallback field
+  if (companyResearchObj.industry) {
+    updateData.industry_sector = companyResearchObj.industry;
+    updateData.industry = companyResearchObj.industry; // Fallback field
   }
-  if (companyResearch.headquarters) updateData.headquarters_location = companyResearch.headquarters;
-  if (companyResearch.description || companyResearch.employee_reviews_summary) {
-    updateData.description = companyResearch.description || companyResearch.employee_reviews_summary;
+  if (companyResearchObj.headquarters) updateData.headquarters_location = companyResearchObj.headquarters;
+  if (companyResearchObj.description || companyResearchObj.employee_reviews_summary) {
+    updateData.description = companyResearchObj.description || companyResearchObj.employee_reviews_summary;
   }
   
   // Foundational information
-  if (companyResearch.founded) updateData.founded_year = parseInt(companyResearch.founded);
-  if (companyResearch.job_specific?.direct_application_link) {
-    updateData.careers_page_url = companyResearch.job_specific.direct_application_link;
+  if (companyResearchObj.founded) updateData.founded_year = parseInt(companyResearchObj.founded as string);
+  if ((companyResearchObj.job_specific as Record<string, unknown>)?.direct_application_link) {
+    updateData.careers_page_url = (companyResearchObj.job_specific as Record<string, unknown>).direct_application_link;
   }
-  if (companyResearch.business_model) updateData.business_model = companyResearch.business_model;
-  if (companyResearch.employee_count) updateData.employee_count = parseInt(companyResearch.employee_count);
+  if (companyResearchObj.business_model) updateData.business_model = companyResearchObj.business_model;
+  if (companyResearchObj.employee_count) updateData.employee_count = parseInt(companyResearchObj.employee_count as string);
   
   // Arrays of detailed information
-  if (Array.isArray(companyResearch.office_locations)) updateData.office_locations = companyResearch.office_locations;
-  if (Array.isArray(companyResearch.products_services)) updateData.key_products_services = companyResearch.products_services;
-  if (Array.isArray(companyResearch.notable_investors)) updateData.notable_investors = companyResearch.notable_investors;
-  if (Array.isArray(companyResearch.leadership_team)) updateData.leadership_team = companyResearch.leadership_team;
-  if (Array.isArray(companyResearch.company_values)) updateData.company_values = companyResearch.company_values;
-  if (Array.isArray(companyResearch.culture_highlights)) updateData.culture_highlights = companyResearch.culture_highlights;
-  if (Array.isArray(companyResearch.competitors)) updateData.competitors = companyResearch.competitors;
-  if (Array.isArray(companyResearch.diversity_initiatives)) updateData.diversity_initiatives = companyResearch.diversity_initiatives;
-  if (Array.isArray(companyResearch.awards_recognition)) updateData.awards_recognition = companyResearch.awards_recognition;
-  if (Array.isArray(companyResearch.recent_news)) updateData.recent_news = companyResearch.recent_news;
+  if (Array.isArray(companyResearchObj.office_locations)) updateData.office_locations = companyResearchObj.office_locations;
+  if (Array.isArray(companyResearchObj.products_services)) updateData.key_products_services = companyResearchObj.products_services;
+  if (Array.isArray(companyResearchObj.notable_investors)) updateData.notable_investors = companyResearchObj.notable_investors;
+  if (Array.isArray(companyResearchObj.leadership_team)) updateData.leadership_team = companyResearchObj.leadership_team;
+  if (Array.isArray(companyResearchObj.company_values)) updateData.company_values = companyResearchObj.company_values;
+  if (Array.isArray(companyResearchObj.culture_highlights)) updateData.culture_highlights = companyResearchObj.culture_highlights;
+  if (Array.isArray(companyResearchObj.competitors)) updateData.competitors = companyResearchObj.competitors;
+  if (Array.isArray(companyResearchObj.diversity_initiatives)) updateData.diversity_initiatives = companyResearchObj.diversity_initiatives;
+  if (Array.isArray(companyResearchObj.awards_recognition)) updateData.awards_recognition = companyResearchObj.awards_recognition;
+  if (Array.isArray(companyResearchObj.recent_news)) updateData.recent_news = companyResearchObj.recent_news;
   
   // Text fields with detailed information
-  if (companyResearch.funding_status) updateData.funding_status = companyResearch.funding_status;
-  if (companyResearch.employee_reviews_summary) updateData.employee_reviews_summary = companyResearch.employee_reviews_summary;
-  if (companyResearch.remote_work_policy) updateData.remote_work_policy = companyResearch.remote_work_policy;
+  if (companyResearchObj.funding_status) updateData.funding_status = companyResearchObj.funding_status;
+  if (companyResearchObj.employee_reviews_summary) updateData.employee_reviews_summary = companyResearchObj.employee_reviews_summary;
+  if (companyResearchObj.remote_work_policy) updateData.remote_work_policy = companyResearchObj.remote_work_policy;
   
   // Glassdoor rating (parse if string)
-  if (companyResearch.glassdoor_rating) {
-    const rating = parseFloat(companyResearch.glassdoor_rating);
+  if (companyResearchObj.glassdoor_rating) {
+    const rating = parseFloat(companyResearchObj.glassdoor_rating as string);
     if (!isNaN(rating)) updateData.glassdoor_rating = rating;
   }
   
   // Update domain from website URL
-  const websiteUrl = companyResearch.website || companyResearch.official_website;
+  const websiteUrl = companyResearchObj.website || companyResearchObj.official_website;
   if (websiteUrl) {
     try {
-      const url = new URL(websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`);
+      const websiteUrlStr = websiteUrl as string;
+      const url = new URL(websiteUrlStr.startsWith('http') ? websiteUrlStr : `https://${websiteUrlStr}`);
       updateData.domain = url.hostname.replace('www.', '');
     } catch (e) {
       console.log(`⚠️ Invalid website URL: ${websiteUrl}`);
@@ -677,8 +687,8 @@ async function updateCompanyWithResearch(companyId: string, companyResearch: any
   }
   
   // Determine size category from employee count
-  if (companyResearch.employee_count) {
-    const count = parseInt(companyResearch.employee_count);
+  if (companyResearchObj.employee_count) {
+    const count = parseInt(companyResearchObj.employee_count as string);
     if (count < 50) updateData.company_size_category = 'startup';
     else if (count < 200) updateData.company_size_category = 'small';
     else if (count < 1000) updateData.company_size_category = 'medium';
@@ -687,14 +697,15 @@ async function updateCompanyWithResearch(companyId: string, companyResearch: any
   }
   
   // Research metadata
-  updateData.research_confidence = companyResearch.research_confidence || 'medium';
+  updateData.research_confidence = companyResearchObj.research_confidence || 'medium';
   updateData.research_last_updated = new Date().toISOString();
   updateData.research_source = 'gpt_web_search';
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('companies')
-    .update(updateData)
-    .eq('id', companyId);
+    .update(updateData as never)
+    .eq('id', companyId)
+    .maybeSingle();
 
   if (error) {
     console.warn(`Failed to update company research: ${error.message}`);
@@ -706,25 +717,27 @@ async function updateCompanyWithResearch(companyId: string, companyResearch: any
 /**
  * Calculate quality score based on data completeness (same logic as before)
  */
-function calculateQualityScore(rawJob: any, extracted: any): number {
+function calculateQualityScore(rawJob: unknown, extracted: unknown): number {
+  const rawJobObj = rawJob as Record<string, unknown>;
+  const extractedObj = extracted as Record<string, unknown>;
   let score = 0.0;
 
   // Basic information (40%)
-  if (rawJob.title) score += 0.1;
-  if (rawJob.description) score += 0.15;
-  if (extracted.company_name) score += 0.1;
-  if (rawJob.location) score += 0.05;
+  if (rawJobObj.title) score += 0.1;
+  if (rawJobObj.description) score += 0.15;
+  if (extractedObj.company_name) score += 0.1;
+  if (rawJobObj.location) score += 0.05;
 
   // Application details (30%)
-  if (extracted.job_description_link) score += 0.1;
-  if (extracted.portal_link) score += 0.1;
-  if (extracted.date_posted) score += 0.1;
+  if (extractedObj.job_description_link) score += 0.1;
+  if (extractedObj.portal_link) score += 0.1;
+  if (extractedObj.date_posted) score += 0.1;
 
   // Job specifics (30%)
-  if (extracted.werkstudent !== null) score += 0.05;
-  if (extracted.work_mode !== 'Unknown') score += 0.1;
-  if (extracted.named_skills_tools.length > 0) score += 0.1;
-  if (extracted.german_required !== 'unknown') score += 0.05;
+  if (extractedObj.werkstudent !== null) score += 0.05;
+  if (extractedObj.work_mode !== 'Unknown') score += 0.1;
+  if ((extractedObj.named_skills_tools as unknown[])?.length > 0) score += 0.1;
+  if (extractedObj.german_required !== 'unknown') score += 0.05;
 
   return Math.min(score, 1.0);
 }

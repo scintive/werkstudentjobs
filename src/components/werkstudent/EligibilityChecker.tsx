@@ -11,7 +11,7 @@ import type { StudentProfile, WerkstudentEligibility } from '@/lib/types/student
 
 interface EligibilityCheckerProps {
   studentProfile: Partial<StudentProfile>;
-  userProfile?: any; // Add user profile info
+  userProfile?: unknown; // Add user profile info
   jobRequirements?: {
     hours_per_week?: string;
     language_required?: string;
@@ -86,9 +86,10 @@ export default function EligibilityChecker({
   const checkLocation = (): boolean => {
     if (!jobRequirements?.location) return true;
     if (!studentProfile.preferred_locations?.length) return false;
-    
-    return studentProfile.preferred_locations.some(loc => 
-      loc.toLowerCase().includes(jobRequirements.location.toLowerCase())
+
+    const jobLocation = jobRequirements.location;
+    return studentProfile.preferred_locations.some(loc =>
+      loc.toLowerCase().includes(jobLocation.toLowerCase())
     ) || studentProfile.remote_preference !== 'onsite_only';
   };
 

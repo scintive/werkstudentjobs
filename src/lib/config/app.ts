@@ -171,8 +171,8 @@ export const APP_CONFIG = {
  * @param {string} path - Dot-notation path to config value (e.g., 'OPENAI.DEFAULT_MODEL')
  * @returns {*} The configuration value
  */
-export function getConfig(path: string): any {
-  return path.split('.').reduce((obj, key) => obj?.[key], APP_CONFIG);
+export function getConfig(path: string): unknown {
+  return path.split('.').reduce((obj: unknown, key: string) => obj?.[key], APP_CONFIG as unknown);
 }
 
 /**
@@ -180,7 +180,7 @@ export function getConfig(path: string): any {
  * @param {string} model - Model name
  * @returns {Object} Model configuration
  */
-export function getModelConfig(model: string | null = null): any {
+export function getModelConfig(model: string | null = null): unknown {
   const modelName = model || getConfig('OPENAI.DEFAULT_MODEL');
   return getConfig(`OPENAI.MODELS.${modelName}`) || getConfig('OPENAI.MODELS.gpt-4o-mini');
 }
@@ -190,7 +190,7 @@ export function getModelConfig(model: string | null = null): any {
  * @param {string} template - Template name
  * @returns {Object} Template configuration
  */
-export function getTemplateConfig(template: string | null = null): any {
+export function getTemplateConfig(template: string | null = null): unknown {
   const templateName = template || getConfig('RESUME_TEMPLATES.DEFAULT');
   return getConfig(`RESUME_TEMPLATES.SETTINGS.${templateName}`) || getConfig('RESUME_TEMPLATES.SETTINGS.swiss');
 }

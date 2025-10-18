@@ -222,7 +222,7 @@ export function ModernTemplateSelector({
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    {templates.map((template) => (
+                    {templates.map((template: any) => (
                       <motion.button
                         key={template.id}
                         onClick={() => {
@@ -274,7 +274,7 @@ export function ModernTemplateSelector({
 
                           {/* Features */}
                           <div className="flex flex-wrap gap-1">
-                            {template.features.map((feature, idx) => (
+                            {template.features.map((feature: string, idx: number) => (
                               <span
                                 key={idx}
                                 className="px-1.5 py-0.5 bg-gray-100 text-[10px] text-gray-600 rounded"

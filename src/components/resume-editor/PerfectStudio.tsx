@@ -39,8 +39,11 @@ import {
   Megaphone,
   PenTool,
   Upload,
-  Camera
+  Camera,
+  Edit3,
+  Eye
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useResumeActions } from '@/lib/contexts/ResumeContext'
 import { useSupabaseResumeContext, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext'
 import { supabase } from '@/lib/supabase/client'
@@ -145,12 +148,12 @@ export const CleanInput = ({
       <div className="relative group">
         {icon && (
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gray-600 transition-colors">
-            {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-4 h-4' })}
+            {React.cloneElement(icon as React.ReactElement<unknown>, { className: 'w-4 h-4' })}
           </div>
         )}
         <Component
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e: any) => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn(
             "w-full px-3.5 py-2.5 text-sm bg-gray-50 border-0 rounded-lg",
@@ -183,8 +186,9 @@ const humanizePlanKey = (key: string) => {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-const resolvePlanDisplayName = (category: any, canonical: string) => {
-  const raw = typeof category?.display_name === 'string' ? category.display_name.trim() : ''
+const resolvePlanDisplayName = (category: unknown, canonical: string) => {
+  const cat = category as Record<string, unknown> | null;
+  const raw = typeof cat?.display_name === 'string' ? (cat.display_name as string).trim() : ''
   if (!raw) return humanizePlanKey(canonical)
 
   if (raw.includes('_') || raw === raw.toLowerCase()) {
@@ -198,7 +202,7 @@ const normalizePlanSkillName = (value?: string | null) => {
   return (value || '').toString().toLowerCase().trim()
 }
 
-const normalizePlanSkillEntry = (skill: any) => {
+const normalizePlanSkillEntry = (skill: unknown) => {
   if (!skill) {
     return {
       name: '',
@@ -231,7 +235,7 @@ const normalizePlanSkillEntry = (skill: any) => {
   }
 }
 
-const findSkillsForCanonical = (skillsByCategory: Record<string, any>, canonical: string, displayName: string) => {
+const findSkillsForCanonical = (skillsByCategory: Record<string, unknown>, canonical: string, displayName: string) => {
   if (!skillsByCategory) return null
 
   if (Array.isArray(skillsByCategory[canonical])) {
@@ -250,19 +254,19 @@ const findSkillsForCanonical = (skillsByCategory: Record<string, any>, canonical
   return null
 }
 
-const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> = {}) => {
+const planToOrganizedSkills = (plan: unknown, skillsByCategory: Record<string, unknown> = {}) => {
   if (!plan || !Array.isArray(plan.categories)) return null
 
-  const organized_categories: Record<string, any> = {}
+  const organized_categories: Record<string, unknown> = {}
 
   plan.categories
     .slice()
-    .sort((a: any, b: any) => {
+    .sort((a: unknown, b: unknown) => {
       const aPriority = typeof a?.priority === 'number' ? a.priority : 999
       const bPriority = typeof b?.priority === 'number' ? b.priority : 999
       return aPriority - bPriority
     })
-    .forEach((category: any) => {
+    .forEach((category: unknown) => {
       const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
       if (!canonical) return
 
@@ -271,7 +275,7 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
       const existingSkills = findSkillsForCanonical(skillsByCategory, canonical, displayName)
 
       const resolvedSkills = Array.isArray(existingSkills)
-        ? existingSkills.map((entry: any) => {
+        ? existingSkills.map((entry: unknown) => {
             if (entry == null) return entry
             if (typeof entry === 'string') return entry
             if (typeof entry === 'object') return { ...entry }
@@ -279,13 +283,13 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
           })
         : Array.isArray(category?.skills)
           ? category.skills
-              .filter((item: any) => {
+              .filter((item: unknown) => {
                 const status = String(item?.status || '').toLowerCase()
                 // Include all existing skills unless explicitly marked as removed by user
                 // Only exclude skills with status 'removed' (user explicitly removed them)
                 return status !== 'removed'
               })
-              .map((item: any) => {
+              .map((item: unknown) => {
                 if (item?.proficiency) {
                   return { skill: item.name || item.skill, proficiency: item.proficiency }
                 }
@@ -295,8 +299,8 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
 
       const pendingAdditions = Array.isArray(category?.skills)
         ? category.skills
-            .filter((item: any) => ['add', 'promote'].includes(String(item?.status || '').toLowerCase()))
-            .map((item: any) => item?.name)
+            .filter((item: unknown) => ['add', 'promote'].includes(String(item?.status || '').toLowerCase()))
+            .map((item: unknown) => item?.name)
             .filter(Boolean)
         : []
 
@@ -304,7 +308,7 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
         skills: resolvedSkills,
         suggestions: pendingAdditions,
         reasoning: category?.job_alignment || category?.rationale || '',
-        allowProficiency: resolvedSkills.some((entry: any) => typeof entry === 'object' && entry?.proficiency),
+        allowProficiency: resolvedSkills.some((entry: unknown) => typeof entry === 'object' && entry?.proficiency),
         meta: {
           canonicalKey: canonical,
           planSkills: Array.isArray(category?.skills) ? category.skills : [],
@@ -320,7 +324,7 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
   }
 }
 
-const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) => {
+const applySkillSuggestionToPlan = (plan: unknown, suggestion: UnifiedSuggestion) => {
   if (!plan || !Array.isArray(plan.categories)) return plan
 
   const rawTarget = suggestion.targetPath || ''
@@ -329,28 +333,28 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
   )
   if (!canonicalTarget) return plan
 
-  const clonedCategories = plan.categories.map((category: any) => {
+  const clonedCategories = plan.categories.map((category: unknown) => {
     const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
     return {
       ...category,
       canonical_key: canonical || category?.canonical_key,
       display_name: resolvePlanDisplayName(category, canonical),
       skills: Array.isArray(category?.skills)
-        ? category.skills.map((skill: any) => normalizePlanSkillEntry(skill))
+        ? category.skills.map((skill: unknown) => normalizePlanSkillEntry(skill))
         : []
     }
   })
 
-  let categoryIndex = clonedCategories.findIndex((cat: any) =>
+  let categoryIndex = clonedCategories.findIndex((cat: unknown) =>
     canonicalizePlanKey(cat?.canonical_key || cat?.display_name) === canonicalTarget
   )
 
   if (categoryIndex === -1) {
-    const inferredDisplay = (suggestion as any)?.metadata?.categoryDisplayName || (suggestion as any)?.category || humanizePlanKey(canonicalTarget)
+    const inferredDisplay = (suggestion as unknown)?.metadata?.categoryDisplayName || (suggestion as unknown)?.category || humanizePlanKey(canonicalTarget)
     clonedCategories.push({
       canonical_key: canonicalTarget,
       display_name: resolvePlanDisplayName({ display_name: inferredDisplay }, canonicalTarget),
-      priority: typeof (suggestion as any)?.metadata?.categoryPriority === 'number' ? (suggestion as any).metadata.categoryPriority : undefined,
+      priority: typeof (suggestion as unknown)?.metadata?.categoryPriority === 'number' ? (suggestion as unknown).metadata.categoryPriority : undefined,
       job_alignment: suggestion?.rationale || '',
       skills: []
     })
@@ -359,11 +363,11 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
 
   const category = clonedCategories[categoryIndex]
 
-  if ((suggestion as any).type === 'skill_add' || (suggestion as any).type === 'skill_addition') {
+  if ((suggestion as unknown).type === 'skill_add' || (suggestion as unknown).type === 'skill_addition') {
     const skillName = suggestion.suggested || ''
     if (!skillName) return plan
     const skillKey = normalizePlanSkillName(skillName)
-    const existingIndex = category.skills.findIndex((skill: any) =>
+    const existingIndex = category.skills.findIndex((skill: unknown) =>
       normalizePlanSkillName(skill?.name || skill?.skill || skill) === skillKey
     )
 
@@ -389,10 +393,10 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
         confidence: suggestion.confidence ?? 85
       })
     }
-  } else if ((suggestion as any).type === 'skill_remove' || (suggestion as any).type === 'skill_removal') {
-    const removeKey = normalizePlanSkillName(suggestion.original || (suggestion as any).before || '')
+  } else if ((suggestion as unknown).type === 'skill_remove' || (suggestion as unknown).type === 'skill_removal') {
+    const removeKey = normalizePlanSkillName(suggestion.original || (suggestion as unknown).before || '')
     if (removeKey) {
-      category.skills = category.skills.filter((skill: any) => {
+      category.skills = category.skills.filter((skill: unknown) => {
         const candidate = normalizePlanSkillName(skill?.name || skill?.skill || skill)
         return candidate !== removeKey
       })
@@ -403,26 +407,26 @@ const applySkillSuggestionToPlan = (plan: any, suggestion: UnifiedSuggestion) =>
   return { ...plan, categories: clonedCategories }
 }
 
-const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {}) => {
+const planToResumeSkills = (plan: unknown, existingSkills: Record<string, unknown> = {}) => {
   // If no plan, return existing skills unchanged
   if (!plan || !Array.isArray(plan.categories)) return existingSkills || {}
 
   // Start with a copy of existing skills to preserve user data
-  const result: Record<string, any[]> = {}
+  const result: Record<string, unknown[]> = {}
   const allSkillNames = new Set<string>() // Track all skill names globally to prevent duplicates
   const planCategories = new Set<string>() // Track which categories come from the plan
 
   // First, process plan categories
-  plan.categories.forEach((category: any) => {
+  plan.categories.forEach((category: unknown) => {
     const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
     if (!canonical) return
     planCategories.add(canonical)
 
-    const categorySkills: any[] = []
+    const categorySkills: unknown[] = []
 
     // Process skills from plan
     if (Array.isArray(category?.skills)) {
-      category.skills.forEach((entry: any) => {
+      category.skills.forEach((entry: unknown) => {
         const normalized = normalizePlanSkillEntry(entry)
         if (!normalized?.name) return
 
@@ -445,7 +449,7 @@ const planToResumeSkills = (plan: any, existingSkills: Record<string, any> = {})
 
     // Also check if there are existing skills for this category that should be preserved
     const existingCategorySkills = existingSkills[canonical] || []
-    existingCategorySkills.forEach((skill: any) => {
+    existingCategorySkills.forEach((skill: unknown) => {
       const skillName = (typeof skill === 'string' ? skill : skill.skill || skill.name)
       if (skillName) {
         const skillKey = skillName.toLowerCase()
@@ -492,7 +496,7 @@ const TemplateTabs = ({
 
   return (
     <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-      {templates.map((template) => (
+      {templates.map((template: any) => (
         <button
           key={template}
           onClick={() => onChange(template)}
@@ -583,7 +587,7 @@ export function PerfectStudio({
   } = useSupabaseResumeActions()
 
   // For tailor mode: load organized skills from variant's skillsCategoryPlan
-  const [organizedSkills, setOrganizedSkills] = React.useState<any>(null)
+  const [organizedSkills, setOrganizedSkills] = React.useState<unknown>(null)
   const [loadingOrganizedSkills, setLoadingOrganizedSkills] = React.useState(false)
 
   // Load organized skills from variant's skillsCategoryPlan when in tailor mode
@@ -593,17 +597,17 @@ export function PerfectStudio({
       console.log('🧠 Loading organized skills for tailor mode, variantId:', variantId)
 
       // Helper function to extract skills from plan
-      const extractSkillsFromPlan = (skillsCategoryPlan: any) => {
-        const organized_categories: Record<string, any> = {}
+      const extractSkillsFromPlan = (skillsCategoryPlan: unknown) => {
+        const organized_categories: Record<string, unknown> = {}
 
-        skillsCategoryPlan.categories.forEach((category: any) => {
+        skillsCategoryPlan.categories.forEach((category: unknown) => {
           const categoryKey = category.canonical_key || category.display_name?.toLowerCase().replace(/\s+/g, '_')
           if (categoryKey && category.skills) {
             organized_categories[categoryKey] = {
               display_name: category.display_name,
               skills: category.skills
-                .filter((skill: any) => skill.status !== 'remove')
-                .map((skill: any) => skill.name || skill.skill || skill),
+                .filter((skill: unknown) => skill.status !== 'remove')
+                .map((skill: unknown) => skill.name || skill.skill || skill),
               category_rationale: category.rationale,
               job_alignment: category.job_alignment
             }
@@ -621,7 +625,7 @@ export function PerfectStudio({
       }
 
       // FIRST: Check if resumeData already has skillsCategoryPlan (loaded from cache)
-      const skillsCategoryPlan = (resumeData as any)?.skillsCategoryPlan
+      const skillsCategoryPlan = (resumeData as unknown)?.skillsCategoryPlan
       if (skillsCategoryPlan?.categories) {
         console.log('⚡ Found skillsCategoryPlan in resumeData (cached):', skillsCategoryPlan.categories.length)
         const organizedData = extractSkillsFromPlan(skillsCategoryPlan)
@@ -645,7 +649,7 @@ export function PerfectStudio({
               return
             }
 
-            const dbSkillsCategoryPlan = (data as any)?.tailored_data?.skillsCategoryPlan
+            const dbSkillsCategoryPlan = (data as unknown)?.tailored_data?.skillsCategoryPlan
             if (dbSkillsCategoryPlan?.categories) {
               console.log('✅ Found skillsCategoryPlan in database:', dbSkillsCategoryPlan.categories.length)
               const organizedData = extractSkillsFromPlan(dbSkillsCategoryPlan)
@@ -662,14 +666,14 @@ export function PerfectStudio({
   }, [mode, variantId, organizedSkills, loadingOrganizedSkills])
 
   const [localData, setLocalData] = React.useState(resumeData)
-  const [localSkillsPlan, setLocalSkillsPlan] = React.useState<any>(resumeData?.skillsCategoryPlan || null)
+  const [localSkillsPlan, setLocalSkillsPlan] = React.useState<unknown>(resumeData?.skillsCategoryPlan || null)
   const [activeTemplate, setActiveTemplate] = React.useState('swiss')
   const [showPreviewOnMobile, setShowPreviewOnMobile] = React.useState(false)
 
   // Debug logging for photoUrl
   React.useEffect(() => {
-    console.log('🎨 PerfectStudio - resumeData.photoUrl:', (resumeData as any)?.photoUrl)
-    console.log('🎨 PerfectStudio - localData.photoUrl:', (localData as any)?.photoUrl)
+    console.log('🎨 PerfectStudio - resumeData.photoUrl:', (resumeData as unknown)?.photoUrl)
+    console.log('🎨 PerfectStudio - localData.photoUrl:', (localData as unknown)?.photoUrl)
   }, [resumeData, localData])
 
   // Sync resumeData changes to localData (avoid loops)
@@ -679,7 +683,7 @@ export function PerfectStudio({
       const nextJson = JSON.stringify(resumeData || {})
       if (nextJson === lastSyncedJsonRef.current) return
       lastSyncedJsonRef.current = nextJson
-      console.log('🔄 Syncing resumeData to localData, photoUrl:', (resumeData as any)?.photoUrl)
+      console.log('🔄 Syncing resumeData to localData, photoUrl:', (resumeData as unknown)?.photoUrl)
       setLocalData(resumeData)
       setLocalSkillsPlan(resumeData?.skillsCategoryPlan || null)
     } catch {
@@ -764,7 +768,7 @@ export function PerfectStudio({
     variantId,
     jobId,
     baseResumeId,
-    onDataChange: (suggestion) => {
+    onDataChange: (suggestion: any) => {
       // Apply the suggestion to local data
       handleSuggestionApply(suggestion)
     }
@@ -779,10 +783,10 @@ export function PerfectStudio({
 
   // Ensure languages are present in editor state even if only skills.languages exists
   React.useEffect(() => {
-    const hasExplicitLanguages = Array.isArray((localData as any).languages) && (localData as any).languages.length > 0
-    const skillsLanguages = Array.isArray((localData as any)?.skills?.languages) ? (localData as any).skills.languages : []
+    const hasExplicitLanguages = Array.isArray((localData as unknown).languages) && (localData as unknown).languages.length > 0
+    const skillsLanguages = Array.isArray((localData as unknown)?.skills?.languages) ? (localData as unknown).skills.languages : []
     if (!hasExplicitLanguages && skillsLanguages.length > 0) {
-      const parsed = skillsLanguages.map((entry: any) => {
+      const parsed = skillsLanguages.map((entry: unknown) => {
         if (typeof entry === 'string') {
           const name = entry.replace(/\s*\([^)]*\)\s*$/, '').trim()
           const level = (entry.match(/\(([^)]+)\)/)?.[1] || 'Not specified')
@@ -793,15 +797,15 @@ export function PerfectStudio({
           proficiency: (entry?.proficiency ?? entry?.level ?? 'Not specified').toString()
         }
       })
-      setLocalData(prev => ({ ...prev, languages: parsed as any }))
+      setLocalData(prev => ({ ...prev, languages: parsed as unknown }))
     }
   }, [localData.skills?.languages])
   
   // Handle applying a suggestion to the actual data and persist to variant immediately
-  const handleSuggestionApply = async (suggestion: any) => {
+  const handleSuggestionApply = async (suggestion: unknown) => {
     // Build updated snapshot synchronously from current localData
     const updated = (() => {
-      const draft: any = { ...localData }
+      const draft: unknown = { ...localData }
 
       const normalizedTargetPath = (suggestion.targetPath || '')
         .replace(/\[(\d+)\]/g, '.$1')
@@ -931,9 +935,9 @@ export function PerfectStudio({
             // Check for duplicates across all categories
             const skillLower = suggestion.suggested.toLowerCase()
             let alreadyExists = false
-            Object.values(draft.skills).forEach((catSkills: any) => {
+            Object.values(draft.skills).forEach((catSkills: unknown) => {
               if (Array.isArray(catSkills)) {
-                catSkills.forEach((skill: any) => {
+                catSkills.forEach((skill: unknown) => {
                   const existingName = typeof skill === 'string' ? skill : skill.skill || skill.name
                   if (existingName && existingName.toLowerCase() === skillLower) {
                     alreadyExists = true
@@ -957,7 +961,7 @@ export function PerfectStudio({
               Object.keys(draft.skills).forEach(cat => {
                 if (Array.isArray(draft.skills[cat])) {
                   const originalLength = draft.skills[cat].length
-                  draft.skills[cat] = draft.skills[cat].filter((skill: any) => {
+                  draft.skills[cat] = draft.skills[cat].filter((skill: unknown) => {
                     const skillName = typeof skill === 'string' ? skill : skill.skill || skill.name
                     return skillName !== targetName
                   })
@@ -1061,12 +1065,12 @@ export function PerfectStudio({
         try { return JSON.stringify({ d: localData || {}, t: activeTemplate, l: showSkillLevelsInResume }) } catch { return '' } 
       })()
       // Skip duplicate work if nothing significant changed since last run
-      const lastPreviewKey = (debounceTimer as any).lastPreviewKey as string | undefined
+      const lastPreviewKey = (debounceTimer as unknown).lastPreviewKey as string | undefined
       if (lastPreviewKey && lastPreviewKey === snapshotKey) {
         setIsGeneratingPreview(false)
         return
       }
-      ;(debounceTimer as any).lastPreviewKey = snapshotKey
+      ;(debounceTimer as unknown).lastPreviewKey = snapshotKey
       
       // Save current scroll position before updating
       if (iframeRef.current?.contentWindow) {
@@ -1088,7 +1092,7 @@ export function PerfectStudio({
             if (key === 'personalInfo') {
               updatePersonalInfo(localData.personalInfo)
             } else {
-              updateField(key as any, localData[key as keyof typeof localData])
+              updateField(key as unknown, localData[key as keyof typeof localData])
             }
           })
         }
@@ -1098,7 +1102,7 @@ export function PerfectStudio({
           if (key === 'personalInfo') {
             updatePersonalInfo(localData.personalInfo)
           } else {
-            updateField(key as any, localData[key as keyof typeof localData])
+            updateField(key as unknown, localData[key as keyof typeof localData])
           }
         })
       }
@@ -1224,7 +1228,7 @@ export function PerfectStudio({
         date: '',
         description: ''
       }]
-    } as any
+    } as unknown
 
     setLocalData({
       ...localData,
@@ -1238,9 +1242,9 @@ export function PerfectStudio({
       {/* Elegant Template Bar */}
       <ElegantTemplateBar
         activeTemplate={activeTemplate}
-        onChange={(tpl) => setActiveTemplate(tpl)}
+        onChange={(tpl: any) => setActiveTemplate(tpl)}
         onExport={exportToPDF}
-        resumeId={(resumeData as any)?.id}
+        resumeId={(resumeData as unknown)?.id}
         variantId={variantId}
       />
 
@@ -1422,7 +1426,7 @@ export function PerfectStudio({
               {mode === 'tailor' ? (
                 <TailorEnhancedSkillsManager
                   skills={localData.skills || {}}
-                  onSkillsChange={(updatedSkills) => {
+                  onSkillsChange={(updatedSkills: any) => {
                     console.log('🎯 Tailor skills change callback triggered with:', Object.keys(updatedSkills || {}))
                     // Update local data
                     setLocalData(prevData => ({
@@ -1440,7 +1444,7 @@ export function PerfectStudio({
                 <EnhancedSkillsManager
                   skills={localData.skills}
                   mode={mode}
-                  onSkillsChange={(updatedSkills) => {
+                  onSkillsChange={(updatedSkills: any) => {
                   // Update local data
                   setLocalData(prevData => ({
                     ...prevData,
@@ -1458,20 +1462,20 @@ export function PerfectStudio({
                   // Update the plan to reflect the removal
                   if (localSkillsPlan && Array.isArray(localSkillsPlan.categories)) {
                     const updatedPlan = { ...localSkillsPlan }
-                    updatedPlan.categories = localSkillsPlan.categories.map((category: any) => {
+                    updatedPlan.categories = localSkillsPlan.categories.map((category: unknown) => {
                       const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name)
                       const updatedCategory = { ...category }
 
                       // Remove skills that no longer exist in updatedSkills
                       if (Array.isArray(updatedCategory.skills)) {
-                        updatedCategory.skills = updatedCategory.skills.filter((skill: any) => {
+                        updatedCategory.skills = updatedCategory.skills.filter((skill: unknown) => {
                           const skillName = skill?.name || skill?.skill || skill
                           if (!skillName) return false
 
                           // Check if this skill still exists in any category of updatedSkills
-                          return Object.values(updatedSkills || {}).some((catSkills: any) => {
+                          return Object.values(updatedSkills || {}).some((catSkills: unknown) => {
                             if (!Array.isArray(catSkills)) return false
-                            return catSkills.some((s: any) => {
+                            return catSkills.some((s: unknown) => {
                               const name = typeof s === 'string' ? s : s?.skill || s?.name
                               return name && name.toLowerCase() === skillName.toLowerCase()
                             })
@@ -1499,18 +1503,18 @@ export function PerfectStudio({
                   }
                 }}
                 userProfile={resumeData} // Use resumeData from context
-                languages={(localData.languages as any) || []}
+                languages={(localData.languages as unknown) || []}
                 // Pass suggestion props for tailor mode
                 suggestions={suggestionsEnabled ? getSuggestionsForSection('skills') : []}
                 onAcceptSuggestion={acceptSuggestion}
                 onDeclineSuggestion={declineSuggestion}
-                onLanguagesChange={(updatedLanguages) => {
+                onLanguagesChange={(updatedLanguages: any) => {
                   console.log('🌍 Language change callback triggered:', updatedLanguages)
                   // Update localData to keep it in sync
                   setLocalData(prevData => ({
                     ...prevData,
                     languages: updatedLanguages
-                  } as any))
+                  } as unknown))
                   console.log('🌍 Updated localData languages to prevent reset')
                 }}
                 />
@@ -1521,10 +1525,10 @@ export function PerfectStudio({
             {false && mode === 'base' && (
               <SkillsSuggestionsPanel
                 suggestions={[]}
-                onAccept={(id) => {
+                onAccept={(id: any) => {
                   console.log('Accept skill suggestion:', id)
                 }}
-                onDecline={(id) => {
+                onDecline={(id: any) => {
                   console.log('Decline skill suggestion:', id)
                 }}
                 loading={false}
@@ -1533,14 +1537,14 @@ export function PerfectStudio({
 
             {/* Languages Card */}
             <LanguagesCard
-              languages={(localData.languages || []) as any}
-              onLanguagesChange={(updatedLanguages) => {
+              languages={(localData.languages || []) as unknown}
+              onLanguagesChange={(updatedLanguages: any) => {
                 console.log('🌍 Updating languages:', updatedLanguages)
                 // Update localData
                 const newData = {
                   ...localData,
                   languages: updatedLanguages
-                } as any
+                } as unknown
                 setLocalData(newData)
 
                 // Auto-save in base mode
@@ -1549,7 +1553,7 @@ export function PerfectStudio({
                   const updatedResumeData = {
                     ...resumeData,
                     languages: updatedLanguages
-                  } as any
+                  } as unknown
                   updateField('languages', updatedLanguages)
                   import('@/lib/services/resumeDataService').then(({ ResumeDataService }) => {
                     const service = ResumeDataService.getInstance()
@@ -1606,7 +1610,7 @@ export function PerfectStudio({
                     field_of_study: '',
                     institution: '',
                     duration: ''
-                  } as any]
+                  } as unknown]
                 })
               }}
             >
@@ -1745,7 +1749,7 @@ export function PerfectStudio({
                             <CleanInput
                               label={fieldNames[0]}
                               value={item.title || ''}
-                              onChange={(value) => {
+                              onChange={(value: any) => {
                                 const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].title = value
                                 setLocalData({ ...localData, customSections: newSections })
@@ -1755,7 +1759,7 @@ export function PerfectStudio({
                             <CleanInput
                               label={fieldNames[1]}
                               value={item.subtitle || ''}
-                              onChange={(value) => {
+                              onChange={(value: any) => {
                                 const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].subtitle = value
                                 setLocalData({ ...localData, customSections: newSections })
@@ -1765,7 +1769,7 @@ export function PerfectStudio({
                             <CleanInput
                               label={fieldNames[2]}
                               value={item.date || ''}
-                              onChange={(value) => {
+                              onChange={(value: any) => {
                                 const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].date = value
                                 setLocalData({ ...localData, customSections: newSections })
@@ -1776,7 +1780,7 @@ export function PerfectStudio({
                             <CleanInput
                               label={fieldNames[3]}
                               value={item.description || ''}
-                              onChange={(value) => {
+                              onChange={(value: any) => {
                                 const newSections = [...(localData.customSections || [])]
                                 newSections[sectionIndex].items[itemIndex].description = value
                                 setLocalData({ ...localData, customSections: newSections })

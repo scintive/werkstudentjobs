@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('id')
-      .eq('user_id', userId as any)
+      .eq('user_id', userId)
       .limit(1)
       .single()
 
@@ -33,11 +33,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Query user_job_interactions to find applied jobs
+    const userProfileObj = userProfile as Record<string, unknown>;
     const { data: interactions, error } = await supabase
       .from('user_job_interactions')
       .select('job_id, created_at, interaction_data')
-      .eq('user_profile_id', (userProfile as any).id)
-      .eq('interaction_type' as any, 'apply' as any)
+      .eq('user_profile_id', userProfileObj.id as string)
+      .eq('interaction_type', 'apply')
       .order('created_at', { ascending: false })
 
     if (error) {

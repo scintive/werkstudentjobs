@@ -26,8 +26,8 @@ interface ProjectAlignment {
 interface AlignmentCardsProps {
   coursework: CourseworkAlignment[];
   projects: ProjectAlignment[];
-  onAddToResume?: (type: 'course' | 'project', item: any) => void;
-  onAddToCoverLetter?: (type: 'course' | 'project', item: any) => void;
+  onAddToResume?: (type: 'course' | 'project', item: unknown) => void;
+  onAddToCoverLetter?: (type: 'course' | 'project', item: unknown) => void;
 }
 
 export function AlignmentCards({ 

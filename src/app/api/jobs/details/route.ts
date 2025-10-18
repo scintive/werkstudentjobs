@@ -36,10 +36,6 @@ export async function GET(request: NextRequest) {
       .eq('id', jobId)
       .single();
 
-    // Type assertion for jobData to fix Vercel build issues
-    // Using 'as any' because Supabase's type inference doesn't handle nested select fields properly
-    const jobDataTyped = jobData as any;
-
     if (jobError || !jobData) {
       console.error('🔍 JOB DETAILS: Error fetching job:', jobError);
       return NextResponse.json(
@@ -48,7 +44,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`🔍 JOB DETAILS: Found job "${jobDataTyped.title}" at ${jobDataTyped.companies?.name || jobDataTyped.company_name}`);
+    // Type assertion for jobData to fix Vercel build issues
+    // Using Record<string, unknown> because Supabase's type inference doesn't handle nested select fields properly
+    const jobDataTyped = jobData as Record<string, unknown>;
+    const companiesObj = jobDataTyped.companies as Record<string, unknown> | undefined;
+    console.log(`🔍 JOB DETAILS: Found job "${jobDataTyped.title as string}" at ${(companiesObj?.name as string) || (jobDataTyped.company_name as string)}`);
     
     return NextResponse.json(jobData);
     

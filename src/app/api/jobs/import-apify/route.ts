@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Process each job through the LLM pipeline
     const processedJobs: any[] = [];
-    const failedJobs: Array<{ job: any; error: string }> = [];
+    const failedJobs: Array<{ job: unknown; error: string }> = [];
 
     // Use service role client for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -67,16 +67,17 @@ export async function POST(request: NextRequest) {
     for (const job of jobs) {
       try {
         processedCount++;
-        console.log(`📝 Processing ${processedCount}/${jobs.length}: ${job.title} at ${job.companyName}`);
+        const jobRecord = job as Record<string, unknown>;
+        console.log(`📝 Processing ${processedCount}/${jobs.length}: ${jobRecord.title} at ${jobRecord.companyName}`);
 
         // Extract job data
         const jobData = {
-          title: job.title || job.position || '',
-          companyName: job.companyName || job.company || '',
-          location: job.location || '',
-          description: job.descriptionText || job.description || job.jobDescription || '',
-          url: job.link || job.url || job.jobUrl || '',
-          postedAt: job.postedAt || job.postedDate || job.posted || null,
+          title: (jobRecord.title || jobRecord.position || '') as string,
+          companyName: (jobRecord.companyName || jobRecord.company || '') as string,
+          location: (jobRecord.location || '') as string,
+          description: (jobRecord.descriptionText || jobRecord.description || jobRecord.jobDescription || '') as string,
+          url: (jobRecord.link || jobRecord.url || jobRecord.jobUrl || '') as string,
+          postedAt: (jobRecord.postedAt || jobRecord.postedDate || jobRecord.posted || null) as string | null,
         };
 
         // Skip if missing critical data
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
           jobData
         );
 
-        console.log(`✅ Processed ${job.title}, confidence: ${companyResearch.confidence}%`);
+        console.log(`✅ Processed ${jobRecord.title}, confidence: ${companyResearch.confidence}%`);
 
         // Check if company exists, if not create it
         let companyId: string | null = null;
@@ -109,7 +110,8 @@ export async function POST(request: NextRequest) {
           console.log(`🏢 Company exists: ${jobData.companyName}, current logo: ${existingCompany.logo_url ? 'YES' : 'NO'}, website: ${existingCompany.website_url || 'NO'}`);
 
           // Always try to fetch/update logo if we have website data
-          const websiteForLogo = companyResearch.research?.website || existingCompany.website_url;
+          const research = companyResearch.research as Record<string, unknown> | null | undefined;
+          const websiteForLogo = research?.website || existingCompany.website_url;
           console.log(`🔍 Website for logo: ${websiteForLogo || 'NONE'}`);
 
           if (websiteForLogo) {
@@ -132,10 +134,10 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Create company with ALL research data from smartCompanyResearch pipeline
-          const r = companyResearch.research; // Shorthand for research data
-          const companyData: any = {
+          const r = companyResearch.research as Record<string, unknown> | null | undefined; // Shorthand for research data
+          const companyData = {
             name: jobData.companyName,
-          };
+          } as Record<string, unknown>;
 
           console.log(`\n🔍 DEBUG - Company: ${jobData.companyName}`);
           console.log(`🔍 DEBUG - Research exists:`, r ? 'YES' : 'NO');
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
 
           // Fetch company logo using dedicated logo service (Clearbit/Google)
           // This is more reliable than extracting from scraped content
-          const logoUrl = await fetchCompanyLogo(jobData.companyName, r?.website || companyData.website_url);
+          const logoUrl = await fetchCompanyLogo(jobData.companyName, (r?.website as string | undefined) || (companyData.website_url as string | undefined));
           if (logoUrl) {
             companyData.logo_url = logoUrl;
             console.log(`✅ Fetched logo for ${jobData.companyName}: ${logoUrl}`);
@@ -274,7 +276,7 @@ export async function POST(request: NextRequest) {
             .single();
 
           if (existingJob) {
-            console.log(`⏭️  Job already exists: ${job.title} at ${jobData.companyName}`);
+            console.log(`⏭️  Job already exists: ${jobRecord.title} at ${jobData.companyName}`);
             continue;
           }
         }
@@ -325,10 +327,10 @@ export async function POST(request: NextRequest) {
             skills: extractedJob.named_skills_tools || [],
 
             // Who we are looking for (qualifications, requirements)
-            who_we_are_looking_for: (extractedJob as any).who_we_are_looking_for || [],
+            who_we_are_looking_for: (extractedJob as unknown as Record<string, unknown>).who_we_are_looking_for || [],
 
             // Application requirements (what to send)
-            application_requirements: (extractedJob as any).application_requirements || [],
+            application_requirements: (extractedJob as unknown as Record<string, unknown>).application_requirements || [],
 
             // Status
             is_active: true,
@@ -337,15 +339,16 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (jobError) {
-          console.error(`❌ Failed to insert job ${job.title}:`, JSON.stringify(jobError, null, 2));
+          console.error(`❌ Failed to insert job ${jobRecord.title}:`, JSON.stringify(jobError, null, 2));
           throw new Error(`Failed to insert job: ${jobError.message || JSON.stringify(jobError)}`);
         }
 
         processedJobs.push(newJob);
-        console.log(`✅ Inserted job ${processedCount}/${jobs.length}: ${job.title}`);
+        console.log(`✅ Inserted job ${processedCount}/${jobs.length}: ${jobRecord.title}`);
 
       } catch (error) {
-        console.error(`❌ Failed to process job ${job.title}:`, error);
+        const jobRecord = job as Record<string, unknown>;
+        console.error(`❌ Failed to process job ${jobRecord.title}:`, error);
         failedJobs.push({
           job,
           error: error instanceof Error ? error.message : String(error),
@@ -364,11 +367,14 @@ export async function POST(request: NextRequest) {
         title: j.title,
         portal: j.portal,
       })),
-      failedJobs: failedJobs.map(f => ({
-        title: f.job.title,
-        company: f.job.companyName,
-        error: f.error,
-      })),
+      failedJobs: failedJobs.map(f => {
+        const jobData = f.job as Record<string, unknown>;
+        return {
+          title: jobData.title,
+          company: jobData.companyName,
+          error: f.error,
+        };
+      }),
     });
 
   } catch (error) {

@@ -114,7 +114,7 @@ export function InlineListEditor({
                 <Input
                   ref={inputRef}
                   value={editingValue}
-                  onChange={(e) => setEditingValue(e.target.value)}
+                  onChange={(e: any) => setEditingValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="h-8 text-xs"
                   style={{ width: `${Math.max(editingValue.length, 10)}ch` }}
@@ -137,7 +137,7 @@ export function InlineListEditor({
               >
                 {item}
                 <button
-                  onClick={(e) => {
+                  onClick={(e: any) => {
                     e.stopPropagation()
                     handleRemoveItem(index)
                   }}
@@ -160,7 +160,7 @@ export function InlineListEditor({
           <Input
             ref={inputRef}
             value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
+            onChange={(e: any) => setNewItem(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="h-8 text-xs"
@@ -204,7 +204,7 @@ export function InlineListEditor({
                 <Input
                   ref={inputRef}
                   value={editingValue}
-                  onChange={(e) => setEditingValue(e.target.value)}
+                  onChange={(e: any) => setEditingValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="text-sm"
                 />
@@ -262,7 +262,7 @@ export function InlineListEditor({
           <Input
             ref={inputRef}
             value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
+            onChange={(e: any) => setNewItem(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="text-sm"

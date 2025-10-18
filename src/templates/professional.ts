@@ -376,14 +376,14 @@ export function generateProfessionalResumeHTML(data: ResumeData & { showSkillLev
                     <div class="skill-category" data-category="${category}">
                         <div class="skill-category-title">${category}</div>
                         <div style="margin-bottom: 3mm;">
-                            ${skillList.map((skill, i) => {
+                            ${skillList.map((skill: Record<string, any>, i) => {
                                 // Handle both string skills and skill objects with proficiency
                                 if (typeof skill === 'string') {
                                     return `<span class="skill-pill" data-section="skills" data-category="${category}" data-index="${i}">${skill}</span>`;
-                                } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
+                                } else if (skill?.skill && showSkillLevelsInResume && skill?.proficiency) {
                                     // Clean proficiency indicator with subtle dot
                                     return `<span class="skill-pill with-proficiency" data-level="${skill.proficiency}" title="${skill.proficiency}" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill}</span>`;
-                                } else if (skill.skill) {
+                                } else if (skill?.skill) {
                                     return `<span class="skill-pill" data-section="skills" data-category="${category}" data-index="${i}">${skill.skill}</span>`;
                                 }
                                 return '';
@@ -399,8 +399,8 @@ export function generateProfessionalResumeHTML(data: ResumeData & { showSkillLev
                 <h2 class="sidebar-header">Languages</h2>
                 ${languages.map(lang => `
                     <div class="language-item">
-                        <span class="language-name">${(lang.language || lang.name || '').toString()}</span>
-                        <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
+                        <span class="language-name">${lang.name || ''}</span>
+                        <span class="language-proficiency">${lang.level || ''}</span>
                     </div>
                 `).join('')}
             </section>
@@ -420,7 +420,7 @@ export function generateProfessionalResumeHTML(data: ResumeData & { showSkillLev
             </section>
             ` : ''}
             
-            ${certifications.length > 0 ? `
+            ${certifications && certifications.length > 0 ? `
             <section class="sidebar-section">
                 <h2 class="sidebar-header">Certifications</h2>
                 ${certifications.map(cert => `
@@ -487,7 +487,7 @@ export function generateProfessionalResumeHTML(data: ResumeData & { showSkillLev
             </section>
             ` : ''}
 
-            ${projects.length > 0 ? `
+            ${projects && projects.length > 0 ? `
             <section class="main-section" data-section="projects">
                 <h2 class="main-header">Projects</h2>
                 ${projects.map((project, pIndex) => `

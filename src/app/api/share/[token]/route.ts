@@ -20,7 +20,7 @@ export async function GET(
 
     // Use the database function to get shared document
     const { data, error } = await supabase
-      .rpc('get_shared_document', { p_token: token })
+      .rpc('get_shared_document', { p_token: token } as never)
 
     if (error) {
       console.error('Error fetching shared document:', error)
@@ -30,7 +30,7 @@ export async function GET(
       )
     }
 
-    const shareRecords = data as any[] | null;
+    const shareRecords = data as unknown[] | null;
 
     if (!shareRecords || shareRecords.length === 0) {
       return NextResponse.json(
@@ -39,7 +39,7 @@ export async function GET(
       )
     }
 
-    const shareData = shareRecords[0] as any
+    const shareData = shareRecords[0] as Record<string, unknown>;
 
     // Check if expired
     if (shareData.is_expired) {
@@ -50,29 +50,38 @@ export async function GET(
     }
 
     // Increment view count
-    await supabase.rpc('increment_share_view_count', { p_token: token })
+    await supabase.rpc('increment_share_view_count', { p_token: token } as never)
 
     // Parse resume data
     let resumeData = null
     if (shareData.resume_data) {
       resumeData = shareData.resume_data
-    } else if (shareData.variant_data && shareData.variant_data.tailored_data) {
-      resumeData = shareData.variant_data.tailored_data
+    } else if (shareData.variant_data) {
+      const variantData = shareData.variant_data as Record<string, unknown>;
+      if (variantData.tailored_data) {
+        resumeData = variantData.tailored_data
+      }
     }
 
     // For cover letters, extract from variant data
     let coverLetterData = null
     if (shareData.share_type === 'cover_letter' && shareData.variant_data) {
+      const variantData = shareData.variant_data as Record<string, unknown>;
       // Parse cover_letter_content JSON
-      const coverLetterContent = shareData.variant_data.cover_letter_content
+      const coverLetterContent = variantData.cover_letter_content
       if (coverLetterContent) {
         try {
           const parsed = typeof coverLetterContent === 'string'
             ? JSON.parse(coverLetterContent)
             : coverLetterContent
 
-          const currentVersion = parsed.current_version || 1
-          const version = parsed.versions?.find((v: any) => v.version === currentVersion)
+          const parsedData = parsed as Record<string, unknown>;
+          const currentVersion = parsedData.current_version || 1
+          const versions = parsedData.versions as unknown[] | undefined;
+          const version = versions?.find(v => {
+            const versionData = v as Record<string, unknown>;
+            return versionData.version === currentVersion;
+          }) as Record<string, unknown> | undefined;
 
           if (version?.cover_letter) {
             coverLetterData = version.cover_letter

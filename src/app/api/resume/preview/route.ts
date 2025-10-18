@@ -82,7 +82,7 @@ const humanizePlanKey = (key: string) => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const normalizePlanSkillEntry = (skill: any) => {
+const normalizePlanSkillEntry = (skill: unknown) => {
   if (!skill) {
     return {
       name: '',
@@ -95,18 +95,19 @@ const normalizePlanSkillEntry = (skill: any) => {
   }
 
   if (typeof skill === 'object') {
+    const skillData = skill as Record<string, unknown>;
     return {
-      name: skill.name || skill.skill || '',
-      status: skill.status || 'keep',
-      rationale: skill.rationale || '',
-      source: skill.source || 'resume',
-      proficiency: skill.proficiency ?? null,
-      confidence: skill.confidence ?? null
+      name: String(skillData.name || skillData.skill || ''),
+      status: String(skillData.status || 'keep'),
+      rationale: String(skillData.rationale || ''),
+      source: String(skillData.source || 'resume'),
+      proficiency: skillData.proficiency ?? null,
+      confidence: skillData.confidence ?? null
     };
   }
 
   return {
-    name: skill,
+    name: String(skill),
     status: 'keep',
     rationale: '',
     source: 'resume',
@@ -116,33 +117,40 @@ const normalizePlanSkillEntry = (skill: any) => {
 };
 
 const buildSkillsFromPlan = (
-  plan: any,
-  existingSkills: Record<string, any> = {},
+  plan: unknown,
+  existingSkills: Record<string, unknown> = {},
   showSkillLevelsInResume: boolean,
   languages: any[] = []
 ) => {
-  if (!plan || !Array.isArray(plan.categories)) {
-    return { skillsMap: null as Record<string, any[]> | null, canonicalSet: new Set<string>() };
+  const planData = plan as Record<string, unknown> | null;
+  const categories = planData?.categories as unknown[] | undefined;
+
+  if (!planData || !Array.isArray(categories)) {
+    return { skillsMap: null as Record<string, unknown[]> | null, canonicalSet: new Set<string>() };
   }
 
-  const skillsMap: Record<string, any[]> = {};
+  const skillsMap: Record<string, unknown[]> = {};
   const canonicalSet = new Set<string>();
 
-  plan.categories
+  categories
     .slice()
-    .sort((a: any, b: any) => {
-      const aPriority = typeof a?.priority === 'number' ? a.priority : 999;
-      const bPriority = typeof b?.priority === 'number' ? b.priority : 999;
+    .sort((a: unknown, b: unknown) => {
+      const aData = a as Record<string, unknown> | undefined;
+      const bData = b as Record<string, unknown> | undefined;
+      const aPriority = typeof aData?.priority === 'number' ? aData.priority : 999;
+      const bPriority = typeof bData?.priority === 'number' ? bData.priority : 999;
       return aPriority - bPriority;
     })
-    .forEach((category: any) => {
-      const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name);
+    .forEach(category => {
+      const categoryData = category as Record<string, unknown> | undefined;
+      const canonical = canonicalizePlanKey((categoryData?.canonical_key as string | undefined) || (categoryData?.display_name as string | undefined));
       if (!canonical) return;
 
       canonicalSet.add(canonical);
 
       const displayName = (() => {
-        const raw = typeof category?.display_name === 'string' ? category.display_name.trim() : '';
+        const displayNameValue = categoryData?.display_name;
+        const raw = typeof displayNameValue === 'string' ? displayNameValue.trim() : '';
         if (!raw) return humanizePlanKey(canonical);
         if (raw.includes('_') || raw === raw.toLowerCase()) {
           return humanizePlanKey(canonical);
@@ -150,12 +158,14 @@ const buildSkillsFromPlan = (
         return raw;
       })();
 
-      const normalizedEntries = Array.isArray(category?.skills)
-        ? category.skills
-            .map((entry: any) => normalizePlanSkillEntry(entry))
-            .filter((entry: any) => {
-              if (!entry?.name) return false;
-              const status = String(entry?.status || '').toLowerCase();
+      const skills = categoryData?.skills as unknown[] | undefined;
+      const normalizedEntries = Array.isArray(skills)
+        ? skills
+            .map(entry => normalizePlanSkillEntry(entry))
+            .filter(entry => {
+              const entryData = entry as Record<string, unknown> | undefined;
+              if (!entryData?.name) return false;
+              const status = String(entryData?.status || '').toLowerCase();
               // Only include skills that are 'keep' or 'accepted', not 'add', 'promote', or 'remove'
               return status === 'keep' || status === 'accepted';
             })
@@ -164,15 +174,19 @@ const buildSkillsFromPlan = (
       const deduped: any[] = [];
       const seen = new Set<string>();
 
-      normalizedEntries.forEach((entry: any) => {
-        const key = entry?.name?.toLowerCase?.() || '';
+      normalizedEntries.forEach((entry: Record<string, any>) => {
+        const entryData = entry as Record<string, unknown> | undefined;
+        if (!entryData) return;
+
+        const nameValue = entryData.name;
+        const key = typeof nameValue === 'string' ? nameValue.toLowerCase() : '';
         if (!key || seen.has(key)) return;
         seen.add(key);
 
-        if (showSkillLevelsInResume && entry?.proficiency) {
-          deduped.push({ skill: entry.name, proficiency: entry.proficiency });
+        if (showSkillLevelsInResume && entryData.proficiency) {
+          deduped.push({ skill: entryData.name, proficiency: entryData.proficiency });
         } else {
-          deduped.push(entry.name);
+          deduped.push(entryData.name);
         }
       });
 
@@ -180,19 +194,21 @@ const buildSkillsFromPlan = (
       if (deduped.length === 0 && Array.isArray(existingSkills[canonical])) {
         console.log(`📥 Using fallback skills for category ${canonical}:`, existingSkills[canonical])
         const fallbackList = existingSkills[canonical]
-          .map((entry: any) => {
+          .map(entry => {
             if (typeof entry === 'string') return entry;
-            if (showSkillLevelsInResume && entry?.proficiency) {
-              return { skill: entry.skill || entry.name, proficiency: entry.proficiency };
+            const entryData = entry as Record<string, unknown> | undefined;
+            if (showSkillLevelsInResume && entryData?.proficiency) {
+              return { skill: entryData.skill || entryData.name, proficiency: entryData.proficiency };
             }
-            return entry?.skill || entry?.name || entry;
+            return entryData?.skill || entryData?.name || entry;
           })
           .filter(Boolean);
 
         // Deduplicate fallback skills to prevent multiple entries
         const fallbackSeen = new Set<string>();
         const uniqueFallback = fallbackList.filter(skill => {
-          const key = (typeof skill === 'string' ? skill : skill.skill)?.toLowerCase();
+          const skillData = skill as Record<string, unknown> | string;
+          const key = typeof skillData === 'string' ? skillData.toLowerCase() : String(skillData.skill || '').toLowerCase();
           if (!key || fallbackSeen.has(key)) return false;
           fallbackSeen.add(key);
           return true;
@@ -224,29 +240,32 @@ export async function POST(request: NextRequest) {
 
     // Minimal observability: track proficiency toggle and template only
     // console.debug('preview: skillLevels=', showSkillLevelsInResume, 'template=', template)
-    console.log('📸 PREVIEW API: Received resumeData.photoUrl =', (resumeData as any).photoUrl);
+    const resumeDataTyped = resumeData as Record<string, unknown>;
+    console.log('📸 PREVIEW API: Received resumeData.photoUrl =', resumeDataTyped.photoUrl);
 
     // Format the resume data exactly like CLI (now with GPT education formatting)
     const templateData = await formatResumeDataForTemplate(resumeData, userProfile, showSkillLevelsInResume);
-    console.log('📸 PREVIEW API: templateData.photoUrl =', (templateData as any).photoUrl);
+    const templateDataTyped = templateData as Record<string, unknown>;
+    console.log('📸 PREVIEW API: templateData.photoUrl =', templateDataTyped.photoUrl);
 
     // Generate HTML using the same direct approach as CLI
     let html = '';
+    const templateDataForGeneration = templateData as ResumeData & { showSkillLevelsInResume?: boolean };
     switch (template) {
       case 'swiss':
-        html = generateSwissResumeHTML(templateData);
+        html = generateSwissResumeHTML(templateDataForGeneration);
         break;
       case 'classic':
-        html = generateClassicResumeHTML(templateData);
+        html = generateClassicResumeHTML(templateDataForGeneration);
         break;
       case 'professional':
-        html = generateProfessionalResumeHTML(templateData);
+        html = generateProfessionalResumeHTML(templateDataForGeneration);
         break;
       case 'impact':
-        html = generateImpactResumeHTML(templateData);
+        html = generateImpactResumeHTML(templateDataForGeneration);
         break;
       default:
-        html = generateSwissResumeHTML(templateData);
+        html = generateSwissResumeHTML(templateDataForGeneration);
     }
 
     // console.debug('preview: html_length=', html.length)
@@ -280,11 +299,17 @@ export async function POST(request: NextRequest) {
 }
 
 
-async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?: any, showSkillLevelsInResume: boolean = false): Promise<any> {
+async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?: unknown, showSkillLevelsInResume: boolean = false): Promise<unknown> {
+  // Cast resumeData for property access
+  const resumeDataTyped = resumeData as unknown as Record<string, unknown>;
+
   // Defensive: ensure skills exists to avoid crashes and disappearing sections
   if (!resumeData.skills || typeof resumeData.skills !== 'object') {
-    (resumeData as any).skills = {};
+    resumeDataTyped.skills = {};
   }
+
+  const resumeSkills = resumeDataTyped.skills as Record<string, unknown[]> | undefined;
+
   // SIMPLIFIED: Use only legacy skills format as single source of truth
   const skills: { [key: string]: any[] } = {};
 
@@ -292,14 +317,19 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
     const shouldHaveProficiency = showSkillLevelsInResume && shouldCategoryHaveProficiency(categoryName);
 
     if (!shouldHaveProficiency) {
-      return skillArray.map(skill => typeof skill === 'string' ? skill : (skill as any).skill || skill);
+      return skillArray.map(skill => {
+        if (typeof skill === 'string') return skill;
+        const skillData = skill as Record<string, unknown>;
+        return skillData.skill || skill;
+      });
     }
 
     return skillArray.map(skill => {
       if (typeof skill === 'string') {
         return { skill, proficiency: 'Intermediate' };
       }
-      if ((skill as any).skill) {
+      const skillData = skill as Record<string, unknown>;
+      if (skillData.skill) {
         return skill;
       }
       return { skill: skill.toString(), proficiency: 'Intermediate' };
@@ -307,23 +337,23 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
   };
 
   // Process ALL skills from resumeData.skills - SIMPLE AND CONSISTENT
-  if ((resumeData as any).skills.core?.length) skills['Core Skills'] = processSkillArray((resumeData as any).skills.core, 'Core Skills');
-  if ((resumeData as any).skills.technical?.length) skills['Technical & Digital'] = processSkillArray((resumeData as any).skills.technical, 'Technical & Digital');
-  if ((resumeData as any).skills.creative?.length) skills['Creative & Design'] = processSkillArray((resumeData as any).skills.creative, 'Creative & Design');
-  if ((resumeData as any).skills.business?.length) skills['Business & Strategy'] = processSkillArray((resumeData as any).skills.business, 'Business & Strategy');
-  if ((resumeData as any).skills.interpersonal?.length) skills['Communication & Leadership'] = processSkillArray((resumeData as any).skills.interpersonal, 'Communication & Leadership');
-  if ((resumeData as any).skills.specialized?.length) skills['Specialized'] = processSkillArray((resumeData as any).skills.specialized, 'Specialized');
+  if (resumeSkills?.core?.length) skills['Core Skills'] = processSkillArray(resumeSkills.core as any[], 'Core Skills');
+  if (resumeSkills?.technical?.length) skills['Technical & Digital'] = processSkillArray(resumeSkills.technical as any[], 'Technical & Digital');
+  if (resumeSkills?.creative?.length) skills['Creative & Design'] = processSkillArray(resumeSkills.creative as any[], 'Creative & Design');
+  if (resumeSkills?.business?.length) skills['Business & Strategy'] = processSkillArray(resumeSkills.business as any[], 'Business & Strategy');
+  if (resumeSkills?.interpersonal?.length) skills['Communication & Leadership'] = processSkillArray(resumeSkills.interpersonal as any[], 'Communication & Leadership');
+  if (resumeSkills?.specialized?.length) skills['Specialized'] = processSkillArray(resumeSkills.specialized as any[], 'Specialized');
 
-  if ((resumeData as any).skills.tools?.length) {
-    const processedTools = processSkillArray((resumeData as any).skills.tools, 'Tools');
+  if (resumeSkills?.tools?.length) {
+    const processedTools = processSkillArray(resumeSkills.tools as any[], 'Tools');
     if (skills['Technical & Digital']) {
       skills['Technical & Digital'].push(...processedTools);
     } else {
       skills['Tools & Platforms'] = processedTools;
     }
   }
-  if ((resumeData as any).skills.soft_skills?.length) {
-    const processedSoftSkills = processSkillArray((resumeData as any).skills.soft_skills, 'Soft Skills');
+  if (resumeSkills?.soft_skills?.length) {
+    const processedSoftSkills = processSkillArray(resumeSkills.soft_skills as any[], 'Soft Skills');
     if (skills['Communication & Leadership']) {
       skills['Communication & Leadership'].push(...processedSoftSkills);
     } else {
@@ -335,7 +365,7 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
 
   // Process any custom categories (this handles AI-generated categories that made it into resumeData.skills)
   // Sort entries to ensure consistent order between editor and preview
-  const customEntries = Object.entries((resumeData as any).skills)
+  const customEntries = resumeSkills ? Object.entries(resumeSkills)
     .filter(([categoryKey, skillArray]) => {
       if (knownCategories.has(categoryKey) || !Array.isArray(skillArray) || skillArray.length === 0) {
         return false;
@@ -346,7 +376,7 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       }
       return true;
     })
-    .sort((a, b) => a[0].localeCompare(b[0])); // Sort alphabetically by category key
+    .sort((a, b) => a[0].localeCompare(b[0])) : []; // Sort alphabetically by category key
 
   customEntries.forEach(([categoryKey, skillArray]) => {
     const displayName = categoryKey
@@ -355,7 +385,7 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
-    skills[displayName] = processSkillArray(skillArray as any[], displayName);
+    skills[displayName] = processSkillArray(skillArray as unknown[], displayName);
   });
 
   // Minimal: keep templates clean
@@ -375,7 +405,7 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
     enableProfessionalSummary: resumeData.enableProfessionalSummary !== undefined ? resumeData.enableProfessionalSummary : false,
     skills,
     experience: (resumeData.experience || []).map(exp => {
-      const item = exp as any;
+      const item = exp as Record<string, unknown>;
       return {
         position: item.position,
         company: item.company,
@@ -384,7 +414,7 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       };
     }),
     education: (resumeData.education || []).map(edu => {
-      const item = edu as any;
+      const item = edu as Record<string, unknown>;
       return {
         degree: item.degree || '',
         field_of_study: item.field_of_study || item.field || '',
@@ -406,38 +436,40 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       date: cert.date
     })) || [],
     customSections: resumeData.customSections?.filter(rawSection => {
-      const section = rawSection as any;
-      return section.title?.trim() && section.items?.some((rawItem: any) => {
-        const item = rawItem as any;
+      const section = rawSection as Record<string, unknown>;
+      const items = section.items as unknown[] | undefined;
+      return section.title && String(section.title).trim() && items?.some(rawItem => {
+        const item = rawItem as Record<string, unknown>;
         return (
-          item.field1?.trim() ||
-          item.field2?.trim() ||
-          item.field3?.trim() ||
-          item.field4?.trim() ||
-          item.title?.trim() ||
-          item.description?.trim() ||
-          item.subtitle?.trim()
+          (item.field1 && String(item.field1).trim()) ||
+          (item.field2 && String(item.field2).trim()) ||
+          (item.field3 && String(item.field3).trim()) ||
+          (item.field4 && String(item.field4).trim()) ||
+          (item.title && String(item.title).trim()) ||
+          (item.description && String(item.description).trim()) ||
+          (item.subtitle && String(item.subtitle).trim())
         );
       });
     }).map(rawSection => {
-      const section = rawSection as any;
+      const section = rawSection as Record<string, unknown>;
+      const sectionItems = section.items as unknown[] | undefined;
       return {
         id: section.id,
         title: section.title,
         type: section.type,
-        items: section.items?.filter((rawItem: any) => {
-          const item = rawItem as any;
+        items: sectionItems?.filter(rawItem => {
+          const item = rawItem as Record<string, unknown>;
           return (
-            item.field1?.trim() ||
-            item.field2?.trim() ||
-            item.field3?.trim() ||
-            item.field4?.trim() ||
-            item.title?.trim() ||
-            item.description?.trim() ||
-            item.subtitle?.trim()
+            (item.field1 && String(item.field1).trim()) ||
+            (item.field2 && String(item.field2).trim()) ||
+            (item.field3 && String(item.field3).trim()) ||
+            (item.field4 && String(item.field4).trim()) ||
+            (item.title && String(item.title).trim()) ||
+            (item.description && String(item.description).trim()) ||
+            (item.subtitle && String(item.subtitle).trim())
           );
-        }).map((rawItem: any) => {
-          const item = rawItem as any;
+        }).map(rawItem => {
+          const item = rawItem as Record<string, unknown>;
           return {
             field1: item.field1 || item.title || '',
             field2: item.field2 || item.subtitle || '',
@@ -452,8 +484,8 @@ async function formatResumeDataForTemplate(resumeData: ResumeData, userProfile?:
       };
     }) || [],
     // Languages come from the top-level languages field (NOT from skills)
-    languages: (resumeData as any).languages || [],
-    photoUrl: (resumeData as any).photoUrl || null,
+    languages: resumeDataTyped.languages || [],
+    photoUrl: resumeDataTyped.photoUrl || null,
     showSkillLevelsInResume: showSkillLevelsInResume // Pass skill level toggle to templates
   };
 }

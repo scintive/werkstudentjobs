@@ -135,7 +135,7 @@ export function CookieBanner() {
                       <input
                         type="checkbox"
                         checked={preferences.functional}
-                        onChange={(e) => setPreferences({ ...preferences, functional: e.target.checked })}
+                        onChange={(e: any) => setPreferences({ ...preferences, functional: e.target.checked })}
                         className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </div>
@@ -159,7 +159,7 @@ export function CookieBanner() {
                       <input
                         type="checkbox"
                         checked={preferences.analytics}
-                        onChange={(e) => setPreferences({ ...preferences, analytics: e.target.checked })}
+                        onChange={(e: any) => setPreferences({ ...preferences, analytics: e.target.checked })}
                         className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </div>
@@ -183,7 +183,7 @@ export function CookieBanner() {
                       <input
                         type="checkbox"
                         checked={preferences.marketing}
-                        onChange={(e) => setPreferences({ ...preferences, marketing: e.target.checked })}
+                        onChange={(e: any) => setPreferences({ ...preferences, marketing: e.target.checked })}
                         className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </div>

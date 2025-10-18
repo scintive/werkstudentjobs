@@ -7,6 +7,25 @@ import { parse } from 'csv-parse/sync';
 
 const execAsync = promisify(exec);
 
+// Type definition for JobSpy CSV data
+interface JobSpyCsvRow {
+  title?: string;
+  company?: string;
+  location?: string;
+  description?: string;
+  date_posted?: string;
+  job_url?: string;
+  job_url_direct?: string;
+  job_type?: string;
+  min_amount?: string;
+  max_amount?: string;
+  interval?: string;
+  site?: string;
+  company_url?: string;
+  company_url_direct?: string;
+  company_logo?: string;
+}
+
 /**
  * Vercel Cron Job: Fetch jobs every 4 hours
  *
@@ -123,8 +142,11 @@ else:
 
     console.log(`✅ Parsed ${jobspyJobs.length} job(s) from CSV`);
 
+    // Type assert parsed CSV rows
+    const typedJobs = jobspyJobs as JobSpyCsvRow[];
+
     // Convert JobSpy format to our API format
-    const formattedJobs = jobspyJobs.map((job: any) => ({
+    const formattedJobs = typedJobs.map((job) => ({
       title: job.title || '',
       company: job.company || '',
       location: job.location || '',

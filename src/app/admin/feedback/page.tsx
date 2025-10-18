@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import type { Database } from '@/lib/supabase/types'
 import { 
   MessageCircle, 
   Bug, 
@@ -99,15 +100,16 @@ export default function FeedbackAdminPage() {
   const updateStatus = async (id: string, newStatus: FeedbackStatus) => {
     setUpdatingId(id)
     try {
+      const updateData: Database['public']['Tables']['feedback']['Update'] = { status: newStatus }
       const { error } = await supabase
         .from('feedback')
-        .update({ status: newStatus })
+        .update(updateData as never)
         .eq('id', id)
 
       if (error) throw error
-      
+
       // Update local state
-      setFeedbacks(feedbacks.map(f => 
+      setFeedbacks(feedbacks.map(f =>
         f.id === id ? { ...f, status: newStatus } : f
       ))
     } catch (error) {
@@ -121,15 +123,16 @@ export default function FeedbackAdminPage() {
   const updateNotes = async (id: string, notes: string) => {
     setUpdatingId(id)
     try {
+      const updateData: Database['public']['Tables']['feedback']['Update'] = { admin_notes: notes }
       const { error } = await supabase
         .from('feedback')
-        .update({ admin_notes: notes })
+        .update(updateData as never)
         .eq('id', id)
 
       if (error) throw error
-      
+
       // Update local state
-      setFeedbacks(feedbacks.map(f => 
+      setFeedbacks(feedbacks.map(f =>
         f.id === id ? { ...f, admin_notes: notes } : f
       ))
     } catch (error) {

@@ -2,7 +2,7 @@
 // This fixes Next.js 15.5.0 compatibility with Node.js 20.x
 
 if (typeof URL !== 'undefined' && !('canParse' in URL)) {
-  (URL as any).canParse = function(url: string, base?: string): boolean {
+  (URL as unknown).canParse = function(url: string, base?: string): boolean {
     try {
       new URL(url, base);
       return true;

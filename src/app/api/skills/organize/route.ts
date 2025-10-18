@@ -42,15 +42,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (llmService as any).client = llmService.initializeClient();
     
     console.log('🧠🎯 Generating intelligent skill organization...');
-    const organization = await llmService.organizeSkillsIntelligently(profileData, currentSkills);
-    
+    const organizationRaw = await llmService.organizeSkillsIntelligently(profileData, currentSkills);
+    const organization = organizationRaw as Record<string, unknown>;
+
     console.log('🧠🎯 === ORGANIZATION GENERATED ===');
-    console.log('🧠🎯 Categories count:', Object.keys(organization.organized_categories || {}).length);
-    console.log('🧠🎯 Career focus:', organization.profile_assessment?.career_focus);
-    console.log('🧠🎯 Skill level:', organization.profile_assessment?.skill_level);
+    const organizedCategories = organization.organized_categories as Record<string, unknown> | undefined;
+    const profileAssessment = organization.profile_assessment as Record<string, unknown> | undefined;
+    console.log('🧠🎯 Categories count:', Object.keys(organizedCategories || {}).length);
+    console.log('🧠🎯 Career focus:', profileAssessment?.career_focus);
+    console.log('🧠🎯 Skill level:', profileAssessment?.skill_level);
 
     return NextResponse.json({
       ...organization,

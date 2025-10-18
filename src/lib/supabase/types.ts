@@ -542,12 +542,279 @@ export interface Database {
           updated_at?: string
         }
       }
+      ai_cache: {
+        Row: {
+          key: string
+          model: string
+          messages_hash: string
+          response_json: Json
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          key: string
+          model: string
+          messages_hash: string
+          response_json: Json
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          key?: string
+          model?: string
+          messages_hash?: string
+          response_json?: Json
+          expires_at?: string
+          created_at?: string
+        }
+      }
+      feedback: {
+        Row: {
+          id: string
+          user_id: string | null
+          email: string | null
+          name: string | null
+          type: 'bug' | 'feature' | 'improvement' | 'other'
+          message: string
+          rating: number | null
+          page_url: string | null
+          user_agent: string | null
+          status: 'new' | 'in_progress' | 'resolved' | 'closed'
+          admin_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          email?: string | null
+          name?: string | null
+          type?: 'bug' | 'feature' | 'improvement' | 'other'
+          message: string
+          rating?: number | null
+          page_url?: string | null
+          user_agent?: string | null
+          status?: 'new' | 'in_progress' | 'resolved' | 'closed'
+          admin_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          email?: string | null
+          name?: string | null
+          type?: 'bug' | 'feature' | 'improvement' | 'other'
+          message?: string
+          rating?: number | null
+          page_url?: string | null
+          user_agent?: string | null
+          status?: 'new' | 'in_progress' | 'resolved' | 'closed'
+          admin_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      resume_variants: {
+        Row: {
+          id: string
+          base_resume_id: string
+          job_id: string
+          user_id: string | null
+          session_id: string | null
+          variant_name: string | null
+          tailored_data: Json
+          applied_suggestions: string[]
+          ats_keywords: string[]
+          match_score: number | null
+          is_active: boolean
+          template: string | null
+          job_analysis: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_resume_id: string
+          job_id: string
+          user_id?: string | null
+          session_id?: string | null
+          variant_name?: string | null
+          tailored_data: Json
+          applied_suggestions?: string[]
+          ats_keywords?: string[]
+          match_score?: number | null
+          is_active?: boolean
+          template?: string | null
+          job_analysis?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          base_resume_id?: string
+          job_id?: string
+          user_id?: string | null
+          session_id?: string | null
+          variant_name?: string | null
+          tailored_data?: Json
+          applied_suggestions?: string[]
+          ats_keywords?: string[]
+          match_score?: number | null
+          is_active?: boolean
+          template?: string | null
+          job_analysis?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      resume_suggestions: {
+        Row: {
+          id: string
+          variant_id: string
+          job_id: string
+          section: 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications' | 'languages' | 'custom' | 'title'
+          suggestion_type: 'text' | 'bullet' | 'skill_addition' | 'skill_removal' | 'reorder' | 'language_addition' | 'skill_edit' | 'alias'
+          target_id: string | null
+          original_content: string
+          suggested_content: string
+          rationale: string
+          ats_relevance: string | null
+          keywords: string[] | null
+          confidence: number
+          impact: 'high' | 'medium' | 'low'
+          accepted: boolean | null
+          applied_at: string | null
+          created_at: string
+          diff_html: string | null
+          before: string | null
+          after: string | null
+          resume_evidence: string | null
+          job_requirement: string | null
+          ats_keywords: string[] | null
+          target_path: string | null
+        }
+        Insert: {
+          id?: string
+          variant_id: string
+          job_id: string
+          section: 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications' | 'languages' | 'custom' | 'title'
+          suggestion_type: 'text' | 'bullet' | 'skill_addition' | 'skill_removal' | 'reorder' | 'language_addition' | 'skill_edit' | 'alias'
+          target_id?: string | null
+          original_content: string
+          suggested_content: string
+          rationale: string
+          ats_relevance?: string | null
+          keywords?: string[] | null
+          confidence: number
+          impact: 'high' | 'medium' | 'low'
+          accepted?: boolean | null
+          applied_at?: string | null
+          created_at?: string
+          diff_html?: string | null
+          before?: string | null
+          after?: string | null
+          resume_evidence?: string | null
+          job_requirement?: string | null
+          ats_keywords?: string[] | null
+          target_path?: string | null
+        }
+        Update: {
+          id?: string
+          variant_id?: string
+          job_id?: string
+          section?: 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications' | 'languages' | 'custom' | 'title'
+          suggestion_type?: 'text' | 'bullet' | 'skill_addition' | 'skill_removal' | 'reorder' | 'language_addition' | 'skill_edit' | 'alias'
+          target_id?: string | null
+          original_content?: string
+          suggested_content?: string
+          rationale?: string
+          ats_relevance?: string | null
+          keywords?: string[] | null
+          confidence?: number
+          impact?: 'high' | 'medium' | 'low'
+          accepted?: boolean | null
+          applied_at?: string | null
+          created_at?: string
+          diff_html?: string | null
+          before?: string | null
+          after?: string | null
+          resume_evidence?: string | null
+          job_requirement?: string | null
+          ats_keywords?: string[] | null
+          target_path?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_share_token: {
+        Args: {
+          p_token: string
+          p_user_id: string
+          p_share_type: string
+          p_resume_id?: string | null
+          p_variant_id?: string | null
+          p_template?: string | null
+          p_expires_at?: string | null
+        }
+        Returns: {
+          id: string
+          token: string
+          user_id: string
+          share_type: string
+          resume_id: string | null
+          variant_id: string | null
+          template: string | null
+          expires_at: string | null
+          view_count: number
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      increment_share_view_count: {
+        Args: {
+          p_token: string
+        }
+        Returns: void
+      }
+      get_shared_document: {
+        Args: {
+          p_token: string
+        }
+        Returns: {
+          share_type: string
+          template: string
+          resume_data: Json
+          variant_data: Json
+          is_expired: boolean
+        }[]
+      }
+      upsert_resume_variant: {
+        Args: {
+          p_base_resume_id: string
+          p_job_id: string
+          p_user_id: string
+          p_tailored_data: Json
+          p_applied_suggestions: string[]
+          p_ats_keywords: string[]
+          p_is_active: boolean
+        }
+        Returns: {
+          id: string
+          base_resume_id: string
+          job_id: string
+          user_id: string
+          tailored_data: Json
+          applied_suggestions: string[]
+          ats_keywords: string[]
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -564,13 +831,19 @@ export type UserJobInteraction = Database['public']['Tables']['user_job_interact
 export type UserProfile = Database['public']['Tables']['user_profiles']['Row']
 export type JobMatchResult = Database['public']['Tables']['job_match_results']['Row']
 export type ResumeData = Database['public']['Tables']['resume_data']['Row']
+export type Feedback = Database['public']['Tables']['feedback']['Row']
+export type ResumeVariant = Database['public']['Tables']['resume_variants']['Row']
+export type ResumeSuggestion = Database['public']['Tables']['resume_suggestions']['Row']
+export type AICacheEntry = Database['public']['Tables']['ai_cache']['Row']
 
 // Extended job type with company info and match result
-export interface JobWithCompany extends Job {
+export interface JobWithCompany extends Omit<Job, 'skills'> {
   company: Company
   requirements?: JobRequirement[]
   skills?: JobSkill[]
   matchResult?: JobMatchResult
+  skills_canonical_flat?: string[]
+  tools_canonical_flat?: string[]
 }
 
 // Type helper for Job queries with nested company data (common pattern in API routes)

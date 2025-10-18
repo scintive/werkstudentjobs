@@ -83,17 +83,17 @@ export default function AppHeader() {
           }
 
           if (resumeData) {
-            setUserName((resumeData as any).personal_info?.name || '')
-            setPhotoUrl((resumeData as any).photo_url || null)
+            setUserName((resumeData as Record<string, any>).personal_info?.name || '')
+            setPhotoUrl((resumeData as Record<string, any>).photo_url || null)
           }
 
           // If no name from resume_data, fallback to auth metadata
-          if (!(resumeData as any)?.personal_info?.name && user.user_metadata?.name) {
+          if (!resumeData || !(resumeData as Record<string, any>).personal_info?.name && user.user_metadata?.name) {
             setUserName(user.user_metadata.name)
           }
 
           // If no photo in resume_data, check user_profiles - MUST match user_id
-          if (!(resumeData as any)?.photo_url) {
+          if (!resumeData || !(resumeData as Record<string, any>).photo_url) {
             const { data: profileData, error: profileError } = await supabase
               .from('user_profiles')
               .select('photo_url')
@@ -104,8 +104,8 @@ export default function AppHeader() {
               console.error('Error fetching profile data:', profileError)
             }
 
-            if ((profileData as any)?.photo_url) {
-              setPhotoUrl((profileData as any).photo_url)
+            if (profileData && (profileData as Record<string, any>).photo_url) {
+              setPhotoUrl((profileData as Record<string, any>).photo_url)
             }
           }
         } catch (error) {
@@ -179,7 +179,7 @@ export default function AppHeader() {
             {/* Desktop Navigation - Only show when authenticated */}
             {email && (
               <nav className="hidden lg:ml-8 lg:flex lg:space-x-1">
-                {navigationItems.map((item) => {
+                {navigationItems.map((item: any) => {
                   const Icon = item.icon
                   const isActive = isActiveRoute(item.href)
 
@@ -306,7 +306,7 @@ export default function AppHeader() {
         {/* Mobile Navigation Menu */}
         {email && mobileMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 py-3 space-y-1">
-            {navigationItems.map((item) => {
+            {navigationItems.map((item: any) => {
               const Icon = item.icon
               const isActive = isActiveRoute(item.href)
 

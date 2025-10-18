@@ -34,7 +34,7 @@ interface UseUnifiedSuggestionsProps {
   variantId?: string
   jobId?: string
   baseResumeId?: string
-  onDataChange?: (data: any) => void
+  onDataChange?: (data: unknown) => void
 }
 
 export function useUnifiedSuggestions({
@@ -90,19 +90,19 @@ export function useUnifiedSuggestions({
       console.log(`📊 Raw suggestions from DB:`, data?.length || 0, 'suggestions')
       if (data && data.length > 0) {
         console.log('Sample suggestion:', data[0])
-        console.log('🔍 Sections found:', Array.from(new Set(data.map(s => s.section))))
-        console.log('🔍 Types found:', Array.from(new Set(data.map(s => s.suggestion_type))))
+        console.log('🔍 Sections found:', Array.from(new Set((data as unknown[]).map((s: Record<string, any>) => s.section))))
+        console.log('🔍 Types found:', Array.from(new Set((data as unknown[]).map((s: Record<string, any>) => s.suggestion_type))))
       }
       
       // Transform to our format
-      const transformed: UnifiedSuggestion[] = (data || []).map(s => ({
+      const transformed: UnifiedSuggestion[] = ((data as unknown[]) || []).map((s: Record<string, any>) => ({
         id: s.id,
         variantId: s.variant_id,
         section: (s.section === 'professionalSummary' ? 'summary' :
                   s.section === 'professionalTitle' ? 'title' :
                   s.section),
         type: (s.suggestion_type === 'skill_addition' ? 'skill_add' : s.suggestion_type === 'skill_removal' ? 'skill_remove' : (s.suggestion_type || 'enhancement')),
-        targetPath: canonicalizePath((s as any).target_id || (s as any).target_path),
+        targetPath: canonicalizePath(s.target_id || s.target_path),
         original: s.original_content,
         suggested: s.suggested_content,
         rationale: s.rationale,
@@ -201,7 +201,7 @@ export function useUnifiedSuggestions({
           .update({
             accepted: true,
             applied_at: new Date().toISOString()
-          })
+          } as never)
           .eq('id', suggestionId)
       } catch (error) {
         console.error('Failed to update suggestion status:', error)
@@ -254,7 +254,7 @@ export function useUnifiedSuggestions({
           .update({
             accepted: false,
             applied_at: new Date().toISOString()
-          })
+          } as never)
           .eq('id', suggestionId)
       } catch (error) {
         console.error('Failed to update suggestion status:', error)
@@ -325,7 +325,7 @@ export function useUnifiedSuggestions({
 
   const generateSuggestionsForSection = useCallback(async (
     section: string,
-    currentContent: any,
+    currentContent: unknown,
     jobContext?: any
   ) => {
     if (mode !== 'tailor' || !jobId || !baseResumeId) {

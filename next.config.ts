@@ -6,13 +6,12 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
   eslint: {
-    // Don't fail build on ESLint warnings
-    ignoreDuringBuilds: true,
+    // Enable ESLint checks during builds for production quality
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // ⚠️ Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    ignoreBuildErrors: true,
+    // Enable TypeScript type checking during builds
+    ignoreBuildErrors: false,
   },
   // Externalize packages for Vercel serverless
   serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'puppeteer'],

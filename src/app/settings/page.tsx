@@ -57,8 +57,8 @@ export default function SettingsPage() {
         console.log('🔄 Auto-saving...')
 
         // Update all resume_data entries for this user
-        const { error: updateError } = await (supabase
-          .from('resume_data') as any)
+        const { error: updateError } = await supabase
+          .from('resume_data')
           .update({
             personal_info: {
               name: formData.name,
@@ -69,21 +69,21 @@ export default function SettingsPage() {
               website: formData.website
             },
             updated_at: new Date().toISOString()
-          })
+          } as never)
           .eq('user_id', userId)
 
         if (updateError) throw updateError
 
         // Update onboarding fields in user_profiles
-        const { error: profileError } = await (supabase
-          .from('user_profiles') as any)
+        const { error: profileError } = await supabase
+          .from('user_profiles')
           .update({
             hours_available: formData.hoursAvailable,
             current_semester: formData.currentSemester,
             university_name: formData.universityName,
             start_preference: formData.startPreference,
             updated_at: new Date().toISOString()
-          })
+          } as never)
           .eq('user_id', userId)
 
         if (profileError) throw profileError
@@ -184,8 +184,8 @@ export default function SettingsPage() {
       console.log('💾 Saving personal info:', formData)
 
       // Update all resume_data entries for this user
-      const { data: updateData, error: updateError } = await (supabase
-        .from('resume_data') as any)
+      const { data: updateData, error: updateError } = await supabase
+        .from('resume_data')
         .update({
           personal_info: {
             name: formData.name,
@@ -196,7 +196,7 @@ export default function SettingsPage() {
             website: formData.website
           },
           updated_at: new Date().toISOString()
-        })
+        } as never)
         .eq('user_id', userId)
 
       if (updateError) {
@@ -207,15 +207,15 @@ export default function SettingsPage() {
       console.log('✅ Resume data updated:', updateData)
 
       // Update onboarding fields in user_profiles
-      const { data: profileData, error: profileError } = await (supabase
-        .from('user_profiles') as any)
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
         .update({
           hours_available: formData.hoursAvailable,
           current_semester: formData.currentSemester,
           university_name: formData.universityName,
           start_preference: formData.startPreference,
           updated_at: new Date().toISOString()
-        })
+        } as never)
         .eq('user_id', userId)
 
       if (profileError) {
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                 <Input
                   id="universityName"
                   value={formData.universityName}
-                  onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, universityName: e.target.value })}
                   placeholder="Technical University of Munich"
                 />
               </div>
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                   min="1"
                   max="12"
                   value={formData.currentSemester || ''}
-                  onChange={(e) => setFormData({ ...formData, currentSemester: e.target.value ? parseInt(e.target.value) : undefined })}
+                  onChange={(e: any) => setFormData({ ...formData, currentSemester: e.target.value ? parseInt(e.target.value) : undefined })}
                   placeholder="3"
                 />
               </div>
@@ -337,7 +337,7 @@ export default function SettingsPage() {
                   min="1"
                   max="40"
                   value={formData.hoursAvailable || ''}
-                  onChange={(e) => setFormData({ ...formData, hoursAvailable: e.target.value ? parseInt(e.target.value) : undefined })}
+                  onChange={(e: any) => setFormData({ ...formData, hoursAvailable: e.target.value ? parseInt(e.target.value) : undefined })}
                   placeholder="20"
                 />
               </div>
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                 <Input
                   id="startPreference"
                   value={formData.startPreference}
-                  onChange={(e) => setFormData({ ...formData, startPreference: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, startPreference: e.target.value })}
                   placeholder="Immediately / Next Month / etc."
                 />
               </div>
@@ -373,7 +373,7 @@ export default function SettingsPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="John Doe"
                 />
               </div>
@@ -400,7 +400,7 @@ export default function SettingsPage() {
                 <Input
                   id="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -413,7 +413,7 @@ export default function SettingsPage() {
                 <Input
                   id="location"
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="San Francisco, CA"
                 />
               </div>
@@ -423,7 +423,7 @@ export default function SettingsPage() {
                 <Input
                   id="linkedin"
                   value={formData.linkedin}
-                  onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, linkedin: e.target.value })}
                   placeholder="linkedin.com/in/johndoe"
                 />
               </div>
@@ -433,7 +433,7 @@ export default function SettingsPage() {
                 <Input
                   id="website"
                   value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, website: e.target.value })}
                   placeholder="johndoe.com"
                 />
               </div>

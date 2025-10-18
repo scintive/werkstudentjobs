@@ -125,8 +125,8 @@ export class GeoEnhancedMatchingService {
 
     // Calculate matches for each job
     for (const job of jobs) {
-      const isRemote = job.work_mode === 'remote' || job.is_remote;
-      const isHybrid = job.work_mode === 'hybrid';
+      const isRemote = job.work_mode?.toLowerCase() === 'remote' || job.is_remote;
+      const isHybrid = job.work_mode?.toLowerCase() === 'hybrid';
 
       if (isRemote) {
         results.set(job.id, {
@@ -145,13 +145,13 @@ export class GeoEnhancedMatchingService {
       }
 
       // Check if job has coordinates in database
-      if (job.latitude && job.longitude) {
-        console.log(`🗺️ Using stored coordinates for job ${job.id}: [${job.latitude}, ${job.longitude}]`);
-        
+      if ((job as unknown).latitude && (job as unknown).longitude) {
+        console.log(`🗺️ Using stored coordinates for job ${job.id}: [${(job as unknown).latitude}, ${(job as unknown).longitude}]`);
+
         // Use stored coordinates
         const distanceKm = locationService.calculateDistance(
           userGeo.latitude, userGeo.longitude,
-          parseFloat(job.latitude.toString()), parseFloat(job.longitude.toString())
+          parseFloat((job as unknown).latitude.toString()), parseFloat((job as unknown).longitude.toString())
         );
 
         let score = locationService.getLocationScore(distanceKm);
@@ -245,15 +245,15 @@ export class GeoEnhancedMatchingService {
 
     // Filter by max distance and sort
     return jobsWithDistance
-      .filter(job => 
+      .filter(job =>
         !job.distanceKm || // Include remote/unknown
         job.distanceKm <= maxDistanceKm ||
-        job.work_mode === 'remote'
+        job.work_mode?.toLowerCase() === 'remote'
       )
       .sort((a, b) => {
         // Remote jobs first
-        if (a.work_mode === 'remote' && b.work_mode !== 'remote') return -1;
-        if (b.work_mode === 'remote' && a.work_mode !== 'remote') return 1;
+        if (a.work_mode?.toLowerCase() === 'remote' && b.work_mode?.toLowerCase() !== 'remote') return -1;
+        if (b.work_mode?.toLowerCase() === 'remote' && a.work_mode?.toLowerCase() !== 'remote') return 1;
         
         // Then by distance
         const aDist = a.distanceKm || Infinity;

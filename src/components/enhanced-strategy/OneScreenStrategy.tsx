@@ -5,21 +5,24 @@ import { motion } from 'framer-motion';
 import { Target, Sparkles, Star, Lightbulb, ChevronRight } from 'lucide-react';
 
 type OneScreenStrategyProps = {
-  userProfile: any;
-  jobData: any;
-  strategy?: any;
+  userProfile: unknown;
+  jobData: unknown;
+  strategy?: unknown;
   onTailorSkills?: () => void;
 };
 
-function flattenUserSkills(skillsObj: any): string[] {
+function flattenUserSkills(skillsObj: unknown): string[] {
   if (!skillsObj || typeof skillsObj !== 'object') return [];
   const out: string[] = [];
-  Object.values(skillsObj).forEach((arr: any) => {
+  Object.values(skillsObj).forEach((arr: unknown) => {
     if (Array.isArray(arr)) {
       for (const s of arr) {
         if (!s) continue;
         if (typeof s === 'string') out.push(s);
-        else if (typeof s === 'object') out.push(String((s as any).skill || (s as any).name || ''));
+        else if (typeof s === 'object') {
+          const sObj = s as Record<string, unknown>;
+          out.push(String(sObj.skill || sObj.name || ''));
+        }
       }
     }
   });
@@ -27,12 +30,16 @@ function flattenUserSkills(skillsObj: any): string[] {
 }
 
 export default function OneScreenStrategy({ userProfile, jobData, strategy, onTailorSkills }: OneScreenStrategyProps) {
+  const jobDataObj = jobData as Record<string, unknown>;
+  const userProfileObj = userProfile as Record<string, unknown>;
+  const strategyObj = strategy as Record<string, unknown>;
+
   const jobSkills: string[] = Array.from(new Set([
-    ...(jobData?.skills_original || []),
-    ...(jobData?.tools_original || [])
+    ...((jobDataObj?.skills_original as string[]) || []),
+    ...((jobDataObj?.tools_original as string[]) || [])
   ].filter(Boolean)));
 
-  const userSkills = flattenUserSkills(userProfile?.skills);
+  const userSkills = flattenUserSkills(userProfileObj?.skills);
   const userSkillsNorm = userSkills.map(s => s.toLowerCase().trim());
 
   const matched: string[] = [];
@@ -43,11 +50,14 @@ export default function OneScreenStrategy({ userProfile, jobData, strategy, onTa
     (exists ? matched : missing).push(js);
   }
 
-  const pitch = strategy?.positioning?.elevator_pitch || strategy?.win_strategy?.main_positioning || '';
-  const themes: string[] = strategy?.positioning?.themes || strategy?.win_strategy?.key_differentiators || [];
-  const atsKeywords: string[] = strategy?.ats_keywords || strategy?.win_strategy?.ats_keywords || [];
+  const positioning = strategyObj?.positioning as Record<string, unknown> | undefined;
+  const winStrategy = strategyObj?.win_strategy as Record<string, unknown> | undefined;
 
-  const score = Math.round(Number(jobData?.match_score || 0));
+  const pitch = (positioning?.elevator_pitch as string) || (winStrategy?.main_positioning as string) || '';
+  const themes: string[] = (positioning?.themes as string[]) || (winStrategy?.key_differentiators as string[]) || [];
+  const atsKeywords: string[] = (strategyObj?.ats_keywords as string[]) || (winStrategy?.ats_keywords as string[]) || [];
+
+  const score = Math.round(Number(jobDataObj?.match_score || 0));
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -59,7 +69,7 @@ export default function OneScreenStrategy({ userProfile, jobData, strategy, onTa
           </div>
           <div>
             <div className="text-sm text-gray-500">AI Strategy Snapshot</div>
-            <div className="font-semibold text-gray-900">{jobData?.title}</div>
+            <div className="font-semibold text-gray-900">{jobDataObj?.title as string}</div>
           </div>
         </div>
         <div className="px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
@@ -79,7 +89,7 @@ export default function OneScreenStrategy({ userProfile, jobData, strategy, onTa
           <div className="mb-2">
             <div className="text-xs font-medium text-green-700 mb-1">✓ You have</div>
             <div className="flex flex-wrap gap-1">
-              {matched.slice(0, 6).map((s) => (
+              {matched.slice(0, 6).map((s: any) => (
                 <span key={s} className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs border border-green-200">{s}</span>
               ))}
               {matched.length === 0 && <span className="text-gray-500 text-xs">No direct skill matches</span>}
@@ -88,7 +98,7 @@ export default function OneScreenStrategy({ userProfile, jobData, strategy, onTa
           <div>
             <div className="text-xs font-medium text-amber-700 mb-1">⚠ Consider adding</div>
             <div className="flex flex-wrap gap-1">
-              {missing.slice(0, 6).map((s) => (
+              {missing.slice(0, 6).map((s: any) => (
                 <span key={s} className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs border border-amber-200">{s}</span>
               ))}
               {missing.length === 0 && <span className="text-gray-500 text-xs">No major gaps</span>}

@@ -30,7 +30,7 @@ interface SkillsSuggestionsPanelProps {
   loading?: boolean;
 }
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, unknown> = {
   'data_management___analysis': Brain,
   'client_service_support': Users,
   'analytical_tools': Code,
@@ -211,7 +211,7 @@ export const SkillsSuggestionsPanel: React.FC<SkillsSuggestionsPanelProps> = ({
                   >
                     <div className="p-4 space-y-2">
                       {/* Removals - Show these first per user feedback */}
-                      {items.removals.map((suggestion) => (
+                      {items.removals.map((suggestion: any) => (
                         <SkillSuggestionCard
                           key={suggestion.id}
                           suggestion={suggestion}
@@ -224,7 +224,7 @@ export const SkillsSuggestionsPanel: React.FC<SkillsSuggestionsPanelProps> = ({
                       ))}
 
                       {/* Additions - Show these after removals */}
-                      {items.additions.map((suggestion) => (
+                      {items.additions.map((suggestion: any) => (
                         <SkillSuggestionCard
                           key={suggestion.id}
                           suggestion={suggestion}

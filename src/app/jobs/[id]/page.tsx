@@ -69,7 +69,7 @@ function extractSalaryFromBenefits(benefits: string[] | null): string | null {
 }
 
 // Helper function to render content that can be either array or markdown string
-function renderJobContent(content: any, fallbackIcon: React.ComponentType<{ className?: string }>) {
+function renderJobContent(content: unknown, fallbackIcon: React.ComponentType<{ className?: string }>) {
   // If it's an array (legacy format), render as list
   if (Array.isArray(content)) {
     return (
@@ -135,7 +135,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const extractedSalary = extractSalaryFromBenefits(job.benefits);
-  const variantData = tailoredVariant as any;
+  const variantData = tailoredVariant as Record<string, unknown> | null;
 
   return (
     <div className="min-h-screen bg-white">
@@ -244,14 +244,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 <div>
                   <h3 className="text-lg font-semibold text-emerald-900 flex items-center gap-2">
                     You have a tailored resume for this job
-                    {variantData.match_score && (
+                    {(variantData.match_score as number) && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600 text-white">
-                        {variantData.match_score}% match
+                        {variantData.match_score as number}% match
                       </span>
                     )}
                   </h3>
                   <p className="text-sm text-emerald-700">
-                    Last updated {new Date(variantData.updated_at).toLocaleDateString()}
+                    Last updated {new Date(variantData.updated_at as string).toLocaleDateString()}
                   </p>
                 </div>
               </div>

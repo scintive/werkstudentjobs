@@ -147,7 +147,7 @@ const getMatchScoreTooltip = (score: number, isPlaceholder: boolean = false, job
 }
 
 // Helper function to render content that can be either array or markdown string
-function renderJobContent(content: any) {
+function renderJobContent(content: unknown) {
   // If it's an array (new clean format), render as clean list
   if (Array.isArray(content)) {
     return (
@@ -181,36 +181,38 @@ function renderJobContent(content: any) {
 }
 
 // Helper function to convert user profile to student profile format
-function convertToStudentProfile(userProfile: any): Partial<StudentProfile> | null {
+function convertToStudentProfile(userProfile: unknown): Partial<StudentProfile> | null {
   if (!userProfile || typeof userProfile !== 'object') return null;
-  
+
+  const profileObj = userProfile as Record<string, unknown>;
+
   // Check if this looks like a student profile
   const hasStudentIndicators = (
-    userProfile.degree_program ||
-    userProfile.university ||
-    userProfile.current_year ||
-    userProfile.expected_graduation ||
-    userProfile.enrollment_status ||
-    userProfile.weekly_availability
+    profileObj.degree_program ||
+    profileObj.university ||
+    profileObj.current_year ||
+    profileObj.expected_graduation ||
+    profileObj.enrollment_status ||
+    profileObj.weekly_availability
   );
-  
+
   if (!hasStudentIndicators) return null;
-  
+
   return {
-    degree_program: userProfile.degree_program || 'Computer Science',
-    university: userProfile.university || '',
-    current_year: userProfile.current_year || 3,
-    expected_graduation: userProfile.expected_graduation,
-    weekly_availability: userProfile.weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
-    earliest_start_date: userProfile.earliest_start_date || 'immediately',
-    preferred_duration: userProfile.preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
-    enrollment_status: userProfile.enrollment_status || 'enrolled',
-    language_proficiencies: userProfile.language_proficiencies || [],
-    academic_projects: userProfile.academic_projects || [],
-    relevant_coursework: userProfile.relevant_coursework || [],
-    preferred_locations: userProfile.preferred_locations || [],
-    remote_preference: userProfile.remote_preference || 'flexible',
-    visa_status: userProfile.visa_status
+    degree_program: (profileObj.degree_program as string) || 'Computer Science',
+    university: (profileObj.university as string) || '',
+    current_year: (profileObj.current_year as number) || 3,
+    expected_graduation: profileObj.expected_graduation as string | undefined,
+    weekly_availability: (profileObj.weekly_availability as { hours_min: number; hours_max: number; flexible: boolean }) || { hours_min: 15, hours_max: 20, flexible: true },
+    earliest_start_date: (profileObj.earliest_start_date as string) || 'immediately',
+    preferred_duration: (profileObj.preferred_duration as { months_min: number; months_max: number; open_ended: boolean }) || { months_min: 6, months_max: 12, open_ended: false },
+    enrollment_status: (profileObj.enrollment_status as 'enrolled' | 'graduating_soon' | 'gap_year' | undefined) || 'enrolled',
+    language_proficiencies: (profileObj.language_proficiencies as Array<{ language: string; cefr_level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'Native'; certification?: string }>) || [],
+    academic_projects: (profileObj.academic_projects as Array<{ title: string; course?: string; duration: string; description: string; technologies: string[]; team_size?: number; role?: string; github_url?: string; metrics: Array<{ type: 'accuracy' | 'performance' | 'scale' | 'grade' | 'users' | 'efficiency' | 'other'; value: string; context?: string }>; grade?: string }>) || [],
+    relevant_coursework: (profileObj.relevant_coursework as Array<{ course_name: string; course_code?: string; semester: string; grade?: string; ects_credits?: number; relevant_topics: string[]; projects?: { name: string; description: string; metric?: string }[] }>) || [],
+    preferred_locations: (profileObj.preferred_locations as string[]) || [],
+    remote_preference: (profileObj.remote_preference as 'onsite_only' | 'hybrid_preferred' | 'remote_preferred' | 'flexible' | undefined) || 'flexible',
+    visa_status: profileObj.visa_status as 'eu_citizen' | 'student_visa' | 'work_permit' | 'needs_sponsorship' | undefined
   };
 }
 
@@ -391,14 +393,15 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
       
       // Try different possible location fields
       if ('personal_details' in userProfile && userProfile.personal_details) {
-        const details = userProfile.personal_details as any;
-        profileLocation = details?.contact?.address || details?.location || details?.city || details?.address || null;
+        const details = userProfile.personal_details as Record<string, unknown>;
+        const contact = details?.contact as Record<string, unknown> | undefined;
+        profileLocation = (contact?.address as string) || (details?.location as string) || (details?.city as string) || (details?.address as string) || null;
       }
-      
+
       // Try alternative structures
       if (!profileLocation && 'personalInfo' in userProfile) {
-        const info = (userProfile as any).personalInfo;
-        profileLocation = info?.location || info?.address || info?.city || null;
+        const info = (userProfile as Record<string, unknown>).personalInfo as Record<string, unknown> | undefined;
+        profileLocation = (info?.location as string) || (info?.address as string) || (info?.city as string) || null;
       }
       
       if (profileLocation) {
@@ -459,10 +462,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
         // Create a map of job_id -> metadata
         const tailoredMap = new Map()
-        data.tailoredJobs?.forEach((item: any) => {
-          tailoredMap.set(item.job_id, {
-            created_at: item.created_at,
-            match_score: item.match_score
+        data.tailoredJobs?.forEach((item: unknown) => {
+          const itemObj = item as Record<string, unknown>;
+          tailoredMap.set(itemObj.job_id, {
+            created_at: itemObj.created_at,
+            match_score: itemObj.match_score
           })
         })
 
@@ -610,7 +614,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         console.log('🔍 DEBUG: About to check matching conditions', {
           hasUserProfile: !!userProfile,
           userProfileType: typeof userProfile,
-          userProfileKeys: userProfile ? Object.keys(userProfile as any).slice(0, 10) : [],
+          userProfileKeys: userProfile ? Object.keys(userProfile as Record<string, any>).slice(0, 10) : [],
           transformedJobsLength: transformedJobs.length,
           firstJob: transformedJobs[0]?.title,
           firstJobSkills: transformedJobs[0]?.skills,
@@ -622,11 +626,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         if (userProfile && transformedJobs.length > 0) {
           console.log('🎯 User profile available, calculating weighted match scores...')
           console.log('🎯 DEBUG: User profile structure:', {
-            hasSkills: !!(userProfile as any).skills,
-            skillCategories: (userProfile as any).skills ? Object.keys((userProfile as any).skills) : [],
-            sampleSkills: (userProfile as any).skills ? Object.entries((userProfile as any).skills).slice(0, 2).map(([k, v]: [string, any]) => [k, Array.isArray(v) ? v.slice(0, 3) : v]) : [],
-            hasLanguages: !!(userProfile as any).languages,
-            languagesCount: Array.isArray((userProfile as any).languages) ? (userProfile as any).languages.length : 0
+            hasSkills: !!(userProfile as Record<string, any>).skills,
+            skillCategories: (userProfile as Record<string, any>).skills ? Object.keys((userProfile as Record<string, any>).skills) : [],
+            sampleSkills: (userProfile as Record<string, any>).skills ? Object.entries((userProfile as Record<string, any>).skills).slice(0, 2).map(([k, v]: [string, any]) => [k, Array.isArray(v) ? v.slice(0, 3) : v]) : [],
+            hasLanguages: !!(userProfile as Record<string, any>).languages,
+            languagesCount: Array.isArray((userProfile as Record<string, any>).languages) ? (userProfile as Record<string, any>).languages.length : 0
           })
           try {
             const matchingController = new AbortController()
@@ -742,7 +746,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         console.error('JobBrowser: API returned error status:', response.status)
       }
     } catch (error) {
-      if ((error as any).name === 'AbortError') {
+      if ((error as Record<string, any>)?.name === 'AbortError') {
         console.error('JobBrowser: API request timed out after 2 minutes')
       } else {
         console.error('JobBrowser: Error fetching jobs:', error)
@@ -859,11 +863,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
         if (job.country?.toLowerCase().includes(query)) return true
         // Search in skills
         if (job.skills && Array.isArray(job.skills)) {
-          if (job.skills.some((skill: any) => typeof skill === 'string' && skill.toLowerCase().includes(query))) return true
+          if (job.skills.some((skill: unknown) => typeof skill === 'string' && skill.toLowerCase().includes(query))) return true
         }
         // Search in tools
         if (job.tools && Array.isArray(job.tools)) {
-          if (job.tools.some((tool: any) => typeof tool === 'string' && tool.toLowerCase().includes(query))) return true
+          if (job.tools.some((tool: unknown) => typeof tool === 'string' && tool.toLowerCase().includes(query))) return true
         }
         // Search in job description
         if (job.description?.toLowerCase().includes(query)) return true
@@ -1049,7 +1053,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
             <Input
               placeholder="Search jobs, companies, and skills..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: any) => setSearchQuery(e.target.value)}
               className="pl-11 h-11 text-sm bg-white border-gray-200 rounded-xl shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
@@ -1114,7 +1118,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                   type="text"
                   placeholder="e.g. Berlin, Munich, Frankfurt."
                   value={locationSearch}
-                  onChange={(e) => {
+                  onChange={(e: any) => {
                     setLocationSearch(e.target.value);
                     if (e.target.value.trim()) {
                       setSelectedLocation('all');
@@ -1134,7 +1138,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
             </div>
 
             {/* Distance Filter */}
-            <Select value={String(distanceRadius)} onValueChange={(val) => setDistanceRadius(Number(val))}>
+            <Select value={String(distanceRadius)} onValueChange={(val: any) => setDistanceRadius(Number(val))}>
               <SelectTrigger className="h-9 w-[100px] bg-white border-gray-200 text-sm">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-gray-500" />
@@ -1394,11 +1398,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 score={job.match_score}
                                 size="sm"
                                 showLabel={false}
-                                breakdown={(job as any).matchCalculation ? {
-                                  skills: Math.round(((job as any).matchCalculation.skillsOverlap?.score || 0) * 100),
-                                  tools: Math.round(((job as any).matchCalculation.toolsOverlap?.score || 0) * 100),
-                                  language: Math.round(((job as any).matchCalculation.languageFit?.score || 0) * 100),
-                                  location: Math.round(((job as any).matchCalculation.locationFit?.score || 0) * 100)
+                                breakdown={(job as Record<string, any>).matchCalculation ? {
+                                  skills: Math.round(((job as Record<string, any>).matchCalculation.skillsOverlap?.score || 0) * 100),
+                                  tools: Math.round(((job as Record<string, any>).matchCalculation.toolsOverlap?.score || 0) * 100),
+                                  language: Math.round(((job as Record<string, any>).matchCalculation.languageFit?.score || 0) * 100),
+                                  location: Math.round(((job as Record<string, any>).matchCalculation.locationFit?.score || 0) * 100)
                                 } : undefined}
                               />
                             )}
@@ -1458,11 +1462,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 <EligibilityChecker
                                   studentProfile={studentProfile}
                                   jobRequirements={{
-                                    hours_per_week: (job as any).hours_per_week || '15-20',
+                                    hours_per_week: (job as Record<string, any>).hours_per_week || '15-20',
                                     language_required: job.german_required || job.language_required || undefined,
                                     location: job.location_city || undefined,
-                                    duration: (job as any).duration_months?.toString(),
-                                    start_date: (job as any).start_date
+                                    duration: (job as Record<string, any>).duration_months?.toString(),
+                                    start_date: (job as Record<string, any>).start_date
                                   }}
                                   compact={true}
                                 />
@@ -1470,15 +1474,15 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                             )}
                             {((): React.ReactNode => {
                               // Smart language detection for existing jobs
-                              let detectedLanguage: any = job.german_required;
+                              let detectedLanguage: unknown = job.german_required;
 
                               // If unknown, try to detect from job content
                               if (detectedLanguage === 'unknown' || !detectedLanguage) {
                                 // Check if job content appears to be in English
                                 const englishIndicators = [
                                   job.title?.includes('Intern'),
-                                  job.responsibilities?.some((r: any) => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
-                                  job.skills?.some((s: any) => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some((eng: string) => s.includes(eng)))
+                                  job.responsibilities?.some((r: unknown) => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                                  job.skills?.some((s: unknown) => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development'].some((eng: string) => s.includes(eng)))
                                 ];
 
                                 if (englishIndicators.filter(Boolean).length >= 2) {
@@ -1520,7 +1524,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 size="sm"
                                 variant={savedJobs.has(job.id) ? "default" : "ghost"}
                                 className="h-4 w-4 p-0"
-                                onClick={(e) => {
+                                onClick={(e: any) => {
                                   e.stopPropagation()
                                   toggleSaveJob(job.id)
                                 }}
@@ -1637,11 +1641,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                         <EligibilityChecker
                           studentProfile={studentProfile}
                           jobRequirements={{
-                            hours_per_week: (selectedJob as any).hours_per_week || '15-20',
+                            hours_per_week: (selectedJob as Record<string, any>).hours_per_week || '15-20',
                             language_required: selectedJob.german_required || selectedJob.language_required || undefined,
                             location: selectedJob.location_city || undefined,
-                            duration: (selectedJob as any).duration_months?.toString(),
-                            start_date: (selectedJob as any).start_date || undefined
+                            duration: (selectedJob as Record<string, any>).duration_months?.toString(),
+                            start_date: (selectedJob as Record<string, any>).start_date || undefined
                           }}
                           compact={false}
                         />
@@ -1656,11 +1660,11 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           score={selectedJob.match_score}
                           size="md"
                           showLabel={true}
-                          breakdown={(selectedJob as any).matchCalculation ? {
-                            skills: Math.round(((selectedJob as any).matchCalculation.skillsOverlap?.score || 0) * 100),
-                            tools: Math.round(((selectedJob as any).matchCalculation.toolsOverlap?.score || 0) * 100),
-                            language: Math.round(((selectedJob as any).matchCalculation.languageFit?.score || 0) * 100),
-                            location: Math.round(((selectedJob as any).matchCalculation.locationFit?.score || 0) * 100)
+                          breakdown={(selectedJob as Record<string, any>).matchCalculation ? {
+                            skills: Math.round(((selectedJob as Record<string, any>).matchCalculation.skillsOverlap?.score || 0) * 100),
+                            tools: Math.round(((selectedJob as Record<string, any>).matchCalculation.toolsOverlap?.score || 0) * 100),
+                            language: Math.round(((selectedJob as Record<string, any>).matchCalculation.languageFit?.score || 0) * 100),
+                            location: Math.round(((selectedJob as Record<string, any>).matchCalculation.locationFit?.score || 0) * 100)
                           } : undefined}
                         />
                       )}
@@ -1685,8 +1689,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           // Check if job content appears to be in English
                           const englishIndicators = [
                             selectedJob.title?.includes('Intern'),
-                            selectedJob.responsibilities?.some((r: any) => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
-                            selectedJob.skills?.some((s: any) => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some((eng: string) => s.includes(eng)))
+                            selectedJob.responsibilities?.some((r: unknown) => typeof r === 'string' && /^[A-Z][a-z\s]+[.]$/.test(r)),
+                            selectedJob.skills?.some((s: unknown) => typeof s === 'string' && ['Marketing', 'Analysis', 'Management', 'Development', 'Laboratory', 'Technical'].some((eng: string) => s.includes(eng)))
                           ];
 
                           if (englishIndicators.filter(Boolean).length >= 2) {
@@ -1877,12 +1881,12 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                             <div className="ml-auto text-xs text-green-600 font-medium">
                               {((): string => {
                                 // Prefer server-calculated overlap if available
-                                const mc = (selectedJob as any).matchCalculation;
+                                const mc = (selectedJob as Record<string, any>).matchCalculation;
                                 if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
                                   if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
                                      
                                     console.debug('[match.debug] server overlap', {
-                                      jobId: (selectedJob as any).id,
+                                      jobId: (selectedJob as Record<string, any>).id,
                                       skillsMatched: mc.skillsOverlap.matched.slice(0, 5),
                                       toolsMatched: (mc.toolsOverlap?.matched || []).slice(0, 5)
                                     })
@@ -1891,21 +1895,21 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                 }
                                 // Fallback: simple intersection
                                 const allUserSkills: string[] = [];
-                                if ((userProfile as any).skills && typeof (userProfile as any).skills === 'object') {
-                                  Object.values((userProfile as any).skills).forEach(arr => {
+                                if ((userProfile as Record<string, any>).skills && typeof (userProfile as Record<string, any>).skills === 'object') {
+                                  Object.values((userProfile as Record<string, any>).skills).forEach(arr => {
                                     if (Array.isArray(arr)) {
                                       for (const s of arr) allUserSkills.push(String(s));
                                     }
                                   });
                                 }
                                 const normalizedUserSkills = allUserSkills.map(s => s.toLowerCase().trim());
-                                const rawJobSkills = (selectedJob as any).skills || [];
-                                const jobSkills = Array.isArray(rawJobSkills) ? rawJobSkills.map((s: any) => String(s).toLowerCase().trim()) : [];
+                                const rawJobSkills = (selectedJob as Record<string, any>).skills || [];
+                                const jobSkills = Array.isArray(rawJobSkills) ? rawJobSkills.map((s: unknown) => String(s).toLowerCase().trim()) : [];
                                 const matchingSkills = jobSkills.filter(jobSkill => normalizedUserSkills.some(userSkill => userSkill === jobSkill || userSkill.includes(jobSkill) || jobSkill.includes(userSkill)));
                                 if (process.env.NEXT_PUBLIC_MATCH_DEBUG === '1') {
                                    
                                   console.debug('[match.debug] fallback overlap', {
-                                    jobId: (selectedJob as any).id,
+                                    jobId: (selectedJob as Record<string, any>).id,
                                     userSkills: normalizedUserSkills.slice(0, 5),
                                     jobSkills: jobSkills.slice(0, 5),
                                     count: matchingSkills.length
@@ -1919,7 +1923,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                           <div className="space-y-2">
                             {((): React.ReactNode => {
                               // Prefer server-calculated lists
-                              const mc = (selectedJob as any).matchCalculation;
+                              const mc = (selectedJob as Record<string, any>).matchCalculation;
                               if (mc && mc.skillsOverlap && Array.isArray(mc.skillsOverlap.matched)) {
                                 const matchingTechSkills: string[] = mc.skillsOverlap.matched || [];
                                 const matchingDesignSkills: string[] = (mc.toolsOverlap?.matched as string[]) || [];
@@ -1934,7 +1938,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                           <span className="text-xs text-green-600">({matchingTechSkills.length})</span>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
-                                          {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: string, index: number) => (
+                                          {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: any, index: number) => (
                                             <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">{skill}</span>
                                           ))}
                                           {matchingTechSkills.length > 6 && (
@@ -1953,7 +1957,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                           <span className="text-xs text-purple-600">({matchingDesignSkills.length})</span>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
-                                          {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: string, index: number) => (
+                                          {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: any, index: number) => (
                                             <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">{skill}</span>
                                           ))}
                                           {matchingDesignSkills.length > 4 && (
@@ -1977,8 +1981,8 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                               const userTechSkills: string[] = [];
                               const userSoftSkills: string[] = [];
                               const userDesignSkills: string[] = [];
-                              if ((userProfile as any).skills && typeof (userProfile as any).skills === 'object') {
-                                Object.entries((userProfile as any).skills).forEach(([category, skillArray]) => {
+                              if ((userProfile as Record<string, any>).skills && typeof (userProfile as Record<string, any>).skills === 'object') {
+                                Object.entries((userProfile as Record<string, any>).skills).forEach(([category, skillArray]) => {
                                   if (Array.isArray(skillArray)) {
                                     const normalizedSkills = skillArray.map(s => String(s).toLowerCase().trim());
                                     if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('tech')) {
@@ -1993,10 +1997,10 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                   }
                                 });
                               }
-                              const jobSkills = (selectedJob as any).skills || [];
-                              const matchingTechSkills = (jobSkills as any[]).filter(jobSkill => userTechSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
-                              const matchingSoftSkills = (jobSkills as any[]).filter(jobSkill => userSoftSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
-                              const matchingDesignSkills = (jobSkills as any[]).filter(jobSkill => userDesignSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
+                              const jobSkills = (selectedJob as Record<string, any>).skills || [];
+                              const matchingTechSkills = (jobSkills as unknown[]).filter(jobSkill => userTechSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
+                              const matchingSoftSkills = (jobSkills as unknown[]).filter(jobSkill => userSoftSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
+                              const matchingDesignSkills = (jobSkills as unknown[]).filter(jobSkill => userDesignSkills.some(userSkill => userSkill === String(jobSkill).toLowerCase().trim() || userSkill.includes(String(jobSkill).toLowerCase().trim()) || String(jobSkill).toLowerCase().trim().includes(userSkill)));
 
                               return (
                                 <>
@@ -2008,7 +2012,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                         <span className="text-xs text-green-600">({matchingTechSkills.length})</span>
                                       </div>
                                       <div className="flex flex-wrap gap-1">
-                                        {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: string, index: number) => (
+                                        {(expandedSkillSections.technical ? matchingTechSkills : matchingTechSkills.slice(0, 6)).map((skill: any, index: number) => (
                                           <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">{String(skill)}</span>
                                         ))}
                                         {matchingTechSkills.length > 6 && (
@@ -2027,7 +2031,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                         <span className="text-xs text-emerald-600">({matchingSoftSkills.length})</span>
                                       </div>
                                       <div className="flex flex-wrap gap-1">
-                                        {(expandedSkillSections.soft ? matchingSoftSkills : matchingSoftSkills.slice(0, 4)).map((skill: string, index: number) => (
+                                        {(expandedSkillSections.soft ? matchingSoftSkills : matchingSoftSkills.slice(0, 4)).map((skill: any, index: number) => (
                                           <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">{String(skill)}</span>
                                         ))}
                                         {matchingSoftSkills.length > 4 && (
@@ -2046,7 +2050,7 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
                                         <span className="text-xs text-purple-600">({matchingDesignSkills.length})</span>
                                       </div>
                                       <div className="flex flex-wrap gap-1">
-                                        {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: string, index: number) => (
+                                        {(expandedSkillSections.design ? matchingDesignSkills : matchingDesignSkills.slice(0, 4)).map((skill: any, index: number) => (
                                           <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">{String(skill)}</span>
                                         ))}
                                         {matchingDesignSkills.length > 4 && (
@@ -2072,15 +2076,15 @@ export function JobBrowser({ userProfile, onJobSelect, className }: JobBrowserPr
 
                     {/* Skills Analysis Panel - Moved to top */}
                     {((): boolean => {
-                      const skills = (selectedJob as any).skills
+                      const skills = (selectedJob as Record<string, any>).skills
                         ;
                       return Array.isArray(skills) && skills.length > 0;
                     })() && (
                       <div className="transform scale-90 origin-top">
                         <SkillsAnalysisPanel 
-                          jobSkills={(selectedJob as any).skills
-                            || (selectedJob as any).skills_canonical_flat
-                            || (selectedJob as any).skills_canonical}
+                          jobSkills={(selectedJob as Record<string, any>).skills
+                            || (selectedJob as Record<string, any>).skills_canonical_flat
+                            || (selectedJob as Record<string, any>).skills_canonical}
                           jobTitle={selectedJob.title}
                         />
                       </div>

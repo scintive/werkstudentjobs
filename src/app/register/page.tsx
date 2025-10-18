@@ -76,8 +76,9 @@ export default function RegisterPage() {
         })
         router.push('/onboarding')
       }
-    } catch (error: any) {
-      setError(error.message || 'Registration failed')
+    } catch (error: unknown) {
+      const errorObj = error as Record<string, unknown>;
+      setError((errorObj.message as string) || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -156,7 +157,7 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="John Doe"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e: any) => setName(e.target.value)}
                   className="pl-9"
                   required
                   disabled={loading || success}
@@ -173,7 +174,7 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="name@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: any) => setEmail(e.target.value)}
                   className="pl-9"
                   required
                   disabled={loading || success}
@@ -190,7 +191,7 @@ export default function RegisterPage() {
                   type="password"
                   placeholder="Create a strong password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: any) => setPassword(e.target.value)}
                   className="pl-9"
                   required
                   minLength={6}

@@ -91,9 +91,9 @@ export function InlineEditor({
         )}
         <div className="relative group">
           <InputComponent
-            ref={inputRef as any}
+            ref={inputRef as unknown}
             value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
+            onChange={(e: any) => setTempValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className={cn(

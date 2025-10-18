@@ -429,7 +429,7 @@ export function getPrompt(category: string, type: string): string {
  * @param {Record<string, any>} data - The data to fill into the template
  * @returns {string} The filled prompt
  */
-export function fillPromptTemplate(template: string, data: Record<string, any>): string {
+export function fillPromptTemplate(template: string, data: Record<string, unknown>): string {
   return Object.entries(data).reduce((prompt, [key, value]) => {
     const placeholder = `{{${key}}}`;
     return prompt.replace(new RegExp(placeholder, 'g'), String(value));

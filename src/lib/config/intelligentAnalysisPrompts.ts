@@ -6,10 +6,10 @@
  */
 
 export interface PromptContext {
-  job: any;
-  userProfile: any;
-  userExperience: any[];
-  userProjects: any[];
+  job: unknown;
+  userProfile: unknown;
+  userExperience: unknown[];
+  userProjects: unknown[];
   userSkills: Record<string, string[]>;
 }
 
@@ -50,24 +50,24 @@ Description: ${jobDescription.substring(0, 500)}
 
 YOUR PROFILE:
 Name: ${userName}
-Education: ${userEducation.map((e: any) => `${e.degree} in ${e.field_of_study} from ${e.institution}`).join(', ')}
+Education: ${userEducation.map((e: Record<string, any>) => `${e.degree} in ${e.field_of_study} from ${e.institution}`).join(', ')}
 
 Experience:
-${userExperience.map((exp: any, i: number) => `
+${userExperience.map((exp: unknown, i: number) => `
 ${i + 1}. ${exp.position} at ${exp.company} (${exp.start_date} - ${exp.end_date || 'Present'})
    ${exp.description || ''}
    Key achievements: ${(exp.achievements || []).join(', ')}
 `).join('\n')}
 
 Projects:
-${userProjects.map((proj: any, i: number) => `
+${userProjects.map((proj: unknown, i: number) => `
 ${i + 1}. ${proj.title}
    ${proj.description || ''}
    Technologies: ${(proj.technologies || []).join(', ')}
 `).join('\n')}
 
 Certifications:
-${(userProfile.certifications || []).map((cert: any, i: number) => `
+${(userProfile.certifications || []).map((cert: unknown, i: number) => `
 ${i + 1}. ${cert.title}
    Institution: ${cert.institution}
    Date: ${cert.date || 'N/A'}
@@ -75,7 +75,7 @@ ${i + 1}. ${cert.title}
 
 ${userProfile.custom_sections?.awards?.length > 0 ? `
 Awards & Achievements:
-${userProfile.custom_sections.awards.map((award: any, i: number) => `
+${userProfile.custom_sections.awards.map((award: unknown, i: number) => `
 ${i + 1}. ${typeof award === 'string' ? award : award.title || award.name}
    ${typeof award === 'object' && award.description ? award.description : ''}
 `).join('\n')}
@@ -83,7 +83,7 @@ ${i + 1}. ${typeof award === 'string' ? award : award.title || award.name}
 
 ${userProfile.custom_sections?.leadership?.length > 0 ? `
 Leadership Experience:
-${userProfile.custom_sections.leadership.map((lead: any, i: number) => `
+${userProfile.custom_sections.leadership.map((lead: unknown, i: number) => `
 ${i + 1}. ${typeof lead === 'string' ? lead : lead.title || lead.name}
    ${typeof lead === 'object' && lead.description ? lead.description : ''}
 `).join('\n')}
@@ -91,7 +91,7 @@ ${i + 1}. ${typeof lead === 'string' ? lead : lead.title || lead.name}
 
 ${userProfile.custom_sections?.volunteer?.length > 0 ? `
 Volunteer Work:
-${userProfile.custom_sections.volunteer.map((vol: any, i: number) => `
+${userProfile.custom_sections.volunteer.map((vol: unknown, i: number) => `
 ${i + 1}. ${typeof vol === 'string' ? vol : vol.role || vol.title}
    ${typeof vol === 'object' && vol.organization ? `@ ${vol.organization}` : ''}
    ${typeof vol === 'object' && vol.description ? vol.description : ''}

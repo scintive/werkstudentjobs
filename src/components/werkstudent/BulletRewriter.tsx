@@ -184,7 +184,7 @@ export default function BulletRewriter({
 • Used Python for data visualization assignment
 • Participated in hackathon event`}
             value={inputBullets}
-            onChange={(e) => setInputBullets(e.target.value)}
+            onChange={(e: any) => setInputBullets(e.target.value)}
             rows={6}
             className="resize-none"
           />

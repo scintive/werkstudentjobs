@@ -6,6 +6,18 @@ import { llmService } from '@/lib/services/llmService';
 import { fetchCompanyLogo } from '@/lib/services/logoService';
 import { createClient } from '@supabase/supabase-js';
 
+// Type definition for JobSpy job data
+interface JobSpyJob {
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  job_url?: string;
+  date_posted?: string;
+  company_url?: string;
+  site?: string;
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -105,9 +117,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🚀 Processing ${jobs.length} jobs from JobSpy...`);
+    // Type assert jobs array
+    const typedJobs = jobs as JobSpyJob[];
 
-    if (jobs.length === 0) {
+    console.log(`🚀 Processing ${typedJobs.length} jobs from JobSpy...`);
+
+    if (typedJobs.length === 0) {
       return NextResponse.json({
         success: false,
         message: 'No jobs provided',
@@ -119,7 +134,7 @@ export async function POST(request: NextRequest) {
     // Process each job through the LLM pipeline
     const processedJobs: any[] = [];
     const failedJobs: Array<{
-      job: any;
+      job: JobSpyJob;
       error: string;
       errorDetails?: {
         descriptionLength?: number;
@@ -137,10 +152,10 @@ export async function POST(request: NextRequest) {
 
     let processedCount = 0;
 
-    for (const job of jobs) {
+    for (const job of typedJobs) {
       try {
         processedCount++;
-        console.log(`📝 Processing ${processedCount}/${jobs.length}: ${job.title} at ${job.company}`);
+        console.log(`📝 Processing ${processedCount}/${typedJobs.length}: ${job.title} at ${job.company}`);
 
         // Extract job data from JobSpy format
         const jobData = {
@@ -164,25 +179,26 @@ export async function POST(request: NextRequest) {
 
         // VALIDATION: Ensure critical fields are populated (COMPLETE VIOLATION if empty)
         const validationErrors: string[] = [];
+        const extractedJobRecord = extractedJob as unknown as Record<string, unknown>;
 
         // Check responsibilities/tasks
-        if (!(extractedJob as any).tasks_responsibilities || (extractedJob as any).tasks_responsibilities.length === 0) {
+        if (!extractedJobRecord.tasks_responsibilities || (extractedJobRecord.tasks_responsibilities as unknown[]).length === 0) {
           validationErrors.push('Missing tasks/responsibilities');
         }
 
         // Check skills
-        if (!(extractedJob as any).named_skills_tools || (extractedJob as any).named_skills_tools.length === 0) {
+        if (!extractedJobRecord.named_skills_tools || (extractedJobRecord.named_skills_tools as unknown[]).length === 0) {
           validationErrors.push('Missing skills/tools');
         }
 
         // Check benefits (can be flexible, some jobs may not list benefits)
         // But log if missing for transparency
-        if (!(extractedJob as any).benefits || (extractedJob as any).benefits.length === 0) {
+        if (!extractedJobRecord.benefits || (extractedJobRecord.benefits as unknown[]).length === 0) {
           console.warn(`⚠️  Job ${job.title} at ${jobData.companyName} has no benefits listed`);
         }
 
         // Check "who we are looking for"
-        if (!(extractedJob as any).who_we_are_looking_for || (extractedJob as any).who_we_are_looking_for.length === 0) {
+        if (!extractedJobRecord.who_we_are_looking_for || (extractedJobRecord.who_we_are_looking_for as unknown[]).length === 0) {
           validationErrors.push('Missing "who we are looking for" requirements');
         }
 
@@ -199,9 +215,9 @@ export async function POST(request: NextRequest) {
           console.error(`   Job: ${job.title} at ${jobData.companyName}`);
           console.error(`   Errors: ${errorMessage}`);
           console.error(`   Description length: ${jobData.description?.length || 0} chars`);
-          console.error(`   Skills parsed: ${(extractedJob as any).named_skills_tools?.length || 0}`);
-          console.error(`   Responsibilities parsed: ${(extractedJob as any).tasks_responsibilities?.length || 0}`);
-          console.error(`   Requirements parsed: ${(extractedJob as any).who_we_are_looking_for?.length || 0}`);
+          console.error(`   Skills parsed: ${(extractedJobRecord.named_skills_tools as unknown[])?.length || 0}`);
+          console.error(`   Responsibilities parsed: ${(extractedJobRecord.tasks_responsibilities as unknown[])?.length || 0}`);
+          console.error(`   Requirements parsed: ${(extractedJobRecord.who_we_are_looking_for as unknown[])?.length || 0}`);
           console.error('═'.repeat(80));
 
           failedJobs.push({
@@ -209,10 +225,10 @@ export async function POST(request: NextRequest) {
             error: `Data quality validation failed: ${errorMessage}`,
             errorDetails: {
               descriptionLength: jobData.description?.length || 0,
-              skillsCount: (extractedJob as any).named_skills_tools?.length || 0,
-              responsibilitiesCount: (extractedJob as any).tasks_responsibilities?.length || 0,
-              requirementsCount: (extractedJob as any).who_we_are_looking_for?.length || 0,
-              benefitsCount: (extractedJob as any).benefits?.length || 0,
+              skillsCount: (extractedJobRecord.named_skills_tools as unknown[])?.length || 0,
+              responsibilitiesCount: (extractedJobRecord.tasks_responsibilities as unknown[])?.length || 0,
+              requirementsCount: (extractedJobRecord.who_we_are_looking_for as unknown[])?.length || 0,
+              benefitsCount: (extractedJobRecord.benefits as unknown[])?.length || 0,
             }
           });
           continue; // Skip this job
@@ -239,7 +255,7 @@ export async function POST(request: NextRequest) {
           console.log(`🏢 Company exists: ${jobData.companyName}`);
 
           // Update company website and logo if we have new data
-          const updateData: any = {};
+          const updateData = {} as Record<string, unknown>;
 
           // Update website URL if JobSpy provided one and we don't have it yet
           if (jobData.companyWebsite && !existingCompany.website_url) {
@@ -248,9 +264,10 @@ export async function POST(request: NextRequest) {
           }
 
           // Update logo if we have website data
-          const websiteForLogo = jobData.companyWebsite || companyResearch.research?.website || existingCompany.website_url;
+          const research = companyResearch.research as Record<string, unknown> | null | undefined;
+          const websiteForLogo = jobData.companyWebsite || research?.website || existingCompany.website_url;
           if (websiteForLogo) {
-            const logoUrl = await fetchCompanyLogo(jobData.companyName, websiteForLogo);
+            const logoUrl = await fetchCompanyLogo(jobData.companyName, websiteForLogo as string);
             if (logoUrl && (!existingCompany.logo_url || existingCompany.logo_url !== logoUrl)) {
               updateData.logo_url = logoUrl;
               console.log(`✅ Updated logo for ${jobData.companyName}`);
@@ -266,10 +283,10 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Create company with research data
-          const r = companyResearch.research;
-          const companyData: any = {
+          const r = companyResearch.research as Record<string, unknown> | null | undefined;
+          const companyData = {
             name: jobData.companyName,
-          };
+          } as Record<string, unknown>;
 
           if (r?.description) companyData.description = r.description;
           if (r?.industry) companyData.industry = r.industry;
@@ -285,7 +302,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Fetch company logo
-          const logoUrl = await fetchCompanyLogo(jobData.companyName, r?.website || companyData.website_url);
+          const logoUrl = await fetchCompanyLogo(jobData.companyName, ((r?.website as string | undefined) || (companyData.website_url as string | undefined)));
           if (logoUrl) {
             companyData.logo_url = logoUrl;
             console.log(`✅ Fetched logo for ${jobData.companyName}`);
@@ -434,9 +451,10 @@ export async function POST(request: NextRequest) {
 
         // Find company's official application/career page using Tavily
         console.log(`🔍 Finding official career page for ${jobData.companyName}...`);
+        const researchData = companyResearch.research as Record<string, unknown> | null | undefined;
         const officialCareerPage = await findCompanyCareerPage(
-          jobData.companyName, 
-          jobData.companyWebsite || companyResearch.research?.website || null
+          jobData.companyName,
+          jobData.companyWebsite || (researchData?.website as string | null) || null
         );
         
         // Determine best application link (prefer company page over job boards)
@@ -485,22 +503,22 @@ export async function POST(request: NextRequest) {
             posted_at: extractedJob.date_posted || (jobData.postedAt ? new Date(jobData.postedAt).toISOString() : new Date().toISOString()),
 
             // Tasks & Responsibilities
-            responsibilities: (extractedJob as any).tasks_responsibilities || [],
+            responsibilities: extractedJobRecord.tasks_responsibilities || [],
 
             // Nice to Have
-            nice_to_have: (extractedJob as any).nice_to_have || [],
+            nice_to_have: extractedJobRecord.nice_to_have || [],
 
             // Benefits
-            benefits: (extractedJob as any).benefits || [],
+            benefits: extractedJobRecord.benefits || [],
 
             // Skills and Tools
-            skills: (extractedJob as any).named_skills_tools || [],
+            skills: extractedJobRecord.named_skills_tools || [],
 
             // Who we are looking for
-            who_we_are_looking_for: (extractedJob as any).who_we_are_looking_for || [],
+            who_we_are_looking_for: extractedJobRecord.who_we_are_looking_for || [],
 
             // Application requirements
-            application_requirements: (extractedJob as any).application_requirements || [],
+            application_requirements: extractedJobRecord.application_requirements || [],
 
             // Status
             is_active: true,
@@ -514,7 +532,7 @@ export async function POST(request: NextRequest) {
         }
 
         processedJobs.push(newJob);
-        console.log(`✅ Inserted job ${processedCount}/${jobs.length}: ${job.title}`);
+        console.log(`✅ Inserted job ${processedCount}/${typedJobs.length}: ${job.title}`);
 
       } catch (error) {
         console.error(`❌ Failed to process job ${job.title}:`, error);
@@ -527,8 +545,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${processedJobs.length} jobs from ${jobs.length} total`,
-      totalFetched: jobs.length,
+      message: `Processed ${processedJobs.length} jobs from ${typedJobs.length} total`,
+      totalFetched: typedJobs.length,
       processed: processedJobs.length,
       failed: failedJobs.length,
       jobs: processedJobs.map(j => ({

@@ -53,7 +53,7 @@ export function QuickActions() {
         <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {actions.map((action) => (
+        {actions.map((action: any) => (
           <Link key={action.title} href={action.href} prefetch={true}>
             <Button
               variant="ghost"

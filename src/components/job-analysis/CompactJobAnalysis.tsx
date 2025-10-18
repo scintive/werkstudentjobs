@@ -15,8 +15,8 @@ import { RelevantExperienceSidebar } from './RelevantExperienceSidebar';
 
 interface CompactJobAnalysisProps {
   analysis: IntelligentJobAnalysis;
-  userProfile: any;
-  jobData: any;
+  userProfile: unknown;
+  jobData: unknown;
 }
 
 function getScoreColors(score: number): { start: string; end: string } {

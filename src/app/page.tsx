@@ -222,7 +222,7 @@ export default function HomePage() {
 
             {loading ? (
               <div className="space-y-1.5">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {[1, 2, 3, 4, 5].map((i: any) => (
                   <div key={i} className="skeleton" style={{ height: '64px' }} />
                 ))}
               </div>

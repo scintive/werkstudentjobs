@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     let authUserId: string | null = null
     let authEmail: string | null = null
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: authRes } = await (supabase as any).auth.getUser()
       if (authRes?.user) {
         authUserId = authRes.user.id || null
@@ -33,13 +34,14 @@ export async function GET(request: NextRequest) {
     console.log('🔍 LATEST PROFILE: Using authenticated user:', authUserId, 'email:', authEmail);
 
     // Get resume data ONLY by authenticated user_id - no fallback to sessions or cookies
-    const { data: resumeDataList, error: resumeError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: resumeDataList, error: resumeError } = await (supabase as any)
       .from('resume_data')
       .select('*')
-      .eq('user_id', authUserId as any)
+      .eq('user_id', authUserId)
       .order('updated_at', { ascending: false })
       .limit(1)
-    
+
     console.log('🔍 LATEST PROFILE: Resume query result - error:', resumeError)
     console.log('🔍 LATEST PROFILE: Resume query result - data count:', resumeDataList?.length || 0)
       
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
     
     if (!resumeError && resumeDataList && resumeDataList.length > 0) {
       // Use complete resume data
-      const resumeRecord = resumeDataList[0] as any;
+      const resumeRecord = resumeDataList[0] as Record<string, unknown>;
       console.log('🔍 LATEST PROFILE: Found complete resume data');
 
       // Get photo and student info from user_profiles if available
@@ -59,16 +61,17 @@ export async function GET(request: NextRequest) {
       console.log('📸 PHOTO DEBUG: resume_data.photo_url =', photoUrl);
 
       if (authUserId) {
-        const { data: profile, error: profileError } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile, error: profileError } = await (supabase as any)
           .from('user_profiles')
           .select('photo_url, hours_available, current_semester, university_name, start_preference')
-          .eq('user_id', authUserId as any)
+          .eq('user_id', authUserId)
           .single();
 
         console.log('👨‍🎓 PROFILE QUERY: error =', profileError, 'has data =', !!profile);
 
         if (profile && !profileError) {
-          const profileData = profile as any;
+          const profileData = profile as Record<string, unknown>;
           if (profileData.photo_url) {
             photoUrl = profileData.photo_url;
             console.log('📸 PHOTO DEBUG: Got photo from user_profiles =', photoUrl);

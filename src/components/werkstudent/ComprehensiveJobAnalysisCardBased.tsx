@@ -10,8 +10,8 @@ import { bestFallbackFor } from '@/lib/linkSources';
 
 interface Props {
   analysis: IntelligentJobAnalysis;
-  userProfile: any;
-  jobData: any;
+  userProfile: unknown;
+  jobData: unknown;
 }
 
 // Learning resource generator based on skill/responsibility
@@ -507,7 +507,7 @@ export function ComprehensiveJobAnalysis({ analysis, userProfile, jobData }: Pro
               </div>
 
               <div className="space-y-4">
-                {userProjects.slice(0, 3).map((project: any, idx: number) => (
+                {userProjects.slice(0, 3).map((project: unknown, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 rounded-lg"
@@ -609,7 +609,7 @@ export function ComprehensiveJobAnalysis({ analysis, userProfile, jobData }: Pro
               </div>
 
               <div className="space-y-3">
-                {userCertifications.map((cert: any, idx: number) => (
+                {userCertifications.map((cert: unknown, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 rounded-lg"
@@ -691,7 +691,7 @@ export function ComprehensiveJobAnalysis({ analysis, userProfile, jobData }: Pro
               </div>
 
               <div className="space-y-3">
-                {customSections?.leadership?.map((item: any, idx: number) => (
+                {customSections?.leadership?.map((item: unknown, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 rounded-lg"
@@ -724,7 +724,7 @@ export function ComprehensiveJobAnalysis({ analysis, userProfile, jobData }: Pro
                     )}
                   </div>
                 ))}
-                {customSections?.awards?.map((item: any, idx: number) => (
+                {customSections?.awards?.map((item: unknown, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 rounded-lg"
@@ -798,7 +798,7 @@ export function ComprehensiveJobAnalysis({ analysis, userProfile, jobData }: Pro
               </div>
 
               <div className="space-y-3">
-                {customSections?.volunteer?.map((item: any, idx: number) => (
+                {customSections?.volunteer?.map((item: unknown, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 rounded-lg"

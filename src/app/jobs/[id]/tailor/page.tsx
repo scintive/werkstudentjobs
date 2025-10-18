@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 
 import type { JobStrategy, CoverLetter, ResumePatch } from '@/lib/types/jobStrategy';
-import type { JobWithCompanyNested } from '@/lib/supabase/types';
+import type { JobWithCompanyNested, ResumeData } from '@/lib/supabase/types';
 import type { StudentProfile, StudentJobStrategy } from '@/lib/types/studentProfile';
+import type { IntelligentJobAnalysis } from '@/lib/services/intelligentJobAnalysisService';
 import { ResumeDataService } from '@/lib/services/resumeDataService';
 import { resumeVariantService } from '@/lib/services/resumeVariantService';
 import { useSupabaseResumeContext, SupabaseResumeProvider, useSupabaseResumeActions } from '@/lib/contexts/SupabaseResumeContext';
@@ -48,11 +49,12 @@ const humanizePlanKey = (key: string) => {
   return key
     .replace(/___/g, ' & ')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+    .replace(/\b\w/g, (char: any) => char.toUpperCase());
 };
 
-const resolvePlanDisplayName = (category: any, canonical: string) => {
-  const raw = typeof category?.display_name === 'string' ? category.display_name.trim() : '';
+const resolvePlanDisplayName = (category: unknown, canonical: string) => {
+  const cat = category as Record<string, unknown> | null;
+  const raw = typeof cat?.display_name === 'string' ? (cat.display_name as string).trim() : '';
   if (!raw) return humanizePlanKey(canonical);
   if (raw.includes('_') || raw === raw.toLowerCase()) {
     return humanizePlanKey(canonical);
@@ -60,14 +62,14 @@ const resolvePlanDisplayName = (category: any, canonical: string) => {
   return raw;
 };
 
-const findSkillsForCanonical = (skillsByCategory: Record<string, any>, canonical: string, displayName: string) => {
+const findSkillsForCanonical = (skillsByCategory: Record<string, unknown>, canonical: string, displayName: string) => {
   if (!skillsByCategory) return null;
 
   if (Array.isArray(skillsByCategory[canonical])) {
     return skillsByCategory[canonical];
   }
 
-  const matchedKey = Object.keys(skillsByCategory).find((key) => {
+  const matchedKey = Object.keys(skillsByCategory).find((key: any) => {
     const normalized = canonicalizePlanKey(key);
     return normalized === canonical || normalized === canonicalizePlanKey(displayName);
   });
@@ -79,20 +81,24 @@ const findSkillsForCanonical = (skillsByCategory: Record<string, any>, canonical
   return null;
 };
 
-const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> = {}) => {
-  if (!plan || !Array.isArray(plan.categories)) return null;
+const planToOrganizedSkills = (plan: unknown, skillsByCategory: Record<string, unknown> = {}) => {
+  const planObj = plan as Record<string, unknown> | null;
+  if (!planObj || !Array.isArray(planObj.categories)) return null;
 
-  const organized_categories: Record<string, any> = {};
+  const organized_categories: Record<string, unknown> = {};
 
-  plan.categories
+  (planObj.categories as unknown[])
     .slice()
-    .sort((a: any, b: any) => {
-      const aPriority = typeof a?.priority === 'number' ? a.priority : 999;
-      const bPriority = typeof b?.priority === 'number' ? b.priority : 999;
+    .sort((a: unknown, b: unknown) => {
+      const aObj = a as Record<string, unknown> | null;
+      const bObj = b as Record<string, unknown> | null;
+      const aPriority = typeof aObj?.priority === 'number' ? (aObj.priority as number) : 999;
+      const bPriority = typeof bObj?.priority === 'number' ? (bObj.priority as number) : 999;
       return aPriority - bPriority;
     })
-    .forEach((category: any) => {
-      const canonical = canonicalizePlanKey(category?.canonical_key || category?.display_name);
+    .forEach((category: unknown) => {
+      const cat = category as Record<string, unknown> | null;
+      const canonical = canonicalizePlanKey((cat?.canonical_key || cat?.display_name) as string | null | undefined);
       if (!canonical) return;
 
       const displayName = resolvePlanDisplayName(category, canonical);
@@ -100,38 +106,51 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
       const existingSkills = findSkillsForCanonical(skillsByCategory, canonical, displayName);
 
       const resolvedSkills = Array.isArray(existingSkills)
-        ? existingSkills.map((entry: any) => {
+        ? existingSkills.map((entry: unknown) => {
             if (!entry) return entry;
             if (typeof entry === 'string') return entry;
             if (typeof entry === 'object') return { ...entry };
             return entry;
           })
-        : Array.isArray(category?.skills)
-          ? category.skills
-              .filter((item: any) => String(item?.status || '').toLowerCase() !== 'remove')
-              .map((item: any) => {
-                if (item?.proficiency) {
-                  return { skill: item.name || item.skill, proficiency: item.proficiency };
+        : Array.isArray(cat?.skills)
+          ? (cat.skills as unknown[])
+              .filter(item => {
+                const itemObj = item as Record<string, unknown> | null;
+                return String(itemObj?.status || '').toLowerCase() !== 'remove';
+              })
+              .map(item => {
+                const itemObj = item as Record<string, unknown> | null;
+                if (itemObj?.proficiency) {
+                  return { skill: itemObj.name || itemObj.skill, proficiency: itemObj.proficiency };
                 }
-                return item?.name || item?.skill || item;
+                return itemObj?.name || itemObj?.skill || item;
               })
           : [];
 
-      const pendingAdditions = Array.isArray(category?.skills)
-        ? category.skills
-            .filter((item: any) => ['add', 'promote'].includes(String(item?.status || '').toLowerCase()))
-            .map((item: any) => item?.name)
+      const pendingAdditions = Array.isArray(cat?.skills)
+        ? (cat.skills as unknown[])
+            .filter(item => {
+              const itemObj = item as Record<string, unknown> | null;
+              return ['add', 'promote'].includes(String(itemObj?.status || '').toLowerCase());
+            })
+            .map(item => {
+              const itemObj = item as Record<string, unknown> | null;
+              return itemObj?.name;
+            })
             .filter(Boolean)
         : [];
 
       organized_categories[displayName] = {
         skills: resolvedSkills,
         suggestions: pendingAdditions,
-        reasoning: category?.job_alignment || category?.rationale || '',
-        allowProficiency: resolvedSkills.some((entry: any) => typeof entry === 'object' && entry?.proficiency),
+        reasoning: cat?.job_alignment || cat?.rationale || '',
+        allowProficiency: resolvedSkills.some((entry: unknown) => {
+          const entryObj = entry as Record<string, unknown> | null;
+          return typeof entry === 'object' && entryObj?.proficiency;
+        }),
         meta: {
           canonicalKey: canonical,
-          planSkills: Array.isArray(category?.skills) ? category.skills : [],
+          planSkills: Array.isArray(cat?.skills) ? (cat.skills as unknown[]) : [],
           displayName
         }
       };
@@ -139,8 +158,8 @@ const planToOrganizedSkills = (plan: any, skillsByCategory: Record<string, any> 
 
   return {
     organized_categories,
-    strategy: plan.strategy,
-    guiding_principles: plan.guiding_principles || []
+    strategy: planObj.strategy,
+    guiding_principles: planObj.guiding_principles || []
   };
 };
 
@@ -244,13 +263,13 @@ function TailorApplicationPage() {
   const [job, setJob] = useState<JobWithCompanyNested | null>(null);
   const [strategy, setStrategy] = useState<JobStrategy | null>(null);
   const [studentStrategy, setStudentStrategy] = useState<StudentJobStrategy | null>(null);
-  const [jobAnalysis, setJobAnalysis] = useState<any>(null); // Store intelligent job analysis from GPT
+  const [jobAnalysis, setJobAnalysis] = useState<unknown>(null); // Store intelligent job analysis from GPT
   // Removed enhancedStrategy - not needed
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [patches, setPatches] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<unknown>(null);
+  const [patches, setPatches] = useState<ResumePatch[]>([]);
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null);
-  const [coverLetterMetadata, setCoverLetterMetadata] = useState<any>(null); // Store generation metadata
-  const [coverLetterVersions, setCoverLetterVersions] = useState<any[]>([]); // Store all versions
+  const [coverLetterMetadata, setCoverLetterMetadata] = useState<unknown>(null); // Store generation metadata
+  const [coverLetterVersions, setCoverLetterVersions] = useState<unknown[]>([]); // Store all versions
   const [currentCoverLetterVersion, setCurrentCoverLetterVersion] = useState<number>(1); // Current version being viewed
   const [previewMode, setPreviewMode] = useState(false);
   const [variantId, setVariantId] = useState<string | null>(null); // Store variant ID from pre-analysis
@@ -344,7 +363,10 @@ function TailorApplicationPage() {
         const listResponse = await fetch('/api/jobs/fetch?limit=100');
         if (listResponse.ok) {
           const { jobs } = await listResponse.json();
-          const foundJob = jobs.find((j: any) => j.id === jobId);
+          const foundJob = jobs.find((j: any) => {
+            const jobObj = j as Record<string, unknown>;
+            return jobObj.id === jobId;
+          });
           if (foundJob) {
             setJob(foundJob);
           } else {
@@ -368,7 +390,7 @@ function TailorApplicationPage() {
         work_mode: 'Unknown',
         match_score: 0,
         skills_original: [],
-      } as any);
+      } as unknown as JobWithCompanyNested);
     }
   };
 
@@ -417,9 +439,11 @@ function TailorApplicationPage() {
       // Determine if we should use student strategy API
       const isWerkstudent = job?.is_werkstudent || job?.title?.toLowerCase().includes('werkstudent');
       const hasEducation = resumeData.education && resumeData.education.length > 0;
-      const hasCurrentEducation = hasEducation && resumeData.education.some((edu: any) =>
-        edu.year?.includes('Expected') || edu.year?.includes('2025') || edu.year?.includes('2026')
-      );
+      const hasCurrentEducation = hasEducation && resumeData.education.some((edu: any) => {
+        const eduObj = edu as Record<string, unknown> | null;
+        const year = eduObj?.year as string | undefined;
+        return year?.includes('Expected') || year?.includes('2025') || year?.includes('2026');
+      });
       const endpoint = (isWerkstudent || hasCurrentEducation) ? '/api/jobs/strategy-student' : '/api/jobs/strategy';
 
       // Keep state in sync
@@ -694,35 +718,37 @@ function TailorApplicationPage() {
   // Helper function to convert user profile to student profile format
   const getStudentProfile = (): Partial<StudentProfile> | null => {
     if (!userProfile) return null;
-    
+
+    const profile = userProfile as Record<string, unknown>;
+
     // Check if this looks like a student profile
     const hasStudentIndicators = (
-      userProfile.degree_program ||
-      userProfile.university ||
-      userProfile.current_year ||
-      userProfile.expected_graduation ||
-      userProfile.enrollment_status ||
-      userProfile.weekly_availability
+      profile.degree_program ||
+      profile.university ||
+      profile.current_year ||
+      profile.expected_graduation ||
+      profile.enrollment_status ||
+      profile.weekly_availability
     );
-    
+
     if (!hasStudentIndicators) return null;
-    
+
     return {
-      degree_program: userProfile.degree_program,
-      university: userProfile.university,
-      current_year: userProfile.current_year,
-      expected_graduation: userProfile.expected_graduation,
-      weekly_availability: userProfile.weekly_availability,
-      earliest_start_date: userProfile.earliest_start_date,
-      preferred_duration: userProfile.preferred_duration,
-      enrollment_status: userProfile.enrollment_status,
-      language_proficiencies: userProfile.language_proficiencies,
-      academic_projects: userProfile.academic_projects,
-      relevant_coursework: userProfile.relevant_coursework,
-      preferred_locations: userProfile.preferred_locations,
-      remote_preference: userProfile.remote_preference,
-      visa_status: userProfile.visa_status
-    };
+      degree_program: profile.degree_program,
+      university: profile.university,
+      current_year: profile.current_year,
+      expected_graduation: profile.expected_graduation,
+      weekly_availability: profile.weekly_availability,
+      earliest_start_date: profile.earliest_start_date,
+      preferred_duration: profile.preferred_duration,
+      enrollment_status: profile.enrollment_status,
+      language_proficiencies: profile.language_proficiencies,
+      academic_projects: profile.academic_projects,
+      relevant_coursework: profile.relevant_coursework,
+      preferred_locations: profile.preferred_locations,
+      remote_preference: profile.remote_preference,
+      visa_status: profile.visa_status
+    } as Partial<StudentProfile>;
   };
 
   // PDF Export for Cover Letters with Premium Templates
@@ -923,7 +949,7 @@ function TailorApplicationPage() {
         {/* Tabs Section */}
         <div className="px-4 sm:px-6 lg:px-10 bg-gray-50/50">
           <div className="flex items-center gap-0.5 sm:gap-1 -mb-px overflow-x-auto">
-            {TABS.map((tab) => {
+            {TABS.map((tab: any) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const isCompleted = tab.id === 'resume' ? completionStatus.resume :
@@ -1073,8 +1099,8 @@ function StrategyTab({
   job: JobWithCompanyNested;
   strategy: JobStrategy | null;
   studentStrategy: StudentJobStrategy | null;
-  userProfile: any;
-  jobAnalysis: any;
+  userProfile: unknown;
+  jobAnalysis: unknown;
   loading: boolean;
   loadingAnalysis: boolean;
   onRetryStrategy: () => void;
@@ -1090,7 +1116,7 @@ function StrategyTab({
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <CompactJobAnalysis
-          analysis={jobAnalysis}
+          analysis={jobAnalysis as IntelligentJobAnalysis}
           userProfile={userProfile}
           jobData={job}
         />
@@ -1129,26 +1155,27 @@ function StrategyTab({
   }
   
   // Convert user profile to student profile format if applicable
-  const studentProfile: Partial<StudentProfile> | null = userProfile && (
-    userProfile.degree_program ||
-    userProfile.university ||
-    userProfile.enrollment_status
+  const profile = userProfile as Record<string, unknown> | null;
+  const studentProfile: Partial<StudentProfile> | null = profile && (
+    profile.degree_program ||
+    profile.university ||
+    profile.enrollment_status
   ) ? {
-    degree_program: userProfile.degree_program,
-    university: userProfile.university,
-    current_year: userProfile.current_year,
-    expected_graduation: userProfile.expected_graduation,
-    weekly_availability: userProfile.weekly_availability,
-    earliest_start_date: userProfile.earliest_start_date,
-    preferred_duration: userProfile.preferred_duration,
-    enrollment_status: userProfile.enrollment_status,
-    language_proficiencies: userProfile.language_proficiencies,
-    academic_projects: userProfile.academic_projects,
-    relevant_coursework: userProfile.relevant_coursework,
-    preferred_locations: userProfile.preferred_locations,
-    remote_preference: userProfile.remote_preference,
-    visa_status: userProfile.visa_status
-  } : null;
+    degree_program: profile.degree_program,
+    university: profile.university,
+    current_year: profile.current_year,
+    expected_graduation: profile.expected_graduation,
+    weekly_availability: profile.weekly_availability,
+    earliest_start_date: profile.earliest_start_date,
+    preferred_duration: profile.preferred_duration,
+    enrollment_status: profile.enrollment_status,
+    language_proficiencies: profile.language_proficiencies,
+    academic_projects: profile.academic_projects,
+    relevant_coursework: profile.relevant_coursework,
+    preferred_locations: profile.preferred_locations,
+    remote_preference: profile.remote_preference,
+    visa_status: profile.visa_status
+  } as Partial<StudentProfile> : null;
   
   const isWerkstudent = job.is_werkstudent || job.title?.toLowerCase().includes('werkstudent');
   const [showDetails, setShowDetails] = useState(false);
@@ -1191,11 +1218,11 @@ function StrategyTab({
             studentProfile={studentProfile}
             userProfile={userProfile}
             jobRequirements={{
-              hours_per_week: (job as any).hours_per_week || '15-20',
+              hours_per_week: (job as unknown as Record<string, unknown>).hours_per_week as string || '15-20',
               language_required: (job.german_required || job.language_required) ?? undefined,
               location: job.location_city ?? undefined,
-              duration: (job as any).duration_months?.toString(),
-              start_date: (job as any).start_date
+              duration: ((job as unknown as Record<string, unknown>).duration_months as number | undefined)?.toString(),
+              start_date: (job as unknown as Record<string, unknown>).start_date as string | undefined
             }}
             compact={false}
           />
@@ -1570,9 +1597,26 @@ function ResumeStudioTab({
   cachedVariantId = null, // NEW: Variant ID from upfront analysis
   jobAnalysis,
   setJobAnalysis
-}: any) {
+}: {
+  job: JobWithCompanyNested;
+  strategy: JobStrategy | null;
+  studentStrategy: StudentJobStrategy | null;
+  userProfile: unknown;
+  resumeData: unknown;
+  resumeId: string | null;
+  patches: ResumePatch[];
+  onPatchesChange: (patches: ResumePatch[]) => void;
+  loading: boolean;
+  isEditorMode: boolean;
+  currentVariantId: string | null;
+  onVariantIdChange: (id: string | null) => void;
+  preAnalysisComplete?: boolean;
+  cachedVariantId?: string | null;
+  jobAnalysis: unknown;
+  setJobAnalysis: React.Dispatch<React.SetStateAction<unknown>>;
+}) {
   const [localVariantId, setLocalVariantId] = useState<string | null>(cachedVariantId);
-  const [tailoredResumeData, setTailoredResumeData] = useState<any>(null);
+  const [tailoredResumeData, setTailoredResumeData] = useState<unknown>(null);
   const [preparing, setPreparing] = useState<boolean>(!preAnalysisComplete); // Start as not preparing if already done
 
   // Sync cached variant ID from parent when it changes
@@ -1648,7 +1692,7 @@ function ResumeStudioTab({
           } else {
             // Fallback to base resume if variant not found
             console.warn('⚠️ Cached variant not found, using base resume');
-            const fallbackData = { ...resumeData };
+            const fallbackData = { ...(resumeData as Record<string, unknown>) };
             if (studentInfoFromApi) {
               Object.assign(fallbackData, studentInfoFromApi);
             }
@@ -1657,7 +1701,7 @@ function ResumeStudioTab({
           }
         } catch (error) {
           console.error('❌ Failed to load cached variant:', error);
-          const fallbackData = { ...resumeData };
+          const fallbackData = { ...(resumeData as Record<string, unknown>) };
           if (studentInfoFromApi) {
             Object.assign(fallbackData, studentInfoFromApi);
           }
@@ -1730,7 +1774,7 @@ function ResumeStudioTab({
       });
 
       let latestPlan: any | null = null;
-      let latestTailored: any = resumeData;
+      let latestTailored: unknown = resumeData;
 
       if (analyzeResp.ok) {
         const payload = await analyzeResp.json();
@@ -1776,28 +1820,30 @@ function ResumeStudioTab({
           // Type assertion to help TypeScript
           const typedVariantRow2 = variantRow as { tailored_data: any } | null;
           latestTailored = typedVariantRow2?.tailored_data || resumeData;
-          latestPlan = latestTailored?.skillsCategoryPlan || null;
+          const latestTailoredObj = latestTailored as Record<string, unknown>;
+          latestPlan = latestTailoredObj?.skillsCategoryPlan || null;
 
           // Add photoUrl and student info from API to fallback variant
-          if (photoUrlFromApi && !latestTailored.photoUrl) {
-            latestTailored.photoUrl = photoUrlFromApi;
+          if (photoUrlFromApi && !latestTailoredObj.photoUrl) {
+            latestTailoredObj.photoUrl = photoUrlFromApi;
             console.log('📸 TAILOR FALLBACK: Added photoUrl to variant:', photoUrlFromApi);
           }
           if (studentInfoFromApi) {
-            Object.assign(latestTailored, studentInfoFromApi);
+            Object.assign(latestTailoredObj, studentInfoFromApi);
             console.log('👨‍🎓 TAILOR FALLBACK: Added student info to variant:', studentInfoFromApi);
           }
 
           setTailoredResumeData(latestTailored);
         } else {
           latestTailored = resumeData;
+          const latestTailoredObj2 = latestTailored as Record<string, unknown>;
           // Add photoUrl and student info even when using base resumeData
-          if (photoUrlFromApi && !latestTailored.photoUrl) {
-            latestTailored = { ...latestTailored, photoUrl: photoUrlFromApi };
+          if (photoUrlFromApi && !latestTailoredObj2.photoUrl) {
+            latestTailored = { ...(latestTailored as Record<string, unknown>), photoUrl: photoUrlFromApi };
             console.log('📸 TAILOR NO VARIANT: Added photoUrl to base resume:', photoUrlFromApi);
           }
           if (studentInfoFromApi) {
-            latestTailored = { ...latestTailored, ...studentInfoFromApi };
+            latestTailored = { ...(latestTailored as Record<string, unknown>), ...studentInfoFromApi };
             console.log('👨‍🎓 TAILOR NO VARIANT: Added student info to base resume:', studentInfoFromApi);
           }
           setTailoredResumeData(latestTailored);
@@ -1815,16 +1861,16 @@ function ResumeStudioTab({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               userProfile: {
-                ...userProfile,
-                skills: latestTailored?.skills || {}
+                ...(userProfile as Record<string, unknown>),
+                skills: (latestTailored as Record<string, unknown> | null)?.skills || {}
               },
-              currentSkills: latestTailored?.skills || {}
+              currentSkills: (latestTailored as Record<string, unknown> | null)?.skills || {}
             })
           });
           if (enhanceResp.ok) {
             const enhanced = await enhanceResp.json();
             if (enhanced.organized_skills && typeof enhanced.organized_skills === 'object') {
-              const organized_categories: Record<string, any> = {};
+              const organized_categories: Record<string, unknown> = {};
               Object.entries(enhanced.organized_skills).forEach(([cat, list]) => {
                 const skills = Array.isArray(list) ? list : [];
                 organized_categories[cat] = {
@@ -1866,21 +1912,24 @@ function ResumeStudioTab({
     <div>
       {localVariantId ? (
         // Unified editor with tailor mode
-        <SupabaseResumeProvider 
-          initialData={tailoredResumeData}
-          mode="tailor"
-          variantId={localVariantId}
-        >
+        <>
+          { }
+          <SupabaseResumeProvider
+            initialData={tailoredResumeData as any}
+            mode="tailor"
+            variantId={localVariantId}
+          >
           <PerfectStudio
             mode="tailor"
             jobData={job}
             jobId={job?.id}
-            baseResumeId={resumeId}
+            baseResumeId={resumeId ?? undefined}
             variantId={localVariantId}
             userProfile={userProfile}
             strategy={studentStrategy || strategy}
           />
         </SupabaseResumeProvider>
+        </>
       ) : (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -1957,7 +2006,7 @@ function CoverLetterTemplateSelector({
                 </div>
 
                 <div className="mt-3 space-y-1">
-                  {templates.map((template) => (
+                  {templates.map((template: any) => (
                     <button
                       key={template.id}
                       onClick={() => {
@@ -2016,14 +2065,14 @@ function CoverLetterStudioTab({
   job: JobWithCompanyNested;
   strategy: JobStrategy | null;
   coverLetter: CoverLetter | null;
-  coverLetterMetadata: any;
-  coverLetterVersions: any[];
+  coverLetterMetadata: unknown;
+  coverLetterVersions: unknown[];
   currentVersion: number;
   onVersionChange: (version: number) => void;
   onGenerate: (tone: string, length: string, customInstructions?: string) => void;
   onCoverLetterChange: (letter: CoverLetter | null) => void;
   loading: boolean;
-  userProfile: any;
+  userProfile: unknown;
   exportPDF: (letter: CoverLetter, job: JobWithCompanyNested, template?: 'professional' | 'modern' | 'elegant' | 'minimal') => void;
   includeUniversity: boolean;
   setIncludeUniversity: (value: boolean) => void;
@@ -2037,7 +2086,7 @@ function CoverLetterStudioTab({
   const [selectedLength, setSelectedLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [editableContent, setEditableContent] = useState(coverLetter);
   const [customInstructions, setCustomInstructions] = useState('');
-  const [regenerationCount, setRegenerationCount] = useState(coverLetterMetadata?.generation_count || 0);
+  const [regenerationCount, setRegenerationCount] = useState((coverLetterMetadata as Record<string, unknown> | null)?.generation_count as number || 0);
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const MAX_REGENERATIONS = 2;
@@ -2055,19 +2104,23 @@ function CoverLetterStudioTab({
 
   // Sync regeneration count when metadata changes (from variant loading or generation)
   useEffect(() => {
-    if (coverLetterMetadata?.generation_count !== undefined) {
-      setRegenerationCount(coverLetterMetadata.generation_count);
-      console.log('🎯 Updated regeneration count from metadata:', coverLetterMetadata.generation_count);
+    const metadata = coverLetterMetadata as Record<string, unknown> | null;
+    if (metadata?.generation_count !== undefined) {
+      setRegenerationCount(metadata.generation_count as number);
+      console.log('🎯 Updated regeneration count from metadata:', metadata.generation_count);
     }
   }, [coverLetterMetadata]);
 
   // Handle version switching
   const handleVersionSwitch = (version: number) => {
-    const selectedVersion = coverLetterVersions.find(v => v.version === version);
+    const selectedVersion = coverLetterVersions.find(v => {
+      const versionObj = v as Record<string, unknown>;
+      return versionObj.version === version;
+    }) as Record<string, unknown> | undefined;
     if (selectedVersion) {
       onVersionChange(version);
-      setEditableContent(selectedVersion.cover_letter);
-      onCoverLetterChange(selectedVersion.cover_letter);
+      setEditableContent(selectedVersion.cover_letter as CoverLetter);
+      onCoverLetterChange(selectedVersion.cover_letter as CoverLetter);
       console.log('🔄 Switched to version', version);
     }
   };
@@ -2096,7 +2149,7 @@ function CoverLetterStudioTab({
         }
 
         // Find the current version in the versions array
-        const currentVersionObj = coverLetterVersions.find(v => v.version === currentVersion);
+        const currentVersionObj = coverLetterVersions.find(v => (v as Record<string, unknown>).version === currentVersion);
         if (!currentVersionObj) {
           console.warn('⚠️ Current version not found in versions array');
           setSaveStatus('saved');
@@ -2104,11 +2157,12 @@ function CoverLetterStudioTab({
         }
 
         // Update the current version with edited content
-        const updatedVersions = coverLetterVersions.map(v =>
-          v.version === currentVersion
-            ? { ...v, cover_letter: updatedLetter }
-            : v
-        );
+        const updatedVersions = coverLetterVersions.map((v: any) => {
+          const vObj = v as Record<string, unknown>;
+          return vObj.version === currentVersion
+            ? { ...vObj, cover_letter: updatedLetter }
+            : vObj;
+        });
 
         // Save to Supabase
         const { data: variants } = await supabase
@@ -2127,10 +2181,11 @@ function CoverLetterStudioTab({
             current_version: currentVersion
           };
 
-          await (supabase.from('resume_variants') as any)
+          await supabase
+            .from('resume_variants')
             .update({
               cover_letter_content: JSON.stringify(versionedData)
-            })
+            } as never)
             .eq('id', typedVariants[0].id);
 
           console.log('💾 Auto-saved cover letter edits');
@@ -2293,16 +2348,23 @@ function CoverLetterStudioTab({
                   Top Task
                 </h4>
                 {(strategy.tasks || [])
-                  .sort((a: any, b: any) => (b.alignment_score || 0) - (a.alignment_score || 0))
+                  .sort((a: unknown, b: unknown) => {
+                    const aObj = a as Record<string, unknown>;
+                    const bObj = b as Record<string, unknown>;
+                    return ((bObj.alignment_score as number) || 0) - ((aObj.alignment_score as number) || 0);
+                  })
                   .slice(0, 1)
-                  .map((task: any, i: number) => (
-                    <div key={i}>
-                      <div className="text-xs font-medium text-blue-600 mb-1">
-                        {Math.round((task.alignment_score || 0) * 100)}% match
+                  .map((task: unknown, i: number) => {
+                    const taskObj = task as Record<string, unknown>;
+                    return (
+                      <div key={i}>
+                        <div className="text-xs font-medium text-blue-600 mb-1">
+                          {Math.round(((taskObj.alignment_score as number) || 0) * 100)}% match
+                        </div>
+                        <p className="text-xs text-gray-600 line-clamp-2">{(taskObj.task_description as string) || (taskObj.task as string)}</p>
                       </div>
-                      <p className="text-xs text-gray-600 line-clamp-2">{task.task_description || task.task}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
 
               <div className="p-3 bg-green-50 rounded-lg border border-green-200">
@@ -2355,7 +2417,7 @@ function CoverLetterStudioTab({
                           name="tone"
                           value={tone}
                           checked={selectedTone === tone}
-                          onChange={(e) => setSelectedTone(e.target.value as any)}
+                          onChange={(e: any) => setSelectedTone(e.target.value as 'confident' | 'warm' | 'direct')}
                           className="w-3.5 h-3.5 text-blue-600"
                         />
                         <div className={`flex-1 p-2 rounded-lg border transition-all duration-200 ${
@@ -2384,7 +2446,7 @@ function CoverLetterStudioTab({
                           name="length"
                           value={length}
                           checked={selectedLength === length}
-                          onChange={(e) => setSelectedLength(e.target.value as any)}
+                          onChange={(e: any) => setSelectedLength(e.target.value as 'short' | 'medium' | 'long')}
                           className="w-3.5 h-3.5 text-emerald-600"
                         />
                         <div className={`flex-1 p-2 rounded-lg border transition-all duration-200 ${
@@ -2411,60 +2473,79 @@ function CoverLetterStudioTab({
                       <input
                         type="checkbox"
                         checked={includeUniversity}
-                        onChange={(e) => setIncludeUniversity(e.target.checked)}
+                        onChange={(e: any) => setIncludeUniversity(e.target.checked)}
                         className="w-4 h-4 text-emerald-600 rounded mt-0.5 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium text-gray-700 mb-0.5">University & Degree</div>
-                        {userProfile?.education?.[0] && (
-                          <div className="text-xs text-gray-500 leading-relaxed">
-                            {userProfile.education[0].degree} in {userProfile.education[0].field_of_study}
-                            {userProfile.education[0].institution && (
-                              <> • {userProfile.education[0].institution}</>
-                            )}
-                          </div>
-                        )}
+                        {(() => {
+                          const profile = userProfile as Record<string, unknown> | null;
+                          const education = profile?.education as Array<Record<string, unknown>> | undefined;
+                          const firstEdu = education?.[0];
+                          if (!firstEdu) return null;
+                          const institution = firstEdu.institution as string | undefined;
+                          return (
+                            <div className="text-xs text-gray-500 leading-relaxed">
+                              {firstEdu.degree as string} in {firstEdu.field_of_study as string}
+                              {institution && (
+                                <> • {institution}</>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </label>
                     <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={includeSemester}
-                        onChange={(e) => setIncludeSemester(e.target.checked)}
+                        onChange={(e: any) => setIncludeSemester(e.target.checked)}
                         className="w-4 h-4 text-emerald-600 rounded mt-0.5 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium text-gray-700 mb-0.5">Semester Info</div>
-                        {userProfile?.education?.[0]?.year && (
-                          <div className="text-xs text-gray-500">
-                            Expected Graduation: {userProfile.education[0].year}
-                          </div>
-                        )}
+                        {(() => {
+                          const profile = userProfile as Record<string, unknown> | null;
+                          const education = profile?.education as Array<Record<string, unknown>> | undefined;
+                          const year = education?.[0]?.year as string | undefined;
+                          return year && (
+                            <div className="text-xs text-gray-500">
+                              Expected Graduation: {year}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </label>
                     <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={includeHours}
-                        onChange={(e) => setIncludeHours(e.target.checked)}
+                        onChange={(e: any) => setIncludeHours(e.target.checked)}
                         className="w-4 h-4 text-emerald-600 rounded mt-0.5 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium text-gray-700 mb-0.5">Weekly Hours</div>
-                        {(userProfile?.weekly_availability || userProfile?.hours_available) ? (
-                          <div className="text-xs text-gray-500">
-                            {userProfile.weekly_availability ? (
-                              <>
-                                {userProfile.weekly_availability.hours_min}-{userProfile.weekly_availability.hours_max} hours/week
-                                {userProfile.weekly_availability.flexible && <> • Flexible</>}
-                              </>
-                            ) : (
-                              <>{userProfile.hours_available} hours/week</>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-xs text-gray-400 italic">Set hours in Settings</div>
-                        )}
+                        {(() => {
+                          const profile = userProfile as Record<string, unknown> | null;
+                          const weeklyAvail = profile?.weekly_availability as Record<string, unknown> | undefined;
+                          const hoursAvail = profile?.hours_available as number | undefined;
+
+                          if (weeklyAvail || hoursAvail) {
+                            return (
+                              <div className="text-xs text-gray-500">
+                                {weeklyAvail ? (
+                                  <>
+                                    {weeklyAvail.hours_min as number}-{weeklyAvail.hours_max as number} hours/week
+                                    {weeklyAvail.flexible && <> • Flexible</>}
+                                  </>
+                                ) : (
+                                  <>{hoursAvail} hours/week</>
+                                )}
+                              </div>
+                            );
+                          }
+                          return <div className="text-xs text-gray-400 italic">Set hours in Settings</div>;
+                        })()}
                       </div>
                     </label>
                   </div>
@@ -2484,17 +2565,24 @@ function CoverLetterStudioTab({
                     </div>
                     <select
                       value={currentVersion}
-                      onChange={(e) => handleVersionSwitch(parseInt(e.target.value))}
+                      onChange={(e: any) => handleVersionSwitch(parseInt(e.target.value))}
                       className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       {coverLetterVersions
                         .slice()
-                        .sort((a, b) => b.version - a.version)
-                        .map((v) => (
-                          <option key={v.version} value={v.version}>
-                            Version {v.version} - {v.tone || 'confident'} / {v.length || 'medium'} ({new Date(v.generated_at).toLocaleDateString()})
-                          </option>
-                        ))}
+                        .sort((a: unknown, b: unknown) => {
+                          const aObj = a as Record<string, unknown>;
+                          const bObj = b as Record<string, unknown>;
+                          return (bObj.version as number) - (aObj.version as number);
+                        })
+                        .map((v: any) => {
+                          const vObj = v as Record<string, unknown>;
+                          return (
+                            <option key={vObj.version as number} value={vObj.version as number}>
+                              Version {vObj.version as number} - {(vObj.tone as string) || 'confident'} / {(vObj.length as string) || 'medium'} ({new Date(vObj.generated_at as string).toLocaleDateString()})
+                            </option>
+                          );
+                        })}
                     </select>
                     <div className="flex items-center gap-1.5 text-xs">
                       {saveStatus === 'saved' && (
@@ -2526,7 +2614,7 @@ function CoverLetterStudioTab({
                   </label>
                   <textarea
                     value={customInstructions}
-                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    onChange={(e: any) => setCustomInstructions(e.target.value)}
                     placeholder="E.g., 'Emphasize Python skills'"
                     className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     rows={2}
@@ -2651,19 +2739,32 @@ function CoverLetterStudioTab({
                   <div className="w-full">
                     {/* Letter Header */}
                     <div className="mb-8">
-                      <h4 className="font-bold text-gray-900 text-lg mb-2">
-                        {userProfile?.personal_details?.name || userProfile?.personalInfo?.name || userProfile?.name || 'Your Name'}
-                      </h4>
-                      <p className="text-gray-600">
-                        {userProfile?.personal_details?.email || userProfile?.personalInfo?.email || userProfile?.email || 'your.email@example.com'}
-                        {(userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone) &&
-                          ` | ${userProfile?.personal_details?.phone || userProfile?.personalInfo?.phone || userProfile?.phone}`
-                        }
-                      </p>
-                      <p className="text-gray-600">{userProfile?.personal_details?.location || userProfile?.personalInfo?.location || userProfile?.location || 'Germany'}</p>
-                      <div className="mt-4 text-right text-gray-600">
-                        {new Date().toLocaleDateString('de-DE')}
-                      </div>
+                      {(() => {
+                        const profile = userProfile as Record<string, unknown> | null;
+                        const personalDetails = profile?.personal_details as Record<string, unknown> | undefined;
+                        const personalInfo = profile?.personalInfo as Record<string, unknown> | undefined;
+
+                        const name = (personalDetails?.name as string) || (personalInfo?.name as string) || (profile?.name as string) || 'Your Name';
+                        const email = (personalDetails?.email as string) || (personalInfo?.email as string) || (profile?.email as string) || 'your.email@example.com';
+                        const phone = (personalDetails?.phone as string) || (personalInfo?.phone as string) || (profile?.phone as string);
+                        const location = (personalDetails?.location as string) || (personalInfo?.location as string) || (profile?.location as string) || 'Germany';
+
+                        return (
+                          <>
+                            <h4 className="font-bold text-gray-900 text-lg mb-2">
+                              {name}
+                            </h4>
+                            <p className="text-gray-600">
+                              {email}
+                              {phone && ` | ${phone}`}
+                            </p>
+                            <p className="text-gray-600">{location}</p>
+                            <div className="mt-4 text-right text-gray-600">
+                              {new Date().toLocaleDateString('de-DE')}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* Recipient */}
@@ -2680,7 +2781,7 @@ function CoverLetterStudioTab({
                     <div className="mb-4">
                       <EnhancedRichText
                         value={editableContent.content.subject || `Application for ${job.title}`}
-                        onChange={(value) => handleContentChange('subject', value)}
+                        onChange={(value: any) => handleContentChange('subject', value)}
                         className="text-gray-900 border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
                         placeholder="Subject line..."
                       />
@@ -2691,7 +2792,7 @@ function CoverLetterStudioTab({
                       {/* Salutation */}
                       <EnhancedRichText
                         value={editableContent.content.salutation || 'Dear Hiring Team'}
-                        onChange={(value) => handleContentChange('salutation', value)}
+                        onChange={(value: any) => handleContentChange('salutation', value)}
                         className="text-gray-800 border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
                         placeholder="Salutation..."
                       />
@@ -2699,7 +2800,7 @@ function CoverLetterStudioTab({
                       {/* Intro */}
                       <EnhancedRichText
                         value={editableContent.content.intro}
-                        onChange={(value) => handleContentChange('intro', value)}
+                        onChange={(value: any) => handleContentChange('intro', value)}
                         className="text-gray-800 leading-relaxed font-medium border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
                         multiline={true}
                         placeholder="Click to write introduction..."
@@ -2710,7 +2811,7 @@ function CoverLetterStudioTab({
                         <EnhancedRichText
                           key={index}
                           value={paragraph}
-                          onChange={(value) => handleBodyParagraphChange(index, value)}
+                          onChange={(value: any) => handleBodyParagraphChange(index, value)}
                           className="text-gray-800 leading-relaxed border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
                           multiline={true}
                           placeholder={`Click to write paragraph ${index + 1}...`}
@@ -2720,7 +2821,7 @@ function CoverLetterStudioTab({
                       {/* Closing */}
                       <EnhancedRichText
                         value={editableContent.content.closing}
-                        onChange={(value) => handleContentChange('closing', value)}
+                        onChange={(value: any) => handleContentChange('closing', value)}
                         className="text-gray-800 leading-relaxed font-medium border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
                         multiline={true}
                         placeholder="Click to write closing..."
@@ -2730,13 +2831,18 @@ function CoverLetterStudioTab({
                       <div className="pt-4">
                         <EnhancedRichText
                           value={editableContent.content.sign_off}
-                          onChange={(value) => handleContentChange('sign_off', value)}
+                          onChange={(value: any) => handleContentChange('sign_off', value)}
                           className="text-gray-800 border-0 hover:bg-gray-50/50 rounded-lg p-2 -m-2"
                           placeholder="Click to add sign-off..."
                         />
                         {/* User name after sign-off */}
                         <div className="mt-1 text-gray-800">
-                          {userProfile?.personalInfo?.name || userProfile?.personal_details?.name || userProfile?.name || 'Your Name'}
+                          {(() => {
+                            const profile = userProfile as Record<string, unknown> | null;
+                            const personalInfo = profile?.personalInfo as Record<string, unknown> | undefined;
+                            const personalDetails = profile?.personal_details as Record<string, unknown> | undefined;
+                            return (personalInfo?.name as string) || (personalDetails?.name as string) || (profile?.name as string) || 'Your Name';
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -2809,11 +2915,11 @@ function DownloadKitTab({
   studentStrategy
 }: {
   job: JobWithCompanyNested | null;
-  userProfile: any;
+  userProfile: unknown;
   variantId: string | null;
   coverLetter: CoverLetter | null;
   completionStatus: { resume: boolean; coverLetter: boolean };
-  jobAnalysis: any;
+  jobAnalysis: unknown;
   strategy: JobStrategy | null;
   studentStrategy: StudentJobStrategy | null;
 }) {
@@ -2824,15 +2930,19 @@ function DownloadKitTab({
   const generateFileName = (type: 'resume' | 'coverletter' | 'analysis') => {
     if (!userProfile || !job) return `document_${type}.pdf`;
 
-    const userName = (userProfile.personalInfo?.name || userProfile.name || 'User')
+    const profile = userProfile as Record<string, unknown>;
+    const personalInfo = profile.personalInfo as Record<string, unknown> | undefined;
+    const userName = ((personalInfo?.name as string) || (profile.name as string) || 'User')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
-    const companyName = (job.companies?.name || job.company_name || 'Company')
+    const jobObj = job as unknown as Record<string, unknown>;
+    const companies = jobObj.companies as Record<string, unknown> | undefined;
+    const companyName = ((companies?.name as string) || (jobObj.company_name as string) || 'Company')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
-    let jobTitle = (job.title || 'Position')
+    let jobTitle = ((jobObj.title as string) || 'Position')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 

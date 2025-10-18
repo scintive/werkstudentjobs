@@ -145,7 +145,7 @@ export function FileUpload({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={(e) => {
+                    onClick={(e: any) => {
                       e.stopPropagation()
                       handleRemoveFile()
                     }}

@@ -13,44 +13,82 @@ describe('FastMatchingService', () => {
 
     // Mock user profile with comprehensive skills
     mockUserProfile = {
-      id: 'test-user-1',
-      user_id: 'test-user-1',
-      skills: ['JavaScript', 'React', 'Node.js', 'TypeScript', 'SQL', 'Git'],
-      tools: ['Figma', 'Docker', 'AWS', 'Jira'],
-      languages: ['English', 'German'],
       personal_details: {
         name: 'Test User',
-        email: 'test@example.com',
-        city: 'Berlin',
-        country: 'Germany',
+        contact: {
+          phone: '+49123456789',
+          email: 'test@example.com',
+          address: 'Berlin, Germany',
+        },
       },
+      professional_title: 'Software Engineer',
+      professional_summary: 'Experienced developer',
+      skills: {
+        technology: ['JavaScript', 'React', 'Node.js', 'TypeScript', 'SQL', 'Git'],
+        soft_skills: ['Communication', 'Teamwork'],
+        design: ['Figma'],
+      },
+      languages: [
+        { language: 'English', proficiency: 'Native' },
+        { language: 'German', proficiency: 'Fluent' },
+      ],
+      education: [],
+      certifications: [],
       experience: [
         {
           company: 'Tech Corp',
-          title: 'Software Engineer',
-          start_date: '2020-01',
-          end_date: '2023-01',
-          description: 'Built web applications with React and Node.js',
-          bullets: ['Developed features', 'Fixed bugs'],
+          position: 'Software Engineer',
+          duration: '2020-2023',
+          responsibilities: ['Built web applications with React and Node.js'],
         },
       ],
-    } as any
+      projects: [],
+    } as unknown
 
     // Mock job with matching requirements
     mockJob = {
       id: 'job-1',
       title: 'Frontend Developer',
-      company_name: 'Test Company',
       location_city: 'Berlin',
       skills_canonical_flat: ['JavaScript', 'React', 'TypeScript', 'HTML', 'CSS'],
       tools_canonical_flat: ['Git', 'Figma', 'Jira'],
-      german_required: 'Required',
+      german_required: 'yes' as const,
       is_remote: false,
       remote_allowed: true,
       description: 'Looking for a frontend developer',
       created_at: '2024-01-01',
       company_id: 'company-1',
-    } as any
+      company: {
+        id: 'company-1',
+        name: 'Test Company',
+        domain: null,
+        logo_url: null,
+        industry: null,
+        size_category: null,
+        website_url: null,
+        linkedin_url: null,
+        glassdoor_url: null,
+        kununu_url: null,
+        twitter_url: null,
+        github_url: null,
+        description: null,
+        founded_year: null,
+        headquarters_city: null,
+        headquarters_country: null,
+        employee_count_min: null,
+        employee_count_max: null,
+        tech_stack: null,
+        culture_tags: null,
+        benefits: null,
+        office_images: null,
+        created_at: '2024-01-01',
+        updated_at: '2024-01-01',
+        research_status: null,
+        research_completed_at: null,
+        research_error: null,
+        glassdoor_rating: null,
+      },
+    } as unknown
   })
 
   describe('calculateBatchMatches', () => {
@@ -98,7 +136,7 @@ describe('FastMatchingService', () => {
     })
 
     it('should handle user profile with no skills', async () => {
-      const profileNoSkills = { ...mockUserProfile, skills: [], tools: [] }
+      const profileNoSkills = { ...mockUserProfile, skills: { technology: [], soft_skills: [], design: [] } }
       const results = await service.calculateBatchMatches([mockJob], profileNoSkills)
 
       expect(results).toHaveLength(1)
@@ -155,7 +193,7 @@ describe('FastMatchingService', () => {
         id: 'perfect-job',
         skills_canonical_flat: ['JavaScript', 'React', 'Node.js', 'TypeScript', 'SQL'],
         tools_canonical_flat: ['Figma', 'Docker', 'AWS', 'Jira'],
-        german_required: 'Not required',
+        german_required: 'no' as const,
         location_city: 'Berlin',
       }
 
@@ -164,7 +202,7 @@ describe('FastMatchingService', () => {
         id: 'poor-job',
         skills_canonical_flat: ['Python', 'Django', 'MongoDB'],
         tools_canonical_flat: ['Jenkins', 'Kubernetes'],
-        german_required: 'Native',
+        german_required: 'yes' as const,
         location_city: 'Munich',
       }
 
@@ -216,7 +254,7 @@ describe('FastMatchingService', () => {
   describe('edge cases', () => {
     it('should handle null skills_canonical_flat', async () => {
       const jobNullSkills = { ...mockJob, skills_canonical_flat: null }
-      const results = await service.calculateBatchMatches([jobNullSkills as any], mockUserProfile)
+      const results = await service.calculateBatchMatches([jobNullSkills as unknown], mockUserProfile)
 
       expect(results).toHaveLength(1)
       expect(results[0].match_score).toBeGreaterThanOrEqual(0)
@@ -224,7 +262,7 @@ describe('FastMatchingService', () => {
 
     it('should handle undefined tools_canonical_flat', async () => {
       const jobUndefinedTools = { ...mockJob, tools_canonical_flat: undefined }
-      const results = await service.calculateBatchMatches([jobUndefinedTools as any], mockUserProfile)
+      const results = await service.calculateBatchMatches([jobUndefinedTools as unknown], mockUserProfile)
 
       expect(results).toHaveLength(1)
       expect(results[0].match_score).toBeGreaterThanOrEqual(0)
@@ -233,7 +271,7 @@ describe('FastMatchingService', () => {
     it('should handle malformed skill arrays', async () => {
       const jobMalformed = {
         ...mockJob,
-        skills_canonical_flat: ['', null, undefined, 'JavaScript', '   ', 'React'] as any,
+        skills_canonical_flat: ['', null, undefined, 'JavaScript', '   ', 'React'] as unknown,
       }
 
       const results = await service.calculateBatchMatches([jobMalformed], mockUserProfile)
@@ -244,9 +282,9 @@ describe('FastMatchingService', () => {
 
     it('should handle missing location data', async () => {
       const jobNoLocation = { ...mockJob, location_city: null, is_remote: null }
-      const profileNoLocation = { ...mockUserProfile, personal_details: { ...mockUserProfile.personal_details, city: null } as any }
+      const profileNoLocation = { ...mockUserProfile, personal_details: { ...mockUserProfile.personal_details, city: null } as unknown }
 
-      const results = await service.calculateBatchMatches([jobNoLocation as any], profileNoLocation)
+      const results = await service.calculateBatchMatches([jobNoLocation as unknown], profileNoLocation)
 
       expect(results).toHaveLength(1)
       expect(results[0].matchCalculation.locationFit).toBeDefined()
@@ -256,7 +294,7 @@ describe('FastMatchingService', () => {
       const jobNoLang = { ...mockJob, german_required: null }
       const profileNoLang = { ...mockUserProfile, languages: [] }
 
-      const results = await service.calculateBatchMatches([jobNoLang as any], profileNoLang)
+      const results = await service.calculateBatchMatches([jobNoLang as unknown], profileNoLang)
 
       expect(results).toHaveLength(1)
       expect(results[0].matchCalculation.languageFit).toBeDefined()
@@ -321,9 +359,9 @@ describe('FastMatchingService', () => {
       expect(results[0]).toMatchObject({
         id: mockJob.id,
         title: mockJob.title,
-        company_name: mockJob.company_name,
         location_city: mockJob.location_city,
       })
+      expect(results[0].company.name).toBe('Test Company')
     })
 
     it('should add match_score field', async () => {

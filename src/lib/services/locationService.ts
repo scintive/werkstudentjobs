@@ -128,9 +128,9 @@ export class LocationService {
         latitude: parseFloat(result.lat),
         longitude: parseFloat(result.lon),
         display_name: result.display_name,
-        city: result.address?.city || result.address?.town || result.address?.village || null,
-        country: result.address?.country || null,
-        country_code: result.address?.country_code || null
+        city: result.address?.city || result.address?.town || result.address?.village || undefined,
+        country: result.address?.country || undefined,
+        country_code: result.address?.country_code || undefined
       };
 
       // Cache the result

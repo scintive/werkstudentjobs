@@ -54,7 +54,7 @@ export function AnalysisLoadingState({
 
         {/* Progress dots */}
         <div className="flex justify-center gap-1.5">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2].map((i: any) => (
             <motion.div
               key={i}
               className="w-2 h-2 rounded-full"

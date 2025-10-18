@@ -11,7 +11,7 @@ interface RequireAuthProps {
 
 export function RequireAuth({ children, fallback }: RequireAuthProps) {
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null)
-  const [userInfo, setUserInfo] = React.useState<any>(null)
+  const [userInfo, setUserInfo] = React.useState<unknown>(null)
   const router = useRouter()
 
   React.useEffect(() => {

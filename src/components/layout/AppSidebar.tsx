@@ -108,7 +108,7 @@ export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarP
           {!collapsed && (
             <p className="nav-section-header mb-3">MAIN</p>
           )}
-          {mainNavItems.map((item) => {
+          {mainNavItems.map((item: any) => {
             const Icon = item.icon
             const isActive = isActiveRoute(item.href)
 
@@ -155,7 +155,7 @@ export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarP
           {!collapsed && (
             <p className="nav-section-header mb-3">TOOLS</p>
           )}
-          {toolsNavItems.map((item) => {
+          {toolsNavItems.map((item: any) => {
             const Icon = item.icon
             const isActive = isActiveRoute(item.href)
 
@@ -195,7 +195,7 @@ export default function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarP
           {!collapsed && (
             <p className="nav-section-header mb-3">SUPPORT</p>
           )}
-          {bottomNavItems.map((item) => {
+          {bottomNavItems.map((item: any) => {
             const Icon = item.icon
             const isActive = isActiveRoute(item.href)
 

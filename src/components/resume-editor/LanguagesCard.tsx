@@ -123,9 +123,9 @@ export default function LanguagesCard({
                 <span className="font-medium text-gray-700">{language.name || language.language}</span>
                 <select
                   value={language.proficiency}
-                  onChange={(e) => handleProficiencyChange(index, e.target.value)}
+                  onChange={(e: any) => handleProficiencyChange(index, e.target.value)}
                   className="ml-auto px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e: any) => e.stopPropagation()}
                 >
                   {proficiencyGroups.map(group => (
                     <optgroup key={group.label} label={group.label}>
@@ -138,7 +138,7 @@ export default function LanguagesCard({
                   ))}
                 </select>
                 <button
-                  onClick={(e) => {
+                  onClick={(e: any) => {
                     e.stopPropagation()
                     handleRemoveLanguage(index)
                   }}
@@ -154,8 +154,8 @@ export default function LanguagesCard({
             <input
               type="text"
               value={newLanguage}
-              onChange={(e) => setNewLanguage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddLanguage()}
+              onChange={(e: any) => setNewLanguage(e.target.value)}
+              onKeyPress={(e: any) => e.key === 'Enter' && handleAddLanguage()}
               placeholder="Add a new language..."
               className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />

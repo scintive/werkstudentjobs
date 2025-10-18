@@ -16,25 +16,27 @@ export const dynamic = 'force-dynamic'
 function JobsContent() {
   const { resumeData } = useSupabaseResumeContext()
 
-  const handleJobSelect = (job: any) => {
+  const handleJobSelect = (job: unknown) => {
     // Navigate to tailor page when job is selected
-    window.location.href = `/jobs/${job.id}/tailor`
+    const jobObj = job as Record<string, unknown>;
+    window.location.href = `/jobs/${jobObj.id}/tailor`
   }
 
   // Derive a userProfile-like object from resumeData for matching/skills UI
   const userProfile = React.useMemo<UserProfile | null>(() => {
-    if (!resumeData) return null as any
+    if (!resumeData) return null
 
     // Flatten skills: convert objects with name/proficiency to strings
-    const normalizeSkillArray = (arr: any[] | undefined) => {
+    const normalizeSkillArray = (arr: unknown[] | undefined) => {
       if (!arr) return [] as string[]
       return arr.map((s: any) => {
         if (!s) return ''
         if (typeof s === 'string') return s
         if (typeof s === 'object') {
           // Common shapes: { name }, { skill, proficiency }
-          if ('skill' in s && s.skill) return String(s.skill)
-          if ('name' in s && s.name) return String((s as any).name)
+          const sObj = s as Record<string, unknown>;
+          if ('skill' in s && sObj.skill) return String(sObj.skill)
+          if ('name' in s && sObj.name) return String(sObj.name)
         }
         return String(s)
       }).filter(Boolean) as string[]
@@ -78,7 +80,8 @@ function JobsContent() {
     // Normalize languages from either top-level or skills.languages
     const profileLanguages = (() => {
       const langs: string[] = []
-      const topLevel = (resumeData as any).languages as Array<{ language: string; proficiency?: string }> | undefined
+      const resumeDataObj = resumeData as unknown as Record<string, unknown>;
+      const topLevel = resumeDataObj.languages as Array<{ language: string; proficiency?: string }> | undefined
       if (Array.isArray(topLevel) && topLevel.length) {
         topLevel.forEach(l => {
           if (!l) return

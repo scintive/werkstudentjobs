@@ -10,13 +10,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const links = Array.isArray(body?.links) ? body.links : [];
     const normalized = links
-      .filter((l: any) => l && typeof l.url === 'string')
-      .map((l: any) => ({ label: String(l.label || ''), url: String(l.url) }));
+      .filter((l: unknown) => {
+        const link = l as Record<string, unknown> | null;
+        return link && typeof link.url === 'string';
+      })
+      .map((l: unknown) => {
+        const link = l as Record<string, unknown>;
+        return { label: String(link.label || ''), url: String(link.url) };
+      });
     if (normalized.length === 0) {
       return NextResponse.json({ success: true, results: {} });
     }
     // Cache key: urls sorted
-    const urls = normalized.map((l: any) => l.url).sort();
+    const urls = normalized.map((l: unknown) => {
+      const link = l as Record<string, unknown>;
+      return link.url;
+    }).sort();
     const cacheKeyPayload = { urls };
     const cached = await AICacheService.get('link_verifier', cacheKeyPayload);
     if (cached) {

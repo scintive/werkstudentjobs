@@ -206,7 +206,7 @@ export function SkillsAnalysisPanel({ jobSkills, userSkills = [], jobTitle }: Sk
 
       {/* Ultra Compact Category Layout */}
       <div className="p-4 space-y-3">
-        {categories.map((category) => (
+        {categories.map((category: any) => (
           <div key={category.id}>
             <div className="flex items-center gap-1.5 mb-2">
               <category.icon className={`w-3.5 h-3.5 text-${category.color}-600`} />
@@ -215,7 +215,7 @@ export function SkillsAnalysisPanel({ jobSkills, userSkills = [], jobTitle }: Sk
             </div>
             
             <div className="flex flex-wrap gap-1">
-              {category.skills.map((skill, index) => (
+              {category.skills.map((skill: any, index: any) => (
                 <SkillBadge key={index} skill={skill} categoryColor={category.color} />
               ))}
             </div>

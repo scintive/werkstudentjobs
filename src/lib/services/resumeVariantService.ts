@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import type { Database } from '@/lib/types/supabase';
+import type { Database } from '@/lib/supabase/types';
 
 export interface ResumeVariant {
   id: string;
@@ -8,7 +8,7 @@ export interface ResumeVariant {
   user_id?: string;
   session_id?: string;
   variant_name?: string;
-  tailored_data: any; // Full resume JSON
+  tailored_data: unknown; // Full resume JSON
   applied_suggestions: string[];
   ats_keywords: string[];
   match_score?: number;
@@ -76,7 +76,7 @@ class ResumeVariantService {
       const { data: existingVariant, error: fetchError } = await query;
 
       if (existingVariant && !fetchError) {
-        console.log('📄 Found existing resume variant:', existingVariant.id);
+        console.log('📄 Found existing resume variant:', (existingVariant as unknown).id);
         return existingVariant as ResumeVariant;
       }
 
@@ -93,7 +93,7 @@ class ResumeVariantService {
       }
 
       // Resolve user id for RLS-safe insert
-      let effectiveUserId = userId || (baseResume as any)?.user_id || null;
+      let effectiveUserId = userId || (baseResume as unknown)?.user_id || null;
       try {
         if (!effectiveUserId) {
           const { data: authData } = await supabase.auth.getUser();
@@ -108,17 +108,17 @@ class ResumeVariantService {
         user_id: effectiveUserId,
         session_id: sessionId || null,
         tailored_data: {
-          personalInfo: baseResume.personal_info,
-          professionalTitle: baseResume.professional_title,
-          professionalSummary: baseResume.professional_summary,
-          enableProfessionalSummary: baseResume.enable_professional_summary,
-          skills: baseResume.skills || {},
-          experience: baseResume.experience || [],
-          education: baseResume.education || [],
-          projects: baseResume.projects || [],
-          certifications: baseResume.certifications || [],
-          customSections: baseResume.custom_sections || [],
-          languages: baseResume.languages || []
+          personalInfo: (baseResume as unknown).personal_info,
+          professionalTitle: (baseResume as unknown).professional_title,
+          professionalSummary: (baseResume as unknown).professional_summary,
+          enableProfessionalSummary: (baseResume as unknown).enable_professional_summary,
+          skills: (baseResume as unknown).skills || {},
+          experience: (baseResume as unknown).experience || [],
+          education: (baseResume as unknown).education || [],
+          projects: (baseResume as unknown).projects || [],
+          certifications: (baseResume as unknown).certifications || [],
+          customSections: (baseResume as unknown).custom_sections || [],
+          languages: (baseResume as unknown).languages || []
         },
         applied_suggestions: [],
         ats_keywords: [],
@@ -127,7 +127,7 @@ class ResumeVariantService {
 
       const { data: createdVariant, error: createError } = await supabase
         .from('resume_variants')
-        .insert(newVariant)
+        .insert(newVariant as never)
         .select()
         .single();
 
@@ -136,7 +136,7 @@ class ResumeVariantService {
         return null;
       }
 
-      console.log('✅ Created new resume variant:', createdVariant.id);
+      console.log('✅ Created new resume variant:', (createdVariant as unknown).id);
       return createdVariant as ResumeVariant;
     } catch (error) {
       console.error('Error in getOrCreateVariant:', error);
@@ -149,7 +149,7 @@ class ResumeVariantService {
    */
   async updateVariant(
     variantId: string,
-    tailoredData: any,
+    tailoredData: unknown,
     appliedSuggestions?: string[],
     template?: string
   ): Promise<boolean> {
@@ -161,7 +161,7 @@ class ResumeVariantService {
         authUserId = authData?.user?.id || null
       } catch {}
 
-      const updateData: any = {
+      const updateData: unknown = {
         tailored_data: tailoredData,
         updated_at: new Date().toISOString()
       };
@@ -176,7 +176,7 @@ class ResumeVariantService {
 
       const { error } = await supabase
         .from('resume_variants')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', variantId)
         .maybeSingle();
 
@@ -206,7 +206,7 @@ class ResumeVariantService {
         .update({
           match_score: matchScore,
           updated_at: new Date().toISOString()
-        })
+        } as never)
         .eq('id', variantId)
         .maybeSingle();
 
@@ -240,7 +240,7 @@ class ResumeVariantService {
 
       const { data, error } = await supabase
         .from('resume_suggestions')
-        .insert(suggestionsToInsert)
+        .insert(suggestionsToInsert as never)
         .select();
 
       if (error) {
@@ -276,7 +276,7 @@ class ResumeVariantService {
 
       console.log(`📋 Found ${data?.length || 0} suggestions for variant ${variantId}`);
       if (data && data.length > 0) {
-        console.log('📋 Suggestion sections:', data.map(s => s.section));
+        console.log('📋 Suggestion sections:', data.map(s => (s as unknown).section));
       }
 
       return data as ResumeSuggestion[];
@@ -299,7 +299,7 @@ class ResumeVariantService {
         .update({
           accepted,
           applied_at: accepted ? new Date().toISOString() : null
-        })
+        } as never)
         .eq('id', suggestionId);
 
       if (error) {
@@ -416,19 +416,19 @@ class ResumeVariantService {
       }
 
       // Apply each suggestion to the tailored data
-      let tailoredData = variant.tailored_data;
-      const appliedSuggestionIds: string[] = variant.applied_suggestions || [];
+      let tailoredData = (variant as unknown).tailored_data;
+      const appliedSuggestionIds: string[] = (variant as unknown).applied_suggestions || [];
 
       for (const suggestion of suggestions) {
         // Apply the suggestion based on its type and section
-        tailoredData = this.applySuggestionToData(tailoredData, suggestion);
-        appliedSuggestionIds.push(suggestion.id);
+        tailoredData = this.applySuggestionToData(tailoredData, suggestion as unknown);
+        appliedSuggestionIds.push((suggestion as unknown).id);
 
         // Mark suggestion as applied
         await supabase
           .from('resume_suggestions')
-          .update({ applied_at: new Date().toISOString() })
-          .eq('id', suggestion.id);
+          .update({ applied_at: new Date().toISOString() } as never)
+          .eq('id', (suggestion as unknown).id);
       }
 
       // Update the variant with new tailored data
@@ -438,7 +438,7 @@ class ResumeVariantService {
           tailored_data: tailoredData,
           applied_suggestions: appliedSuggestionIds,
           updated_at: new Date().toISOString()
-        })
+        } as never)
         .eq('id', variantId);
 
       if (updateError) {
@@ -457,7 +457,7 @@ class ResumeVariantService {
   /**
    * Helper to apply a suggestion to resume data
    */
-  private applySuggestionToData(data: any, suggestion: ResumeSuggestion): any {
+  private applySuggestionToData(data: unknown, suggestion: ResumeSuggestion): any {
     const updatedData = { ...data };
 
     switch (suggestion.section) {

@@ -16,12 +16,13 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 /**
  * Generate profile hash for cache
  */
-function generateProfileHash(profile: any): string {
+function generateProfileHash(profile: unknown): string {
+  const profileData = profile as Record<string, unknown>;
   const key = JSON.stringify({
-    skills: profile.skills,
-    coursework: profile.relevant_coursework,
-    projects: profile.academic_projects,
-    availability: profile.weekly_availability
+    skills: profileData.skills,
+    coursework: profileData.relevant_coursework,
+    projects: profileData.academic_projects,
+    availability: profileData.weekly_availability
   });
   return Buffer.from(key).toString('base64').slice(0, 12);
 }
@@ -86,10 +87,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Cast to any for easier property access
-    const jobData = jobDataRaw as any;
+    const jobData = jobDataRaw as unknown;
     
     // Fetch or use provided student profile
-    let profileData: any = student_profile;
+    let profileData: unknown = student_profile;
     
     if (!profileData && user_profile_id) {
       if (user_profile_id === 'latest') {
@@ -175,25 +176,30 @@ export async function POST(request: NextRequest) {
           }
 
           // Convert resume_data to profile format
-          const resumeRecord = profiles[0] as any;
+          const resumeRecord = profiles[0] as Record<string, unknown>;
+          const personalInfo = resumeRecord.personal_info as Record<string, unknown> | undefined;
+          const resumeSkills = resumeRecord.skills as Record<string, unknown> | undefined;
+          const resumeEducation = resumeRecord.education as unknown[] | undefined;
+          const firstEducation = resumeEducation?.[0] as Record<string, unknown> | undefined;
+
           profileData = {
-            name: resumeRecord.personal_info?.name,
-            email: resumeRecord.personal_info?.email,
-            phone: resumeRecord.personal_info?.phone,
-            location: resumeRecord.personal_info?.location,
+            name: personalInfo?.name,
+            email: personalInfo?.email,
+            phone: personalInfo?.phone,
+            location: personalInfo?.location,
             current_job_title: resumeRecord.professional_title,
             profile_summary: resumeRecord.professional_summary,
-            skills: resumeRecord.skills?.technical || resumeRecord.skills || [],
-            tools: resumeRecord.skills?.tools || [],
-            preferred_languages: resumeRecord.skills?.languages || [],
-            education: resumeRecord.education || [],
-            degree_program: resumeRecord.education?.[0]?.field_of_study || resumeRecord.education?.[0]?.degree,
-            current_year: resumeRecord.education?.[0]?.current_year,
-            expected_graduation: resumeRecord.education?.[0]?.graduation_date,
-            academic_projects: resumeRecord.projects || [],
-            projects: resumeRecord.projects || [],
-            certifications: resumeRecord.certifications || [],
-            custom_sections: resumeRecord.custom_sections || []
+            skills: (resumeSkills?.technical as unknown[] | undefined) || (resumeRecord.skills as unknown[] | undefined) || [],
+            tools: (resumeSkills?.tools as unknown[] | undefined) || [],
+            preferred_languages: (resumeSkills?.languages as unknown[] | undefined) || [],
+            education: resumeEducation || [],
+            degree_program: firstEducation?.field_of_study || firstEducation?.degree,
+            current_year: firstEducation?.current_year,
+            expected_graduation: firstEducation?.graduation_date,
+            academic_projects: (resumeRecord.projects as unknown[] | undefined) || [],
+            projects: (resumeRecord.projects as unknown[] | undefined) || [],
+            certifications: (resumeRecord.certifications as unknown[] | undefined) || [],
+            custom_sections: (resumeRecord.custom_sections as unknown[] | undefined) || []
           };
         }
       } else {
@@ -231,78 +237,107 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    if (!cacheError && (cachedStrategy as any)?.strategy_data) {
+    const cachedStrategyData = cachedStrategy as Record<string, unknown> | null;
+    const strategyDataField = cachedStrategyData?.strategy_data as Record<string, unknown> | undefined;
+
+    if (!cacheError && strategyDataField) {
       console.log('🎓 STUDENT STRATEGY: Found cached strategy in Supabase');
+      const courseworkAlignment = strategyDataField.coursework_alignment as unknown[] | undefined;
+      const projectAlignment = strategyDataField.project_alignment as unknown[] | undefined;
+      const eligibilityChecklist = strategyDataField.eligibility_checklist as Record<string, unknown> | undefined;
+
+      const typedJobData = jobData as Record<string, unknown>;
+      const jobTitle = typedJobData.title as string | undefined;
+
       return NextResponse.json({
         success: true,
-        strategy: (cachedStrategy as any).strategy_data,
+        strategy: strategyDataField,
         cached: true,
-        cached_at: (cachedStrategy as any).created_at,
+        cached_at: cachedStrategyData?.created_at,
         context: {
-          job_title: jobData.title,
-          company: jobData.company_name,
-          is_werkstudent: jobData.is_werkstudent || jobData.title?.toLowerCase().includes('werkstudent'),
-          coursework_matches: (cachedStrategy as any).strategy_data.coursework_alignment?.length || 0,
-          project_matches: (cachedStrategy as any).strategy_data.project_alignment?.length || 0,
-          eligibility_score: Object.values((cachedStrategy as any).strategy_data.eligibility_checklist || {}).filter((v: any) => v).length
+          job_title: jobTitle,
+          company: typedJobData.company_name,
+          is_werkstudent: typedJobData.is_werkstudent || (jobTitle && jobTitle.toLowerCase().includes('werkstudent')),
+          coursework_matches: courseworkAlignment?.length || 0,
+          project_matches: projectAlignment?.length || 0,
+          eligibility_score: eligibilityChecklist ? Object.values(eligibilityChecklist).filter((v: unknown) => v).length : 0
         }
       });
     }
 
     console.log('🎓 STUDENT STRATEGY: No cache found - generating fresh analysis');
-    
+
     // Create compact context for student-focused AI analysis
+    const typedJobData = jobData as Record<string, unknown>;
+    const jobCompanies = typedJobData.companies as Record<string, unknown> | undefined;
+    const jobTitle = typedJobData.title as string | undefined;
+
+    const typedProfileData = profileData as Record<string, unknown>;
+    const profileEducation = typedProfileData.education as unknown[] | undefined;
+    const firstProfileEducation = profileEducation?.[0] as Record<string, unknown> | undefined;
+    const profileCoursework = (typedProfileData.relevant_coursework as unknown[] | undefined) || [];
+    const profileProjects = (typedProfileData.academic_projects as unknown[] | undefined) || (typedProfileData.projects as unknown[] | undefined) || [];
+
     const compactContext = {
       job: {
-        title: jobData.title,
-        company: jobData.company_name || jobData.companies?.name || 'Unknown',
-        description: jobData.description,
+        title: jobTitle,
+        company: typedJobData.company_name || jobCompanies?.name || 'Unknown',
+        description: typedJobData.description,
         // ACTUAL JOB RESPONSIBILITIES - These are the real tasks!
-        responsibilities: (jobData.responsibilities || []),
-        required_skills: (jobData.skills || []),
-        tools_technologies: (jobData.tools || []),
-        nice_to_have: (jobData.nice_to_have || []),
-        who_we_are_looking_for: (jobData.who_we_are_looking_for || []),
-        benefits: (jobData.benefits || []),
-        work_mode: jobData.work_mode,
-        location: jobData.location_city || jobData.city,
-        language: jobData.language_required || jobData.german_required,
-        hours_per_week: jobData.hours_per_week || '15-20',
-        contract_type: jobData.contract_type || jobData.employment_type,
-        is_werkstudent: jobData.is_werkstudent || jobData.werkstudent || 
-                        jobData.title?.toLowerCase().includes('werkstudent') || 
-                        jobData.title?.toLowerCase().includes('working student') ||
-                        jobData.title?.toLowerCase().includes('praktikum')
+        responsibilities: (typedJobData.responsibilities as unknown[] | undefined) || [],
+        required_skills: (typedJobData.skills as unknown[] | undefined) || [],
+        tools_technologies: (typedJobData.tools as unknown[] | undefined) || [],
+        nice_to_have: (typedJobData.nice_to_have as unknown[] | undefined) || [],
+        who_we_are_looking_for: (typedJobData.who_we_are_looking_for as unknown[] | undefined) || [],
+        benefits: (typedJobData.benefits as unknown[] | undefined) || [],
+        work_mode: typedJobData.work_mode,
+        location: typedJobData.location_city || typedJobData.city,
+        language: typedJobData.language_required || typedJobData.german_required,
+        hours_per_week: typedJobData.hours_per_week || '15-20',
+        contract_type: typedJobData.contract_type || typedJobData.employment_type,
+        is_werkstudent: typedJobData.is_werkstudent || typedJobData.werkstudent ||
+                        (jobTitle && jobTitle.toLowerCase().includes('werkstudent')) ||
+                        (jobTitle && jobTitle.toLowerCase().includes('working student')) ||
+                        (jobTitle && jobTitle.toLowerCase().includes('praktikum'))
       },
       student: {
         // Extract degree from education if available, otherwise use profile data
-        degree: profileData.degree_program || 
-                (profileData.education?.[0]?.field_of_study) || 
-                (profileData.education?.[0]?.degree + ' in ' + profileData.education?.[0]?.field_of_study) ||
-                'Not specified',
-        year: profileData.current_year || null,
-        graduation: profileData.expected_graduation || null,
-        coursework: (profileData.relevant_coursework || []).slice(0, 5).map((c: any) => ({
-          name: c.course_name,
-          topics: c.relevant_topics?.slice(0, 3),
-          project: c.projects?.[0]
-        })),
-        projects: (profileData.academic_projects || profileData.projects || []).slice(0, 3).map((p: any) => ({
-          title: p.title || p.name,
-          tech: p.technologies?.slice(0, 4),
-          metrics: p.metrics?.slice(0, 2) || p.description
-        })),
-        skills: profileData.skills || [],
-        tools: profileData.tools || [],
-        languages: profileData.language_proficiencies || profileData.preferred_languages || [],
-        certifications: profileData.certifications || [],
-        experience: profileData.experience || [],
-        availability: profileData.weekly_availability || null,
-        start_date: profileData.earliest_start_date || null,
-        duration: profileData.preferred_duration || null
+        degree: typedProfileData.degree_program ||
+                firstProfileEducation?.field_of_study ||
+                (firstProfileEducation?.degree ? `${firstProfileEducation.degree} in ${firstProfileEducation.field_of_study}` : 'Not specified'),
+        year: typedProfileData.current_year || null,
+        graduation: typedProfileData.expected_graduation || null,
+        coursework: profileCoursework.slice(0, 5).map((c: unknown) => {
+          const course = c as Record<string, unknown>;
+          const topics = course.relevant_topics as unknown[] | undefined;
+          const projects = course.projects as unknown[] | undefined;
+          return {
+            name: course.course_name,
+            topics: topics?.slice(0, 3),
+            project: projects?.[0]
+          };
+        }),
+        projects: profileProjects.slice(0, 3).map((p: unknown) => {
+          const project = p as Record<string, unknown>;
+          const technologies = project.technologies as unknown[] | undefined;
+          const metrics = project.metrics as unknown[] | undefined;
+          return {
+            title: project.title || project.name,
+            tech: technologies?.slice(0, 4),
+            metrics: metrics?.slice(0, 2) || project.description
+          };
+        }),
+        skills: (typedProfileData.skills as unknown[] | undefined) || [],
+        tools: (typedProfileData.tools as unknown[] | undefined) || [],
+        languages: (typedProfileData.language_proficiencies as unknown[] | undefined) || (typedProfileData.preferred_languages as unknown[] | undefined) || [],
+        certifications: (typedProfileData.certifications as unknown[] | undefined) || [],
+        experience: (typedProfileData.experience as unknown[] | undefined) || [],
+        availability: typedProfileData.weekly_availability || null,
+        start_date: typedProfileData.earliest_start_date || null,
+        duration: typedProfileData.preferred_duration || null
       }
     };
-    
+
     // German keywords for Werkstudent positions
     const germanKeywords = [
       'Werkstudent', 'Werkstudent/in', 'Working Student',
@@ -310,17 +345,17 @@ export async function POST(request: NextRequest) {
       '15-20 Stunden/Woche', 'Pflichtpraktikum', 'Praxissemester',
       'Bachelor', 'Master', 'Studium'
     ];
-    
+
     // Debug logging to verify correct profile data
     console.log('🎓 STUDENT STRATEGY: Profile data check:');
-    console.log('  - Name:', profileData.name);
-    console.log('  - Education:', profileData.education?.[0]);
-    console.log('  - Degree program:', profileData.degree_program);
-    console.log('  - Current year:', profileData.current_year);
-    console.log('  - Expected graduation:', profileData.expected_graduation);
-    console.log('  - Professional title:', profileData.professional_title || profileData.current_job_title);
-    console.log('  - Skills count:', Array.isArray(profileData.skills) ? profileData.skills.length : 'N/A');
-    console.log('  - Projects count:', Array.isArray(profileData.projects) ? profileData.projects.length : 'N/A');
+    console.log('  - Name:', typedProfileData.name);
+    console.log('  - Education:', firstProfileEducation);
+    console.log('  - Degree program:', typedProfileData.degree_program);
+    console.log('  - Current year:', typedProfileData.current_year);
+    console.log('  - Expected graduation:', typedProfileData.expected_graduation);
+    console.log('  - Professional title:', typedProfileData.professional_title || typedProfileData.current_job_title);
+    console.log('  - Skills count:', Array.isArray(typedProfileData.skills) ? (typedProfileData.skills as unknown[]).length : 'N/A');
+    console.log('  - Projects count:', Array.isArray(typedProfileData.projects) ? (typedProfileData.projects as unknown[]).length : 'N/A');
     console.log('  - Compact context student:', compactContext.student);
     
     const systemPrompt = `You are a German job market expert specializing in Werkstudent/intern positions with deep expertise in modern skills including content creation, AI tools, marketing, and technical development.
@@ -472,7 +507,7 @@ OUTPUT SCHEMA:
 CRITICAL: Use the EXACT job responsibilities listed below, NOT generic skills. Each task in job_task_analysis MUST correspond to a real responsibility from the job posting.
 
 JOB RESPONSIBILITIES TO ANALYZE:
-${compactContext.job.responsibilities.map((resp: any, i: number) => `${i+1}. ${resp}`).join('\n')}
+${compactContext.job.responsibilities.map((resp: unknown, i: number) => `${i+1}. ${resp}`).join('\n')}
 
 REQUIRED SKILLS FROM JOB:
 ${compactContext.job.required_skills.join(', ')}
@@ -492,7 +527,7 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
 
         // GPT-5-mini: Accurate, comprehensive learning resource links (replacing Claude)
         llmService.generateLearningPaths(
-          compactContext.job.responsibilities.map((resp: any) => ({ task: resp }))
+          compactContext.job.responsibilities.map((resp: unknown) => ({ task: resp as string }))
         )
       ]);
       
@@ -599,24 +634,27 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
       // Merge GPT-5 learning paths into GPT-4o-mini task analysis
       console.log('🎓 STUDENT STRATEGY: Merging GPT-5 learning paths with GPT-4o-mini analysis');
       if (learningPathsPromise && strategyData.job_task_analysis) {
-        strategyData.job_task_analysis = strategyData.job_task_analysis.map((task: any) => {
+        strategyData.job_task_analysis = strategyData.job_task_analysis.map((task: unknown) => {
+          const taskData = task as Record<string, unknown>;
+          const taskText = taskData.task as string | undefined;
+
           // Try to find matching learning paths from GPT-5
           // GPT-5 uses task text as key, need to match flexibly
-          const matchingKey = Object.keys(learningPathsPromise).find(key =>
-            key.toLowerCase().includes(task.task.toLowerCase().substring(0, 20)) ||
-            task.task.toLowerCase().includes(key.toLowerCase().substring(0, 20))
-          );
+          const matchingKey = taskText ? Object.keys(learningPathsPromise).find(key =>
+            key.toLowerCase().includes(taskText.toLowerCase().substring(0, 20)) ||
+            taskText.toLowerCase().includes(key.toLowerCase().substring(0, 20))
+          ) : undefined;
 
           if (matchingKey && learningPathsPromise[matchingKey]) {
             return {
-              ...task,
+              ...taskData,
               learning_paths: learningPathsPromise[matchingKey]
             };
           }
 
           // Fallback: empty learning paths if GPT-5 didn't generate for this task
           return {
-            ...task,
+            ...taskData,
             learning_paths: {
               quick_wins: [],
               certifications: [],
@@ -627,8 +665,11 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
       }
 
       // Add German keywords to ATS keywords if job is in Germany
-      if (jobData.location_country?.toLowerCase().includes('germany') ||
-          jobData.language_required?.includes('DE')) {
+      const locationCountry = typedJobData.location_country as string | undefined;
+      const languageRequired = typedJobData.language_required as string | undefined;
+
+      if ((locationCountry && locationCountry.toLowerCase().includes('germany')) ||
+          (languageRequired && languageRequired.includes('DE'))) {
         strategyData.ats_keywords = [
           ...(strategyData.ats_keywords || []),
           ...germanKeywords.slice(0, 5)
@@ -663,6 +704,7 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
       
       // Save to Supabase for persistent caching (7 days) using auth user_id
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any)
           .from('job_analysis_cache')
           .insert({
@@ -692,8 +734,8 @@ Return your analysis in valid JSON format matching the schema provided. Make sur
         strategy,
         cached: false,
         context: {
-          job_title: jobData.title,
-          company: jobData.company_name,
+          job_title: jobTitle,
+          company: typedJobData.company_name,
           is_werkstudent: compactContext.job.is_werkstudent,
           coursework_matches: strategy.coursework_alignment.length,
           project_matches: strategy.project_alignment.length,

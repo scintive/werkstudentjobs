@@ -27,12 +27,12 @@ import {
 
 interface EnhancedSkillsManagerProps {
   skills: any // Current skills object from resume data
-  onSkillsChange: (skills: any) => void
+  onSkillsChange: (skills: unknown) => void
   userProfile?: any
   languages?: Language[] // Separate language data with proficiency
   onLanguagesChange?: (languages: Language[]) => void
   onShowSkillLevelsChange?: (show: boolean) => void // Callback for skill level toggle
-  suggestions?: any[] // Suggestions for tailor mode
+  suggestions?: Record<string, any>[] // Suggestions for tailor mode
   onAcceptSuggestion?: (suggestionId: string) => void
   onDeclineSuggestion?: (suggestionId: string) => void
   mode?: 'base' | 'tailor'
@@ -249,7 +249,7 @@ export function EnhancedSkillsManager({
   mode = 'base'
 }: EnhancedSkillsManagerProps) {
   // Helper: normalize incoming language objects to canonical shape
-  const normalizeLanguage = React.useCallback((l: any): Language => ({
+  const normalizeLanguage = React.useCallback((l: Record<string, any>): Language => ({
     language: (l?.language ?? l?.name ?? '').toString(),
     proficiency: (l?.proficiency ?? l?.level ?? 'Not specified').toString()
   }), [])
@@ -349,7 +349,7 @@ export function EnhancedSkillsManager({
   }, [skills])
 
   // Convert legacy skills format to organized format
-  const convertSkillsToFlatArray = React.useCallback((skillsData: any): string[] => {
+  const convertSkillsToFlatArray = React.useCallback((skillsData: unknown): string[] => {
     if (!skillsData) return []
     
     const allSkills: string[] = []
@@ -395,7 +395,7 @@ export function EnhancedSkillsManager({
   }
 
   const convertOrganizedToSkillsFormat = (organizedCategories: Record<string, OrganizedCategory>) => {
-    const skillsFormat: Record<string, any[]> = {}
+    const skillsFormat: Record<string, unknown[]> = {}
 
     // SIMPLIFIED: Direct mapping to legacy format - same logic as preview
     const categoryMapping: Record<string, string> = {
@@ -430,7 +430,7 @@ export function EnhancedSkillsManager({
       // Simple conversion - keep skills as they are
       skillsFormat[categoryKey] = categoryData.skills.map(skill => {
         if (typeof skill === 'string') return skill
-        return (skill as any).skill || skill
+        return (skill as Record<string, any>).skill || skill
       })
     })
 
@@ -930,10 +930,10 @@ export function EnhancedSkillsManager({
             <input
               type="text"
               value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
+              onChange={(e: any) => setNewCategoryName(e.target.value)}
               placeholder="Category name..."
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onKeyPress={(e) => e.key === 'Enter' && handleAddNewCategory()}
+              onKeyPress={(e: any) => e.key === 'Enter' && handleAddNewCategory()}
             />
             <button
               onClick={handleAddNewCategory}
@@ -975,10 +975,10 @@ export function EnhancedSkillsManager({
             })
             .map(([categoryName, categoryDataRaw], index) => {
             const categoryData: OrganizedCategory = {
-              skills: Array.isArray((categoryDataRaw as any)?.skills) ? (categoryDataRaw as any).skills : [],
-              suggestions: Array.isArray((categoryDataRaw as any)?.suggestions) ? (categoryDataRaw as any).suggestions : [],
-              reasoning: typeof (categoryDataRaw as any)?.reasoning === 'string' ? (categoryDataRaw as any).reasoning : '',
-              allowProficiency: !!(categoryDataRaw as any)?.allowProficiency
+              skills: Array.isArray((categoryDataRaw as Record<string, any>)?.skills) ? (categoryDataRaw as Record<string, any>).skills : [],
+              suggestions: Array.isArray((categoryDataRaw as Record<string, any>)?.suggestions) ? (categoryDataRaw as Record<string, any>).suggestions : [],
+              reasoning: typeof (categoryDataRaw as Record<string, any>)?.reasoning === 'string' ? (categoryDataRaw as Record<string, any>).reasoning : '',
+              allowProficiency: !!(categoryDataRaw as Record<string, any>)?.allowProficiency
             }
             const isExpanded = expandedCategories.has(categoryName)
             const CategoryIcon = getCategoryIcon(categoryName)
@@ -1006,7 +1006,7 @@ export function EnhancedSkillsManager({
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium text-sm text-gray-900">{categoryName}</h3>
                           <button
-                            onClick={(e) => {
+                            onClick={(e: any) => {
                               e.stopPropagation()
                               handleDeleteCategory(categoryName)
                             }}
@@ -1067,7 +1067,7 @@ export function EnhancedSkillsManager({
                                         <div className="w-px h-4 bg-current opacity-20"></div>
                                         <div className="relative">
                                           <button
-                                            onClick={(e) => {
+                                            onClick={(e: any) => {
                                               e.stopPropagation()
                                               const dropdownKey = `${categoryName}-${skillName}`
                                               setOpenProficiencyDropdowns(prev => ({
@@ -1107,7 +1107,7 @@ export function EnhancedSkillsManager({
                                                   return (
                                                     <button
                                                       key={level}
-                                                      onClick={(e) => {
+                                                      onClick={(e: any) => {
                                                         e.stopPropagation()
                                                         handleUpdateSkillProficiency(categoryName, skillName, level)
                                                         setOpenProficiencyDropdowns(prev => ({
@@ -1159,10 +1159,10 @@ export function EnhancedSkillsManager({
                                 <input
                                   type="text"
                                   value={newSkillInput[categoryName] || ''}
-                                  onChange={(e) => setNewSkillInput(prev => ({ ...prev, [categoryName]: e.target.value }))}
+                                  onChange={(e: any) => setNewSkillInput(prev => ({ ...prev, [categoryName]: e.target.value }))}
                                   placeholder="Add skill..."
                                   className={`flex-1 px-3 py-1.5 border ${colorScheme.border} rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-current focus:border-transparent`}
-                                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomSkill(categoryName)}
+                                  onKeyPress={(e: any) => e.key === 'Enter' && handleAddCustomSkill(categoryName)}
                                   autoFocus
                                 />
                                 <button
@@ -1214,7 +1214,7 @@ export function EnhancedSkillsManager({
                               </button>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              {categoryData.suggestions.map((skill) => (
+                              {categoryData.suggestions.map((skill: any) => (
                                 <motion.button
                                   key={skill}
                                   initial={{ opacity: 0, scale: 0.8 }}

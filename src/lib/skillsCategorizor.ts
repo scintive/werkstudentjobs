@@ -277,7 +277,7 @@ export function migrateSkillsStructure(currentSkills: unknown): SkillCategories 
     allSkills = currentSkills
   } else if (typeof currentSkills === 'object' && currentSkills !== null) {
     // Object structure - collect all skills from all categories
-    Object.values(currentSkills as Record<string, unknown>).forEach((skillList: unknown) => {
+    Object.values(currentSkills as Record<string, unknown>).forEach((skillList: Record<string, any>) => {
       if (Array.isArray(skillList)) {
         allSkills.push(...skillList)
       }

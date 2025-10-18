@@ -19,9 +19,9 @@ interface UserProfile {
   }>;
   professional_title?: string;
   location?: string;
-  skills?: any;
-  projects?: any[];
-  experience?: any[];
+  skills?: unknown;
+  projects?: unknown[];
+  experience?: unknown[];
 }
 
 interface JobRequirement {
@@ -42,8 +42,8 @@ interface SkillMatch {
 
 interface ComprehensiveAnalysisProps {
   userProfile: UserProfile;
-  jobData: any;
-  strategy?: any;
+  jobData: unknown;
+  strategy?: unknown;
   onNavigateToSkills?: () => void;
 }
 
@@ -58,7 +58,7 @@ export function ComprehensiveJobAnalysis({
   // Use strategy job task analysis if available, otherwise generate
   const getJobRequirements = (): JobRequirement[] => {
     if (strategy?.job_task_analysis && strategy.job_task_analysis.length > 0) {
-      return strategy.job_task_analysis.map((task: any) => ({
+      return strategy.job_task_analysis.map((task: unknown) => ({
         skill: task.task,
         compatibility: task.compatibility_score,
         user_has: task.compatibility_score > 60,
@@ -77,7 +77,7 @@ export function ComprehensiveJobAnalysis({
 
     return allSkills.slice(0, 8).map(skill => {
       const userSkills = Object.values(userProfile.skills || {}).flat();
-      const hasSkill = userSkills.some((userSkill: any) => 
+      const hasSkill = userSkills.some((userSkill: unknown) => 
         (typeof userSkill === 'string' ? userSkill : userSkill.skill || userSkill)
           .toLowerCase()
           .includes(skill.toLowerCase()) ||
@@ -101,10 +101,10 @@ export function ComprehensiveJobAnalysis({
   // Use strategy skills analysis if available, otherwise generate
   const getSkillsMatching = (): SkillMatch[] => {
     if (strategy?.skills_analysis?.matched_skills && strategy.skills_analysis.matched_skills.length > 0) {
-      return strategy.skills_analysis.matched_skills.map((match: any) => ({
+      return strategy.skills_analysis.matched_skills.map((match: unknown) => ({
         category: match.category,
         matched_skills: match.skills,
-        missing_skills: strategy.skills_analysis?.skill_gaps?.slice(0, 3).map((gap: any) => gap.missing_skill) || [],
+        missing_skills: strategy.skills_analysis?.skill_gaps?.slice(0, 3).map((gap: unknown) => gap.missing_skill) || [],
         relevance_score: match.relevance === 'high' ? 90 : match.relevance === 'medium' ? 70 : 50
       }));
     }
@@ -119,7 +119,7 @@ export function ComprehensiveJobAnalysis({
         ...(jobData.tools || [])
       ];
 
-      const matched = categorySkills.filter((userSkill: any) => {
+      const matched = categorySkills.filter((userSkill: unknown) => {
         const skillName = typeof userSkill === 'string' ? userSkill : userSkill.skill || userSkill;
         return jobSkills.some(jobSkill => 
           skillName.toLowerCase().includes(jobSkill.toLowerCase()) ||
@@ -128,7 +128,7 @@ export function ComprehensiveJobAnalysis({
       });
 
       const missing = jobSkills.filter(jobSkill => 
-        !categorySkills.some((userSkill: any) => {
+        !categorySkills.some((userSkill: unknown) => {
           const skillName = typeof userSkill === 'string' ? userSkill : userSkill.skill || userSkill;
           return skillName.toLowerCase().includes(jobSkill.toLowerCase()) ||
                  jobSkill.toLowerCase().includes(skillName.toLowerCase());
@@ -139,7 +139,7 @@ export function ComprehensiveJobAnalysis({
         category: category.replace(/___/g, ' & ').split('_').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' '),
-        matched_skills: matched.map((s: any) => typeof s === 'string' ? s : s.skill || s),
+        matched_skills: matched.map((s: unknown) => typeof s === 'string' ? s : s.skill || s),
         missing_skills: missing,
         relevance_score: matched.length > 0 ? Math.min(95, (matched.length / Math.max(matched.length + missing.length, 1)) * 100) : 0
       };
@@ -203,7 +203,7 @@ export function ComprehensiveJobAnalysis({
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as unknown)}
             className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'bg-white text-gray-900 shadow-sm'
@@ -411,7 +411,7 @@ export function ComprehensiveJobAnalysis({
                   <h4 className="font-medium text-gray-900">Learning Priorities</h4>
                 </div>
                 <ul className="space-y-1 text-sm text-gray-700">
-                  {strategy?.skills_analysis?.skill_gaps?.slice(0, 3).map((gap: any, index: number) => (
+                  {strategy?.skills_analysis?.skill_gaps?.slice(0, 3).map((gap: unknown, index: number) => (
                     <li key={index}>• {gap.missing_skill} ({gap.time_to_learn})</li>
                   )) || jobRequirements.filter(req => !req.user_has).slice(0, 3).map(req => (
                     <li key={req.skill}>• {req.skill} ({req.learning_time})</li>

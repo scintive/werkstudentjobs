@@ -7,7 +7,7 @@ import type { ResumeData } from '@/lib/types'
 export type ResumeAction =
   | { type: 'SET_RESUME_DATA'; payload: ResumeData }
   | { type: 'UPDATE_PERSONAL_INFO'; payload: Partial<ResumeData['personalInfo']> }
-  | { type: 'UPDATE_FIELD'; payload: { path: string; value: any } }
+  | { type: 'UPDATE_FIELD'; payload: { path: string; value: unknown } }
   | { type: 'ADD_EXPERIENCE'; payload: ResumeData['experience'][0] }
   | { type: 'UPDATE_EXPERIENCE'; payload: { index: number; data: Partial<ResumeData['experience'][0]> } }
   | { type: 'REMOVE_EXPERIENCE'; payload: { index: number } }
@@ -70,7 +70,7 @@ interface ResumeContextValue {
 }
 
 // Utility function to update nested object properties
-function setNestedProperty(obj: any, path: string, value: any): any {
+function setNestedProperty(obj: unknown, path: string, value: unknown): unknown {
   const keys = path.split('.')
   const result = JSON.parse(JSON.stringify(obj)) // Deep clone
   
@@ -296,7 +296,7 @@ interface ResumeProviderProps {
 export function ResumeProvider({ children, initialData = initialResumeData }: ResumeProviderProps) {
   // DEBUG: Log initialData photoUrl
   React.useEffect(() => {
-    console.log('🎯 RESUME CONTEXT: initialData photoUrl:', (initialData as any)?.photoUrl)
+    console.log('🎯 RESUME CONTEXT: initialData photoUrl:', (initialData as unknown)?.photoUrl)
   }, [initialData])
 
   const [state, dispatch] = React.useReducer(resumeReducer, {
@@ -307,7 +307,7 @@ export function ResumeProvider({ children, initialData = initialResumeData }: Re
 
   // DEBUG: Log state.present photoUrl
   React.useEffect(() => {
-    console.log('🎯 RESUME CONTEXT: state.present (resumeData) photoUrl:', (state.present as any)?.photoUrl)
+    console.log('🎯 RESUME CONTEXT: state.present (resumeData) photoUrl:', (state.present as unknown)?.photoUrl)
   }, [state.present])
 
   const contextValue = React.useMemo(() => ({
@@ -340,7 +340,7 @@ export function useResumeActions() {
   return React.useMemo(() => ({
     setResumeData: (data: ResumeData) => dispatch({ type: 'SET_RESUME_DATA', payload: data }),
     updatePersonalInfo: (info: Partial<ResumeData['personalInfo']>) => dispatch({ type: 'UPDATE_PERSONAL_INFO', payload: info }),
-    updateField: (path: string, value: any) => dispatch({ type: 'UPDATE_FIELD', payload: { path, value } }),
+    updateField: (path: string, value: unknown) => dispatch({ type: 'UPDATE_FIELD', payload: { path, value } }),
     
     // Experience actions
     addExperience: (experience: ResumeData['experience'][0]) => dispatch({ type: 'ADD_EXPERIENCE', payload: experience }),

@@ -220,9 +220,9 @@ export function enhancedCategorizeSkill(skill: string): keyof EnhancedSkillCateg
   ];
   
   for (const category of categoryOrder) {
-    const keywords = ENHANCED_SKILL_MAPPINGS[category] || [];
-    if (keywords.some(keyword => 
-      normalizedSkill.includes(keyword) || 
+    const keywords = ENHANCED_SKILL_MAPPINGS[category as keyof typeof ENHANCED_SKILL_MAPPINGS] || [];
+    if (keywords.some((keyword: string) =>
+      normalizedSkill.includes(keyword) ||
       keyword.includes(normalizedSkill) ||
       // Handle common variations
       normalizedSkill.replace(/[.\-_\s]/g, '') === keyword.replace(/[.\-_\s]/g, '')
@@ -238,10 +238,10 @@ export function enhancedCategorizeSkill(skill: string): keyof EnhancedSkillCateg
 /**
  * Auto-categorize an array of mixed skills into enhanced granular categories
  */
-export function enhancedAutoCategorizeSkills(skills: any[]): EnhancedSkillCategories {
+export function enhancedAutoCategorizeSkills(skills: unknown[]): EnhancedSkillCategories {
   const categorized: EnhancedSkillCategories = {};
   
-  skills.forEach((s: any) => {
+  skills.forEach((s: Record<string, any>) => {
     const skill = typeof s === 'string' ? s : (s?.skill ?? s?.name ?? '');
     if (typeof skill === 'string' && skill.trim()) {
       const category = enhancedCategorizeSkill(skill.trim());
@@ -292,8 +292,13 @@ Focus on skills that enhance the user's marketability and are commonly expected 
 /**
  * Convert user profile context for GPT skill enhancement
  */
-export function createSkillEnhancementContext(userProfile: any): string {
-  const context = {
+export function createSkillEnhancementContext(userProfile: unknown): string {
+  const context: {
+    current_skills: unknown[];
+    experience: unknown[];
+    education: unknown[];
+    industry: string;
+  } = {
     current_skills: [],
     experience: [],
     education: [],
@@ -311,7 +316,7 @@ export function createSkillEnhancementContext(userProfile: any): string {
       context.current_skills = userProfile.skills;
     } else if (typeof userProfile.skills === 'object') {
       // Flatten skills object
-      Object.values(userProfile.skills).forEach((skillList: any) => {
+      Object.values(userProfile.skills).forEach((skillList: Record<string, any>) => {
         if (Array.isArray(skillList)) {
           context.current_skills.push(...skillList);
         }
@@ -321,7 +326,7 @@ export function createSkillEnhancementContext(userProfile: any): string {
 
   // Extract experience for context
   if (userProfile.experience && Array.isArray(userProfile.experience)) {
-    context.experience = userProfile.experience.map((exp: any) => ({
+    context.experience = userProfile.experience.map((exp: Record<string, any>) => ({
       position: exp.position || exp.title,
       company: exp.company,
       responsibilities: exp.responsibilities || exp.achievements
@@ -330,7 +335,7 @@ export function createSkillEnhancementContext(userProfile: any): string {
 
   // Extract education
   if (userProfile.education && Array.isArray(userProfile.education)) {
-    context.education = userProfile.education.map((edu: any) => ({
+    context.education = userProfile.education.map((edu: Record<string, any>) => ({
       degree: edu.degree,
       field: edu.field_of_study || edu.field,
       institution: edu.institution
@@ -339,7 +344,7 @@ export function createSkillEnhancementContext(userProfile: any): string {
 
   // Try to determine industry from experience
   if (context.experience.length > 0) {
-    const positions = context.experience.map((exp: any) => exp.position).join(' ');
+    const positions = context.experience.map((exp: Record<string, any>) => exp.position).join(' ');
     if (positions.toLowerCase().includes('engineer') || positions.toLowerCase().includes('developer')) {
       context.industry = 'Technology';
     } else if (positions.toLowerCase().includes('designer')) {

@@ -32,7 +32,7 @@ export const EducationSection = React.memo(({
               <CleanInput
                 label="Degree"
                 value={edu.degree}
-                onChange={(value) => {
+                onChange={(value: any) => {
                   const newEdu = [...localData.education]
                   newEdu[index].degree = value
                   setLocalData({ ...localData, education: newEdu })
@@ -41,8 +41,8 @@ export const EducationSection = React.memo(({
               />
               <CleanInput
                 label="Field of Study"
-                value={edu.field_of_study || (edu as any).field || ''}
-                onChange={(value) => {
+                value={edu.field_of_study || (edu as unknown).field || ''}
+                onChange={(value: any) => {
                   const newEdu = [...localData.education]
                   newEdu[index].field_of_study = value
                   setLocalData({ ...localData, education: newEdu })
@@ -52,7 +52,7 @@ export const EducationSection = React.memo(({
               <CleanInput
                 label="Institution"
                 value={edu.institution}
-                onChange={(value) => {
+                onChange={(value: any) => {
                   const newEdu = [...localData.education]
                   newEdu[index].institution = value
                   setLocalData({ ...localData, education: newEdu })
@@ -62,7 +62,7 @@ export const EducationSection = React.memo(({
               <CleanInput
                 label="Duration"
                 value={edu.year || ''}
-                onChange={(value) => {
+                onChange={(value: any) => {
                   const newEdu = [...localData.education]
                   newEdu[index].year = value
                   setLocalData({ ...localData, education: newEdu })

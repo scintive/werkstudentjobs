@@ -33,15 +33,15 @@ import { supabase } from '@/lib/supabase/client'
 import { InlineSuggestionOverlay } from './InlineSuggestionOverlay'
 
 interface TailoredResumePreviewProps {
-  jobData: any
-  baseResumeData: any
+  jobData: Record<string, unknown>
+  baseResumeData: Record<string, unknown>
   baseResumeId: string
-  strategy?: any
+  strategy?: Record<string, unknown>
   currentVariantId?: string | null
   onVariantIdChange?: (variantId: string | null) => void
   onStatsChange?: (stats: { pending: number; applied: number; declined: number }) => void
-  onOpenInEditor?: (tailoredData: any, variantId?: string) => void
-  onExportPDF?: (tailoredData: any) => void
+  onOpenInEditor?: (tailoredData: unknown, variantId?: string) => void
+  onExportPDF?: (tailoredData: unknown) => void
   className?: string
 }
 
@@ -59,7 +59,7 @@ export function TailoredResumePreview({
 }: TailoredResumePreviewProps) {
   const [suggestions, setSuggestions] = useState<ResumeSuggestion[]>([])
   const [variantId, setVariantId] = useState<string | null>(null)
-  const [tailoredData, setTailoredData] = useState<any>(null)
+  const [tailoredData, setTailoredData] = useState<unknown>(null)
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set())
   const [declinedSuggestions, setDeclinedSuggestions] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false) // Start with false, set to true only when actually loading
@@ -76,7 +76,7 @@ export function TailoredResumePreview({
   
   // CRITICAL: Store immutable copy of base resume data to prevent modifications
   // Create once and NEVER change it
-  const immutableBaseDataRef = useRef<any>(null)
+  const immutableBaseDataRef = useRef<unknown>(null)
   
   // Initialize only once on first render when baseResumeData is available
   if (!immutableBaseDataRef.current && baseResumeData) {
@@ -127,19 +127,19 @@ export function TailoredResumePreview({
           }
 
           if (variantData) {
-            setVariantId((variantData as any).id)
+            setVariantId((variantData as unknown).id)
             console.log('🔍 Loaded variant data skills check:', {
-              hasSkills: !!(variantData as any).tailored_data?.skills,
-              skillsKeys: (variantData as any).tailored_data?.skills ? Object.keys((variantData as any).tailored_data.skills) : [],
-              skillsCount: (variantData as any).tailored_data?.skills ? Object.values((variantData as any).tailored_data.skills).flat().length : 0
+              hasSkills: !!(variantData as unknown).tailored_data?.skills,
+              skillsKeys: (variantData as unknown).tailored_data?.skills ? Object.keys((variantData as unknown).tailored_data.skills) : [],
+              skillsCount: (variantData as unknown).tailored_data?.skills ? Object.values((variantData as unknown).tailored_data.skills).flat().length : 0
             })
-            setTailoredData((variantData as any).tailored_data)
+            setTailoredData((variantData as unknown).tailored_data)
 
             // Load existing suggestions
-            const savedSuggestions = await resumeVariantService.getSuggestions((variantData as any).id)
+            const savedSuggestions = await resumeVariantService.getSuggestions((variantData as unknown).id)
             setSuggestions(savedSuggestions)
 
-            console.log('✅ Loaded existing variant:', (variantData as any).id)
+            console.log('✅ Loaded existing variant:', (variantData as unknown).id)
             console.log(`📋 Loaded ${savedSuggestions.length} suggestions from existing variant`)
           }
         } catch (error) {
@@ -172,10 +172,10 @@ export function TailoredResumePreview({
 
           if (existingVariant) {
             console.log('🔄 Found existing variant, loading instead of re-analyzing')
-            setTailoredData((existingVariant as any).tailored_data)
-            const savedSuggestions = await resumeVariantService.getSuggestions((existingVariant as any).id)
+            setTailoredData((existingVariant as unknown).tailored_data)
+            const savedSuggestions = await resumeVariantService.getSuggestions((existingVariant as unknown).id)
             setSuggestions(savedSuggestions)
-            console.log(`✅ Loaded existing variant: ${(existingVariant as any).id} with ${savedSuggestions.length} suggestions`)
+            console.log(`✅ Loaded existing variant: ${(existingVariant as unknown).id} with ${savedSuggestions.length} suggestions`)
             return
           }
         } catch (error) {
@@ -233,7 +233,7 @@ export function TailoredResumePreview({
       if (!doc) return
 
       // Clear previous chips
-      doc.querySelectorAll('[data-suggestion-chip]')?.forEach((el) => el.remove())
+      doc.querySelectorAll('[data-suggestion-chip]')?.forEach((el: any) => el.remove())
 
       const makeChip = (targetEl: HTMLElement, s: ResumeSuggestion) => {
         if (!targetEl) return
@@ -267,7 +267,7 @@ export function TailoredResumePreview({
         accept.style.borderRadius = '10px'
         accept.style.padding = '2px 6px'
         accept.style.cursor = 'pointer'
-        accept.onclick = (e) => {
+        accept.onclick = (e: any) => {
           e.preventDefault(); e.stopPropagation();
           // Call through to parent React handler
           handleSuggestionAccept(s.id)
@@ -282,7 +282,7 @@ export function TailoredResumePreview({
         decline.style.borderRadius = '10px'
         decline.style.padding = '2px 6px'
         decline.style.cursor = 'pointer'
-        decline.onclick = (e) => {
+        decline.onclick = (e: any) => {
           e.preventDefault(); e.stopPropagation();
           handleSuggestionDecline(s.id)
         }
@@ -338,7 +338,7 @@ export function TailoredResumePreview({
     return () => clearTimeout(tid)
   }, [tailoredPreviewHtml, suggestions])
 
-  const generatePreviewHtml = async (resumeData: any, isTailored: boolean) => {
+  const generatePreviewHtml = async (resumeData: unknown, isTailored: boolean) => {
     try {
       // Debug log for skills being sent to preview API
       if (isTailored) {
@@ -355,9 +355,9 @@ export function TailoredResumePreview({
           const merged = { ...resumeData }
           
           // Helper functions
-          const isEmptyArray = (v: any) => !Array.isArray(v) || v.length === 0;
-          const isEmptyObject = (v: any) => !v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).length === 0;
-          const isEmptyString = (v: any) => typeof v !== 'string' || v.trim() === '';
+          const isEmptyArray = (v: unknown) => !Array.isArray(v) || v.length === 0;
+          const isEmptyObject = (v: unknown) => !v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).length === 0;
+          const isEmptyString = (v: unknown) => typeof v !== 'string' || v.trim() === '';
           
           // Preserve base data for empty/missing sections
           if (isEmptyObject(merged.personalInfo) && immutableBaseData.personalInfo) {
@@ -697,7 +697,7 @@ export function TailoredResumePreview({
   }, [])
 
   // Helper to apply a suggestion to resume data using new target_path format
-  const applySuggestionToData = (data: any, suggestion: ResumeSuggestion): any => {
+  const applySuggestionToData = (data: unknown, suggestion: ResumeSuggestion): unknown => {
     const updatedData = { ...data }
     const targetPath = suggestion.target_path || suggestion.target_id
 
@@ -731,7 +731,7 @@ export function TailoredResumePreview({
         if ((suggestion.section === 'skills') && suggestion.suggestion_type === 'skill_removal') {
           const toRemove = (suggestion.original_content || suggestion.before || '').toString().trim()
           if (typeof lastKey === 'string' && Array.isArray(current[lastKey])) {
-            current[lastKey] = current[lastKey].filter((s: any) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
+            current[lastKey] = current[lastKey].filter((s: unknown) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
           } else if (Array.isArray(current) && typeof lastKey === 'number') {
             // Remove by index if numeric
             current.splice(lastKey, 1)
@@ -740,7 +740,7 @@ export function TailoredResumePreview({
             if (updatedData.skills && typeof updatedData.skills === 'object') {
               Object.keys(updatedData.skills).forEach(cat => {
                 if (Array.isArray(updatedData.skills[cat])) {
-                  updatedData.skills[cat] = updatedData.skills[cat].filter((s: any) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
+                  updatedData.skills[cat] = updatedData.skills[cat].filter((s: unknown) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
                 }
               })
             }
@@ -750,8 +750,8 @@ export function TailoredResumePreview({
           if (typeof lastKey === 'string') {
             if (!Array.isArray(current[lastKey])) current[lastKey] = Array.isArray(current[lastKey]) ? current[lastKey] : []
             if (newValue) {
-              const arr = current[lastKey] as any[]
-              const exists = arr.some((s: any) => (typeof s === 'string' ? s : s?.skill) === newValue)
+              const arr = current[lastKey] as unknown[]
+              const exists = arr.some((s: unknown) => (typeof s === 'string' ? s : s?.skill) === newValue)
               if (!exists) arr.push(newValue)
             }
           } else if (Array.isArray(current) && typeof lastKey === 'number') {
@@ -788,7 +788,7 @@ export function TailoredResumePreview({
   }
   
   // Legacy fallback logic
-  const applyLegacySuggestion = (data: any, suggestion: ResumeSuggestion) => {
+  const applyLegacySuggestion = (data: unknown, suggestion: ResumeSuggestion) => {
     const out = data
     switch (suggestion.section) {
       case 'summary':
@@ -839,7 +839,7 @@ export function TailoredResumePreview({
         break
       case 'certifications':
         if (Array.isArray(out.certifications)) {
-          const idx = out.certifications.findIndex((c: any) => (c?.title || '').includes(suggestion.original_content || ''))
+          const idx = out.certifications.findIndex((c: unknown) => (c?.title || '').includes(suggestion.original_content || ''))
           if (idx >= 0) {
             if (suggestion.suggested_content) {
               out.certifications[idx].title = suggestion.suggested_content
@@ -865,7 +865,7 @@ export function TailoredResumePreview({
             out.skills[category].push(...toAdd)
           } else if (suggestion.suggestion_type === 'skill_removal') {
             const toRemove = (suggestion.original_content || suggestion.before || '').trim()
-            out.skills[category] = out.skills[category].filter((s: any) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
+            out.skills[category] = out.skills[category].filter((s: unknown) => (typeof s === 'string' ? s : s?.skill) !== toRemove)
           }
         }
         break
@@ -1150,7 +1150,7 @@ export function TailoredResumePreview({
       {/* Debug List (only when SHOW_LIST_DEBUG is true in localStorage) */}
       {typeof window !== 'undefined' && localStorage.getItem('SHOW_LIST_DEBUG') === 'true' && suggestions.length > 0 && (
         <AnimatePresence mode="popLayout">
-          {suggestions.map((suggestion) => (
+          {suggestions.map((suggestion: any) => (
             <SuggestionCard
               key={suggestion.id}
               suggestion={suggestion}

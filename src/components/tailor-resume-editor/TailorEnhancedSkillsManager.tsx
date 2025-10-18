@@ -33,7 +33,7 @@ import {
 
 interface TailorEnhancedSkillsManagerProps {
   skills: any // Current skills object
-  onSkillsChange: (skills: any) => void
+  onSkillsChange: (skills: unknown) => void
   userProfile?: any
   organizedSkills?: any // Pre-organized skills from profile extraction
   languages?: Language[] // Separate language data with proficiency
@@ -164,7 +164,7 @@ export function TailorEnhancedSkillsManager({
   const [deleteConfirmation, setDeleteConfirmation] = React.useState<{ categoryKey: string; displayName: string } | null>(null)
 
   // Helper function to check if organized skills have already been synced with current skills
-  const checkIfSkillsAlreadySynced = (organizedCategories: Record<string, OrganizedCategory>, currentSkills: any): boolean => {
+  const checkIfSkillsAlreadySynced = (organizedCategories: Record<string, OrganizedCategory>, currentSkills: unknown): boolean => {
     // Convert organized categories to the same format as skills object
     const organizedSkillsMap: Record<string, string[]> = {}
     Object.entries(organizedCategories).forEach(([categoryKey, category]) => {
@@ -200,7 +200,7 @@ export function TailorEnhancedSkillsManager({
 
       // Check if all skills exist (order doesn't matter)
       const organizedSet = new Set(organizedSkills.map(s => s.toLowerCase()))
-      const currentSet = new Set(currentCategorySkills.map((s: any) =>
+      const currentSet = new Set(currentCategorySkills.map((s: unknown) =>
         typeof s === 'string' ? s.toLowerCase() : s.skill?.toLowerCase() || ''
       ))
 
@@ -284,7 +284,7 @@ export function TailorEnhancedSkillsManager({
       setJobOptimizedSkills([])
       const jobKeywords = [
         ...(strategy.ats_keywords || []),
-        ...(strategy.must_have_gaps || []).map((gap: any) => gap.skill),
+        ...(strategy.must_have_gaps || []).map((gap: unknown) => gap.skill),
         ...(jobData.skills || []),
         ...(jobData.responsibilities || [])
       ]
@@ -596,7 +596,7 @@ export function TailorEnhancedSkillsManager({
       totalCategoriesBeingSync: Object.keys(data.organized_categories || {}).length
     })
 
-    const skillsObject: any = {}
+    const skillsObject: unknown = {}
 
     Object.entries(data.organized_categories).forEach(([categoryKey, category]) => {
       const displayName = categoryKey
@@ -690,7 +690,7 @@ export function TailorEnhancedSkillsManager({
         const jobSkills = [
           ...(jobData.skills || []),
           ...(strategy?.ats_keywords || []),
-          ...(strategy?.must_have_gaps || []).map((gap: any) => gap.skill)
+          ...(strategy?.must_have_gaps || []).map((gap: unknown) => gap.skill)
         ]
         
         const suggestions = jobSkills
@@ -928,9 +928,9 @@ export function TailorEnhancedSkillsManager({
                           <input
                             type="text"
                             value={editingCategoryName}
-                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                            onChange={(e: any) => setEditingCategoryName(e.target.value)}
                             onBlur={() => handleRenameCategory(categoryKey, editingCategoryName)}
-                            onKeyDown={(e) => {
+                            onKeyDown={(e: any) => {
                               if (e.key === 'Enter') handleRenameCategory(categoryKey, editingCategoryName)
                               if (e.key === 'Escape') setEditingCategory(null)
                             }}
@@ -1103,11 +1103,11 @@ export function TailorEnhancedSkillsManager({
                           <input
                             type="text"
                             value={newSkillInputs[categoryKey] || ''}
-                            onChange={(e) => setNewSkillInputs(prev => ({ 
+                            onChange={(e: any) => setNewSkillInputs(prev => ({ 
                               ...prev, 
                               [categoryKey]: e.target.value 
                             }))}
-                            onKeyDown={(e) => {
+                            onKeyDown={(e: any) => {
                               if (e.key === 'Enter') {
                                 addSkillToCategory(categoryKey, newSkillInputs[categoryKey] || '')
                               }
@@ -1153,7 +1153,7 @@ export function TailorEnhancedSkillsManager({
         })
 
         // If not found in organized data, check the skills prop directly
-        let languageSkills: any[] = []
+        let languageSkills: unknown[] = []
         let languageCategoryKey = 'languages'
 
         if (languageEntry) {
@@ -1192,9 +1192,9 @@ export function TailorEnhancedSkillsManager({
                         </span>
 
                         {/* Job Relevance Indicator */}
-                        {languageEntry && languageEntry[1].jobRelevance && aiMode && (
+                        {languageEntry?.[1]?.jobRelevance && aiMode && (
                           <div className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium uppercase">
-                            {languageEntry[1].jobRelevance} relevance
+                            {languageEntry?.[1]?.jobRelevance} relevance
                           </div>
                         )}
                       </div>
@@ -1248,7 +1248,7 @@ export function TailorEnhancedSkillsManager({
                                 {/* Proficiency Dropdown */}
                                 <select
                                   value={proficiency || 'Professional working'}
-                                  onChange={(e) => {
+                                  onChange={(e: any) => {
                                     const updatedSkills = { ...skills }
                                     const newLangValue = `${language} (${e.target.value})`
 
@@ -1308,11 +1308,11 @@ export function TailorEnhancedSkillsManager({
                           <input
                             type="text"
                             value={newSkillInputs[languageCategoryKey] || ''}
-                            onChange={(e) => setNewSkillInputs(prev => ({
+                            onChange={(e: any) => setNewSkillInputs(prev => ({
                               ...prev,
                               [languageCategoryKey]: e.target.value
                             }))}
-                            onKeyDown={(e) => {
+                            onKeyDown={(e: any) => {
                               if (e.key === 'Enter') {
                                 addSkillToCategory(languageCategoryKey, newSkillInputs[languageCategoryKey] || '')
                               }

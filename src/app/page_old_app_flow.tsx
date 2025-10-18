@@ -65,7 +65,7 @@ function MainApp() {
   const [appSteps, setAppSteps] = React.useState<AppStep[]>(steps)
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null)
   const [selectedTheme, setSelectedTheme] = React.useState<string>('swiss')
-  const [organizedSkills, setOrganizedSkills] = React.useState<any>(null)
+  const [organizedSkills, setOrganizedSkills] = React.useState<unknown>(null)
   const [selectedJob, setSelectedJob] = React.useState<JobWithCompany | null>(null)
   const [isCheckingProfile, setIsCheckingProfile] = React.useState(true)
   const [isAuthed, setIsAuthed] = React.useState<boolean>(false)
@@ -168,8 +168,8 @@ function MainApp() {
                   if (enhanceResp.ok) {
                     const enhanced = await enhanceResp.json()
                     if (enhanced && enhanced.organized_skills) {
-                      const organized_categories: Record<string, any> = {}
-                      Object.entries(enhanced.organized_skills).forEach(([cat, list]: any) => {
+                      const organized_categories: Record<string, unknown> = {}
+                      Object.entries(enhanced.organized_skills).forEach(([cat, list]) => {
                         organized_categories[String(cat)] = {
                           skills: Array.isArray(list) ? list : [],
                           suggestions: Array.isArray(enhanced.suggestions?.[cat]) ? enhanced.suggestions[cat] : [],
@@ -220,7 +220,7 @@ function MainApp() {
     })))
   }, [])
 
-  const handleProfileExtracted = React.useCallback((profile: UserProfile, organizedSkills?: any) => {
+  const handleProfileExtracted = React.useCallback((profile: UserProfile, organizedSkills?: unknown) => {
     setUserProfile(profile)
     setOrganizedSkills(organizedSkills)
     
@@ -257,12 +257,15 @@ function MainApp() {
           duration: exp.duration,
           achievements: exp.responsibilities
         })),
-        education: (profile.education || []).map(edu => ({
-          degree: edu.degree,
-          field_of_study: edu.field_of_study,
-          institution: edu.institution,
-          year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
-        })),
+        education: (profile.education || []).map(edu => {
+          const eduObj = edu as unknown as Record<string, unknown>;
+          return {
+            degree: edu.degree,
+            field_of_study: edu.field_of_study,
+            institution: edu.institution,
+            year: (eduObj.year ? String(eduObj.year) : edu.duration) || ''
+          };
+        }),
         projects: (profile.projects || []).map(proj => ({
           name: proj.title,
           description: proj.description,
@@ -291,11 +294,12 @@ function MainApp() {
             }
           }
           // Handle object format from extraction
+          const langObj = lang as Record<string, unknown>;
           return {
-            name: lang.language || lang.name || '',
-            language: lang.language || lang.name || '',
-            level: lang.proficiency || lang.level || 'Not specified',
-            proficiency: lang.proficiency || lang.level || 'Not specified'
+            name: (langObj.language as string) || (langObj.name as string) || '',
+            language: (langObj.language as string) || (langObj.name as string) || '',
+            level: (langObj.proficiency as string) || (langObj.level as string) || 'Not specified',
+            proficiency: (langObj.proficiency as string) || (langObj.level as string) || 'Not specified'
           }
         }),
         certifications: profile.certifications.map(cert => ({
@@ -303,12 +307,16 @@ function MainApp() {
           issuer: cert.institution,
           date: cert.date
         })),
-        customSections: (profile as any).custom_sections ? (() => {
+        customSections: (() => {
+          const profileObj = profile as unknown as Record<string, unknown>;
+          const customSections = profileObj.custom_sections as Array<Record<string, unknown>> | undefined;
+          if (!customSections) return [];
+
           // Deduplicate sections by title (case-insensitive)
           const seenTitles = new Set<string>();
-          return (profile as any).custom_sections
-            .filter((section: any) => {
-              const normalizedTitle = section.title.toLowerCase().trim();
+          return customSections
+            .filter((section: Record<string, unknown>) => {
+              const normalizedTitle = String(section.title || '').toLowerCase().trim();
               if (seenTitles.has(normalizedTitle)) {
                 console.log('🔍 SKIPPING DUPLICATE CUSTOM SECTION:', section.title);
                 return false;
@@ -316,18 +324,21 @@ function MainApp() {
               seenTitles.add(normalizedTitle);
               return true;
             })
-            .map((section: any, index: number) => ({
-              id: `custom-${index}`,
-              title: section.title,
-              type: 'custom',
-              items: section.items.map((item: any) => ({
-                title: item.title || '',
-                subtitle: item.subtitle || '',
-                date: item.date || '',
-                description: item.description || ''
-              }))
-            }));
-        })() : []
+            .map((section: Record<string, unknown>, index: number) => {
+              const items = section.items as Array<Record<string, unknown>> | undefined;
+              return {
+                id: `custom-${index}`,
+                title: String(section.title || ''),
+                type: 'list' as const,
+                items: (items || []).map((item: Record<string, unknown>) => ({
+                  title: String(item.title || ''),
+                  subtitle: String(item.subtitle || ''),
+                  date: String(item.date || ''),
+                  description: String(item.description || '')
+                }))
+              };
+            });
+        })()
       }
       
       // Update resume data through context
@@ -427,7 +438,7 @@ function MainApp() {
         return (
           <JobBrowser 
             userProfile={userProfile}
-            onJobSelect={(job) => {
+            onJobSelect={(job: any) => {
               setSelectedJob(job)
               // Automatically move to strategy step after job selection
               setTimeout(() => {

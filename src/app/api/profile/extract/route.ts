@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { llmService } from '@/lib/services/llmService';
 import { validateFile, checkRateLimit } from '@/lib/utils/apiValidation';
 // Lazy import puppeteer to avoid bundling/runtime issues
-let _puppeteer: any = null;
+let _puppeteer: unknown = null;
 async function getPuppeteer() {
   if (_puppeteer) return _puppeteer;
   try {
@@ -35,7 +35,8 @@ async function extractTextFromPDF(file: File): Promise<string> {
   // Fallback: Puppeteer + PDF.js (requires network to CDN)
   const base64 = buffer.toString('base64');
   const puppeteer = await getPuppeteer();
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const browser = await (puppeteer as any).launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   try {
     const page = await browser.newPage();
     await page.setContent(`<!doctype html><html><head>
@@ -48,14 +49,23 @@ async function extractTextFromPDF(file: File): Promise<string> {
       const len = raw.length;
       const bytes = new Uint8Array(len);
       for (let i = 0; i < len; i++) bytes[i] = raw.charCodeAt(i);
-      const pdfjsLib = (window as typeof window & { pdfjsLib: any }).pdfjsLib;
-      const task = pdfjsLib.getDocument({ data: bytes });
-      const pdf = await task.promise;
+      const pdfjsLib = (window as typeof window & { pdfjsLib: unknown }).pdfjsLib;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const task = (pdfjsLib as any).getDocument({ data: bytes });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdf = await (task as any).promise;
       let all = '';
-      for (let p = 1; p <= pdf.numPages; p++) {
-        const page = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        const txt = content.items.map((it:any) => it.str).join(' ');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (let p = 1; p <= (pdf as any).numPages; p++) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const page = await (pdf as any).getPage(p);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const content = await (page as any).getTextContent();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const txt = (content as any).items.map((it: Record<string, any>) => {
+          const item = it as Record<string, unknown>;
+          return item.str;
+        }).join(' ');
         all += '\n\n' + txt;
       }
       return all;
@@ -108,6 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize LLM client
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (llmService as any).client = llmService.initializeClient();
     } catch (e) {
       console.error('🔐 OpenAI client init failed:', e);
@@ -115,27 +126,34 @@ export async function POST(request: NextRequest) {
     }
     
     // Use LLM service to structure the profile
-    let profile: any;
+    let profile: unknown;
     try {
       profile = await llmService.extractProfileFromText(extractedText);
 
+      // Cast profile for property access
+      const profileData = profile as Record<string, unknown>;
+
       // DEBUG: Log what GPT extracted for experience and certifications
       console.log('🔍 === GPT EXTRACTION DEBUG ===');
-      console.log('🔍 Experience count:', (profile.experience || []).length);
-      if (profile.experience && profile.experience.length > 0) {
-        profile.experience.forEach((exp: any, idx: number) => {
+      const experience = profileData.experience as unknown[] | undefined;
+      console.log('🔍 Experience count:', (experience || []).length);
+      if (experience && experience.length > 0) {
+        experience.forEach((exp: unknown, idx: number) => {
+          const expData = exp as Record<string, unknown>;
+          const responsibilities = expData.responsibilities as unknown[] | undefined;
           console.log(`🔍 Experience ${idx + 1}:`, {
-            company: exp.company,
-            position: exp.position,
-            duration: exp.duration,
-            responsibilities_count: (exp.responsibilities || []).length,
-            responsibilities: exp.responsibilities
+            company: expData.company,
+            position: expData.position,
+            duration: expData.duration,
+            responsibilities_count: (responsibilities || []).length,
+            responsibilities: responsibilities
           });
         });
       }
-      console.log('🔍 Certifications count:', (profile.certifications || []).length);
-      if (profile.certifications && profile.certifications.length > 0) {
-        console.log('🔍 Certifications:', JSON.stringify(profile.certifications, null, 2));
+      const certifications = profileData.certifications as unknown[] | undefined;
+      console.log('🔍 Certifications count:', (certifications || []).length);
+      if (certifications && certifications.length > 0) {
+        console.log('🔍 Certifications:', JSON.stringify(certifications, null, 2));
       }
       console.log('🔍 === END DEBUG ===');
 
@@ -146,7 +164,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check for required fields
-      if (!profile.personal_details) {
+      if (!profileData.personal_details) {
         console.error('🧠 Profile missing personal_details:', profile);
         throw new Error('Profile extraction missing required personal details');
       }
@@ -155,20 +173,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile extraction failed', details: aiErr instanceof Error ? aiErr.message : 'AI error' }, { status: 500 });
     }
 
+    // Cast profile for remaining property access
+    const profileData = profile as Record<string, unknown>;
+    const education = profileData.education as unknown[] | undefined;
+
     // Format education entries - try GPT first, fallback to manual expansion
-    if (profile.education && Array.isArray(profile.education)) {
-      console.log('🔍 RAW PROFILE EDUCATION BEFORE FORMATTING:', JSON.stringify(profile.education, null, 2));
-      console.log('🔍 EDUCATION FIELD NAMES:', Object.keys(profile.education[0] || {}));
-      
+    if (education && Array.isArray(education)) {
+      console.log('🔍 RAW PROFILE EDUCATION BEFORE FORMATTING:', JSON.stringify(education, null, 2));
+      console.log('🔍 EDUCATION FIELD NAMES:', Object.keys(education[0] || {}));
+
       // Use LLM service for reliable education formatting (now with manual expansion fallback)
       try {
-        profile.education = await llmService.formatEducationEntries(profile.education);
-        console.log('🔍 LLM SERVICE FORMATTED EDUCATION:', JSON.stringify(profile.education, null, 2));
+        profileData.education = await llmService.formatEducationEntries(education);
+        console.log('🔍 LLM SERVICE FORMATTED EDUCATION:', JSON.stringify(profileData.education, null, 2));
       } catch (error) {
         console.warn('🔍 LLM formatting failed, keeping original:', error);
       }
     } else {
-      console.log('🔍 NO EDUCATION DATA OR NOT ARRAY:', profile.education);
+      console.log('🔍 NO EDUCATION DATA OR NOT ARRAY:', education);
     }
 
     // Manual degree expansion function
@@ -203,24 +225,27 @@ export async function POST(request: NextRequest) {
     // INTELLIGENT SKILL ORGANIZATION - Combined into profile extraction for faster loading
     console.log('🧠🎯 === ORGANIZING SKILLS INTELLIGENTLY ===');
     let organizedSkills = null;
-    
+
     try {
       // Extract current skills array from profile
       const currentSkills: string[] = [];
-      if (profile.skills) {
-        Object.values(profile.skills).forEach((skillArray: any) => {
+      const skills = profileData.skills as Record<string, unknown> | undefined;
+      if (skills) {
+        Object.values(skills).forEach((skillArray: unknown) => {
           if (Array.isArray(skillArray)) {
             currentSkills.push(...skillArray);
           }
         });
       }
-      
+
       console.log('🧠🎯 Current skills found:', currentSkills.length);
-      
+
       // Organize skills intelligently using GPT
       if (process.env.OPENAI_API_KEY) {
         organizedSkills = await llmService.organizeSkillsIntelligently(profile, currentSkills);
-        console.log('🧠🎯 Categories created:', Object.keys(organizedSkills.organized_categories || {}).length);
+        const organizedSkillsData = organizedSkills as Record<string, unknown> | null;
+        const organizedCategories = organizedSkillsData?.organized_categories as Record<string, unknown> | undefined;
+        console.log('🧠🎯 Categories created:', Object.keys(organizedCategories || {}).length);
       } else {
         console.log('🧠🎯 No OpenAI key, using fallback organization');
         organizedSkills = {
@@ -238,7 +263,7 @@ export async function POST(request: NextRequest) {
           },
           profile_assessment: {
             career_focus: "Professional Development",
-            skill_level: "entry", 
+            skill_level: "entry",
             recommendations: "Build foundational skills"
           },
           category_mapping: {},
@@ -252,7 +277,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Debug custom sections extraction
-    console.log('🔍 PROFILE EXTRACTION - Custom sections extracted:', JSON.stringify(profile.custom_sections, null, 2));
+    const customSections = profileData.custom_sections;
+    console.log('🔍 PROFILE EXTRACTION - Custom sections extracted:', JSON.stringify(customSections, null, 2));
     console.log('🔍 PROFILE EXTRACTION - Profile keys:', Object.keys(profile));
 
     return NextResponse.json({

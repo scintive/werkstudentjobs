@@ -4,24 +4,25 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
+import type { ResumeDataStructure, JobRow } from '@/lib/types/common'
 
 export interface AnalysisRequest {
   jobId: string
   baseResumeId: string
-  baseResumeData: any
-  jobData: any
+  baseResumeData: ResumeDataStructure | unknown
+  jobData: JobRow | unknown
 }
 
 export interface AnalysisResult {
-  strategy: any
-  tailoredResume: any
-  suggestions: any[]
+  strategy: Record<string, unknown>
+  tailoredResume: ResumeDataStructure | unknown
+  suggestions: unknown[]
   variantId: string
 }
 
 export interface TailorVariant {
   id: string
-  tailored_data: any
+  tailored_data: ResumeDataStructure | unknown
   created_at: string
 }
 
@@ -99,12 +100,12 @@ class TailorAnalysisService {
       }
 
       if (data) {
-        console.log('✅ Found existing variant:', data.id)
+        console.log('✅ Found existing variant:', (data as unknown).id)
       } else {
         console.log('🆕 No existing variant found, will create new one')
       }
 
-      return data
+      return data as unknown
     } catch (error) {
       console.error('❌ Error in getExistingVariant:', error)
       return null
@@ -114,7 +115,7 @@ class TailorAnalysisService {
   /**
    * Get suggestions for a variant
    */
-  private async getVariantSuggestions(variantId: string): Promise<any[]> {
+  private async getVariantSuggestions(variantId: string): Promise<unknown[]> {
     try {
       const { data, error } = await supabase
         .from('resume_suggestions')
@@ -201,7 +202,7 @@ class TailorAnalysisService {
         .update({
           accepted: action === 'accept' ? true : false,
           applied_at: new Date().toISOString()
-        })
+        } as never)
         .eq('id', suggestionId)
         .eq('user_id', user.id)
 
@@ -219,17 +220,17 @@ class TailorAnalysisService {
   /**
    * Update variant data (when suggestions are applied)
    */
-  async updateVariant(variantId: string, updatedData: any): Promise<void> {
+  async updateVariant(variantId: string, updatedData: unknown): Promise<void> {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
       const { error } = await supabase
         .from('resume_variants')
-        .update({ 
+        .update({
           tailored_data: updatedData,
           updated_at: new Date().toISOString()
-        })
+        } as never)
         .eq('id', variantId)
         .eq('user_id', user.id)
 

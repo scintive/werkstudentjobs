@@ -13,7 +13,7 @@ Generates optimized short search phrases to surface high-signal crash courses.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const tasks = Array.isArray(body?.tasks) ? body.tasks.filter((t: any) => typeof t === 'string' && t.trim()) : [];
+    const tasks = Array.isArray(body?.tasks) ? body.tasks.filter((t: unknown) => typeof t === 'string' && t.trim()) : [];
     if (!tasks.length) return NextResponse.json({ success: true, keywords: {} });
 
     const system = `You generate concise, precise search keywords for YouTube/Google to find crash courses.

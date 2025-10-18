@@ -4,8 +4,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Lazy import puppeteer to avoid bundling/runtime issues
-let _puppeteer: any = null;
-let _chromium: any = null;
+let _puppeteer: unknown = null;
+let _chromium: unknown = null;
 
 // Try puppeteer-core first (for Vercel), fallback to puppeteer (for local)
 async function getPuppeteer() {
@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
     const supabase = createServerSupabase(request);
 
     // Fetch variant data from Supabase
-    const { data: variant, error: variantError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: variant, error: variantError } = await (supabase as any)
       .from('resume_variants')
       .select(`
         *,
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('id', variantId as any)
+      .eq('id', variantId)
       .single();
 
     if (variantError || !variant) {
@@ -86,13 +87,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
     }
 
-    const variantData = variant as any;
+    const variantData = variant as Record<string, unknown>;
 
     // Fetch base resume data
-    const { data: baseResume, error: resumeError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: baseResume, error: resumeError } = await (supabase as any)
       .from('resume_data')
       .select('*')
-      .eq('id', variantData.base_resume_id as any)
+      .eq('id', variantData.base_resume_id)
       .single();
 
     if (resumeError || !baseResume) {
@@ -101,21 +103,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge base resume with variant data
+    const tailoredData = variantData.tailored_data as Record<string, unknown> | undefined;
     const resumeData = {
-      ...(baseResume as any),
-      ...(variantData.tailored_data || {}),
+      ...(baseResume as Record<string, unknown>),
+      ...(tailoredData || {}),
     };
-    
+
     // Get template from variant column or from tailored_data as fallback
-    const selectedTemplate = variantData.template || (variantData.tailored_data as any)?._template || 'swiss';
+    const selectedTemplate = variantData.template || tailoredData?._template || 'swiss';
     console.log('📋 PDF Export: Using template:', selectedTemplate);
 
     // Generate filename: UserFullName_CompanyName_Resume.pdf
-    const userName = (resumeData.personal_info?.name || resumeData.personalInfo?.name || 'User')
+    const resumeDataTyped = resumeData as Record<string, unknown>;
+    const personalInfo = resumeDataTyped.personal_info as Record<string, unknown> | undefined;
+    const personalInfoAlt = resumeDataTyped.personalInfo as Record<string, unknown> | undefined;
+    const userName = String(personalInfo?.name || personalInfoAlt?.name || 'User')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
-    const companyName = (variantData.jobs?.companies?.name || 'Company')
+    const jobs = variantData.jobs as Record<string, unknown> | undefined;
+    const companies = jobs?.companies as Record<string, unknown> | undefined;
+    const companyName = String(companies?.name || 'Company')
       .replace(/\s+/g, '')
       .replace(/[^a-zA-Z0-9]/g, '');
 
@@ -143,22 +151,26 @@ export async function GET(request: NextRequest) {
     }
 
     const previewData = await previewResponse.json();
-    const html = (previewData as any)?.html;
+    const previewDataTyped = previewData as Record<string, unknown>;
+    const html = previewDataTyped.html;
 
     if (typeof html !== 'string') {
       throw new Error('Preview response missing HTML payload');
     }
 
-    const htmlContent = html as string;
+    const htmlContent = html;
 
     // Launch Puppeteer with serverless Chrome if on Vercel
     const puppeteer = await getPuppeteer();
     const chromium = await getChromium();
-    
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromiumAny = chromium as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const launchOptions: any = {
-      headless: chromium?.headless !== undefined ? chromium.headless : true,
-      args: chromium 
-        ? [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox']
+      headless: chromiumAny?.headless !== undefined ? chromiumAny.headless : true,
+      args: chromiumAny
+        ? [...chromiumAny.args, '--no-sandbox', '--disable-setuid-sandbox']
         : [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -169,16 +181,17 @@ export async function GET(request: NextRequest) {
             '--disable-gpu',
             '--disable-features=VizDisplayCompositor'
           ],
-      defaultViewport: chromium?.defaultViewport
+      defaultViewport: chromiumAny?.defaultViewport
     };
 
     // Use serverless Chrome executable on Vercel
-    if (chromium) {
-      launchOptions.executablePath = await chromium.executablePath();
+    if (chromiumAny) {
+      launchOptions.executablePath = await chromiumAny.executablePath();
       console.log('✅ Chromium executable path:', launchOptions.executablePath);
     }
 
-    browser = await puppeteer.launch(launchOptions);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    browser = await (puppeteer as any).launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, {
@@ -284,11 +297,14 @@ export async function POST(request: NextRequest) {
     // Launch Puppeteer with serverless Chrome if on Vercel
     const puppeteer = await getPuppeteer();
     const chromium = await getChromium();
-    
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromiumAny = chromium as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const launchOptions: any = {
-      headless: chromium?.headless !== undefined ? chromium.headless : true,
-      args: chromium 
-        ? [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox']
+      headless: chromiumAny?.headless !== undefined ? chromiumAny.headless : true,
+      args: chromiumAny
+        ? [...chromiumAny.args, '--no-sandbox', '--disable-setuid-sandbox']
         : [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -299,16 +315,17 @@ export async function POST(request: NextRequest) {
             '--disable-gpu',
             '--disable-features=VizDisplayCompositor'
           ],
-      defaultViewport: chromium?.defaultViewport
+      defaultViewport: chromiumAny?.defaultViewport
     };
 
     // Use serverless Chrome executable on Vercel
-    if (chromium) {
-      launchOptions.executablePath = await chromium.executablePath();
+    if (chromiumAny) {
+      launchOptions.executablePath = await chromiumAny.executablePath();
       console.log('✅ Chromium executable path:', launchOptions.executablePath);
     }
 
-    browser = await puppeteer.launch(launchOptions);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    browser = await (puppeteer as any).launch(launchOptions);
 
     const page = await browser.newPage();
     

@@ -16,8 +16,8 @@ interface SimpleTailoredPreviewProps {
   jobData: any
   baseResumeData: any
   baseResumeId: string
-  onStatsChange?: (stats: any) => void
-  onOpenInEditor?: (tailoredData: any, variantId: string) => void
+  onStatsChange?: (stats: unknown) => void
+  onOpenInEditor?: (tailoredData: unknown, variantId: string) => void
 }
 
 export function SimpleTailoredPreview({
@@ -260,7 +260,7 @@ export function SimpleTailoredPreview({
           {/* Template Selector */}
           <select
             value={selectedTemplate}
-            onChange={(e) => handleTemplateChange(e.target.value)}
+            onChange={(e: any) => handleTemplateChange(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="swiss">Swiss</option>

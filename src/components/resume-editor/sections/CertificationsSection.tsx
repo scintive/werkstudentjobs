@@ -34,7 +34,7 @@ export const CertificationsSection = React.memo(({
             <CleanInput
               label="Certification Name"
               value={cert.name}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newCerts = [...(localData.certifications || [])]
                 newCerts[index].name = value
                 setLocalData({ ...localData, certifications: newCerts })
@@ -44,7 +44,7 @@ export const CertificationsSection = React.memo(({
             <CleanInput
               label="Issuing Organization"
               value={cert.issuer}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newCerts = [...(localData.certifications || [])]
                 newCerts[index].issuer = value
                 setLocalData({ ...localData, certifications: newCerts })
@@ -54,7 +54,7 @@ export const CertificationsSection = React.memo(({
             <CleanInput
               label="Date Obtained"
               value={cert.date}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newCerts = [...(localData.certifications || [])]
                 newCerts[index].date = value
                 setLocalData({ ...localData, certifications: newCerts })

@@ -34,24 +34,30 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Initialize LLM client 
+    // Initialize LLM client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (llmService as any).client = llmService.initializeClient();
     
     // Generate intelligent skill suggestions based on profile analysis
     console.log('🎯 Calling GPT for intelligent skill suggestions...');
-    const intelligentSuggestions = await llmService.generateSkillSuggestions(userProfile, currentSkills);
+    const intelligentSuggestionsRaw = await llmService.generateSkillSuggestions(userProfile, currentSkills);
+    const intelligentSuggestions = intelligentSuggestionsRaw as Record<string, unknown>;
 
     // Also organize current skills for backward compatibility
-    const skillsArray = Array.isArray(currentSkills) ? currentSkills : 
-                      typeof currentSkills === 'object' ? 
+    const skillsArray = Array.isArray(currentSkills) ? currentSkills :
+                      typeof currentSkills === 'object' ?
                       Object.values(currentSkills).flat() : [];
-    
+
     const organizedSkills = enhancedAutoCategorizeSkills(skillsArray);
-    
+
     console.log('🎯 GPT Suggestions Generated Successfully');
-    console.log('🎯 Technical Suggestions:', intelligentSuggestions.skill_suggestions?.technical?.length || 0);
-    console.log('🎯 Soft Skills Suggestions:', intelligentSuggestions.skill_suggestions?.soft_skills?.length || 0);
-    console.log('🎯 Priority Recommendations:', intelligentSuggestions.priority_recommendations?.length || 0);
+    const skillSuggestions = intelligentSuggestions.skill_suggestions as Record<string, unknown> | undefined;
+    const technical = skillSuggestions?.technical as unknown[] | undefined;
+    const softSkills = skillSuggestions?.soft_skills as unknown[] | undefined;
+    const priorityRecommendations = intelligentSuggestions.priority_recommendations as unknown[] | undefined;
+    console.log('🎯 Technical Suggestions:', technical?.length || 0);
+    console.log('🎯 Soft Skills Suggestions:', softSkills?.length || 0);
+    console.log('🎯 Priority Recommendations:', priorityRecommendations?.length || 0);
 
     // Format response to include both organized skills and intelligent suggestions
     const enhancedResponse = {
@@ -63,10 +69,10 @@ export async function POST(request: NextRequest) {
       
       // Legacy format support for existing frontend
       suggestions: {
-        technical: intelligentSuggestions.skill_suggestions?.technical?.map((s: any) => s.skill) || [],
-        soft_skills: intelligentSuggestions.skill_suggestions?.soft_skills?.map((s: any) => s.skill) || [],
-        industry_specific: intelligentSuggestions.skill_suggestions?.industry_specific?.map((s: any) => s.skill) || [],
-        tools_platforms: intelligentSuggestions.skill_suggestions?.tools_platforms?.map((s: any) => s.skill) || []
+        technical: skillSuggestions?.technical ? (skillSuggestions.technical as unknown[]).map((s: unknown) => (s as Record<string, unknown>).skill) : [],
+        soft_skills: skillSuggestions?.soft_skills ? (skillSuggestions.soft_skills as unknown[]).map((s: unknown) => (s as Record<string, unknown>).skill) : [],
+        industry_specific: skillSuggestions?.industry_specific ? (skillSuggestions.industry_specific as unknown[]).map((s: unknown) => (s as Record<string, unknown>).skill) : [],
+        tools_platforms: skillSuggestions?.tools_platforms ? (skillSuggestions.tools_platforms as unknown[]).map((s: unknown) => (s as Record<string, unknown>).skill) : []
       },
       
       // Enhanced suggestions with reasoning

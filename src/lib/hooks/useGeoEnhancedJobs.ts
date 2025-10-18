@@ -13,11 +13,11 @@ interface UseGeoEnhancedJobsOptions {
   enableGeoMatching?: boolean;
 }
 
-interface GeoEnhancedJob extends JobWithCompany {
+export interface GeoEnhancedJob extends JobWithCompany {
   distanceKm?: number;
   locationScore?: number;
   locationExplanation?: string;
-  enhancedMatchScore?: number;
+  enhancedMatchScore?: number | null;
 }
 
 export function useGeoEnhancedJobs({
@@ -51,14 +51,15 @@ export function useGeoEnhancedJobs({
           jobs
         );
 
-        const jobsWithGeoData = jobs.map(job => {
+        const jobsWithGeoData: GeoEnhancedJob[] = jobs.map(job => {
           const locationMatch = locationMatches.get(job.id);
-          
+
           if (!locationMatch) {
             return {
               ...job,
               locationScore: 0.5,
-              locationExplanation: 'No location data'
+              locationExplanation: 'No location data',
+              enhancedMatchScore: job.match_score
             };
           }
 

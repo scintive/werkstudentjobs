@@ -1,8 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Type definitions for cover letter generation
+interface CoverLetterContent {
+  subject?: string;
+  salutation?: string;
+  intro: string;
+  body_paragraphs: string[];
+  closing: string;
+  sign_off?: string;
+}
+
+interface CoverLetter {
+  content: CoverLetterContent;
+}
+
+interface PersonalInfo {
+  name?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+}
+
+interface UserProfile {
+  personalInfo?: PersonalInfo;
+  name?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+}
+
+interface JobCompany {
+  name?: string;
+}
+
+interface JobData {
+  companies?: JobCompany;
+  company_name?: string;
+  title: string;
+  location_street?: string;
+  location_zip?: string;
+  location_city?: string;
+}
+
 // Lazy import puppeteer to avoid bundling issues
 let _puppeteer: any = null;
-let _chromium: any = null;
+let _chromium: unknown = null;
 
 // Try puppeteer-core first (for Vercel), fallback to puppeteer (for local)
 async function getPuppeteer() {
@@ -76,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Launch Puppeteer with serverless Chrome if on Vercel
     const puppeteer = await getPuppeteer();
-    const chromium = await getChromium();
+    const chromium = await getChromium() as any;
     
     const launchOptions: any = {
       headless: chromium?.headless !== undefined ? chromium.headless : true,
@@ -139,9 +181,9 @@ export async function POST(request: NextRequest) {
 }
 
 function generateCoverLetterHTML(
-  coverLetter: any,
-  userProfile: any,
-  job: any,
+  coverLetter: CoverLetter,
+  userProfile: UserProfile,
+  job: JobData,
   template: string
 ): string {
   const templates = {
@@ -155,7 +197,7 @@ function generateCoverLetterHTML(
   return generator(coverLetter, userProfile, job);
 }
 
-function generateProfessionalTemplate(coverLetter: any, userProfile: any, job: any): string {
+function generateProfessionalTemplate(coverLetter: CoverLetter, userProfile: UserProfile, job: JobData): string {
   const fullText = `${coverLetter.content.intro}\n\n${coverLetter.content.body_paragraphs.join('\n\n')}\n\n${coverLetter.content.closing}`;
   const today = new Date().toLocaleDateString('de-DE');
 
@@ -301,7 +343,7 @@ function generateProfessionalTemplate(coverLetter: any, userProfile: any, job: a
   `;
 }
 
-function generateModernTemplate(coverLetter: any, userProfile: any, job: any): string {
+function generateModernTemplate(coverLetter: CoverLetter, userProfile: UserProfile, job: JobData): string {
   const fullText = `${coverLetter.content.intro}\n\n${coverLetter.content.body_paragraphs.join('\n\n')}\n\n${coverLetter.content.closing}`;
   const today = new Date().toLocaleDateString('de-DE');
 
@@ -451,7 +493,7 @@ function generateModernTemplate(coverLetter: any, userProfile: any, job: any): s
   `;
 }
 
-function generateElegantTemplate(coverLetter: any, userProfile: any, job: any): string {
+function generateElegantTemplate(coverLetter: CoverLetter, userProfile: UserProfile, job: JobData): string {
   const fullText = `${coverLetter.content.intro}\n\n${coverLetter.content.body_paragraphs.join('\n\n')}\n\n${coverLetter.content.closing}`;
   const today = new Date().toLocaleDateString('de-DE');
 
@@ -587,7 +629,7 @@ function generateElegantTemplate(coverLetter: any, userProfile: any, job: any): 
   `;
 }
 
-function generateMinimalTemplate(coverLetter: any, userProfile: any, job: any): string {
+function generateMinimalTemplate(coverLetter: CoverLetter, userProfile: UserProfile, job: JobData): string {
   const fullText = `${coverLetter.content.intro}\n\n${coverLetter.content.body_paragraphs.join('\n\n')}\n\n${coverLetter.content.closing}`;
   const today = new Date().toLocaleDateString('de-DE');
 

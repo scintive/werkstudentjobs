@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Type assertion for jobData to fix Vercel build issues
     // Using type assertion because Supabase's type inference doesn't handle nested select fields properly
-    const jobDataTyped = jobData as Record<string, unknown> & {
+    const jobDataTyped = (jobData || {} as unknown) as Record<string, unknown> & {
       title?: string;
       company_name?: string;
       skills?: string[];

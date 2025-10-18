@@ -357,7 +357,7 @@ export const TailorEnhancedRichText = ({
         ref={editorRef}
         contentEditable={isEditing}
         suppressContentEditableWarning={true}
-        onClick={!isEditing && !readOnly ? (e) => {
+        onClick={!isEditing && !readOnly ? (e: any) => {
           e.preventDefault()
           e.stopPropagation()
           startEditing()
@@ -460,8 +460,8 @@ export const TailorEnhancedRichText = ({
                 <>
                   <button
                     type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(e) => {
+                    onMouseDown={(e: any) => e.preventDefault()}
+                    onClick={(e: any) => {
                       e.preventDefault()
                       e.stopPropagation()
                       acceptAISuggestion()
@@ -478,8 +478,8 @@ export const TailorEnhancedRichText = ({
               
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('bold')
@@ -491,8 +491,8 @@ export const TailorEnhancedRichText = ({
               </button>
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('italic')
@@ -504,8 +504,8 @@ export const TailorEnhancedRichText = ({
               </button>
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('underline')
@@ -519,8 +519,8 @@ export const TailorEnhancedRichText = ({
               {showHighlight && (
                 <button
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
+                  onMouseDown={(e: any) => e.preventDefault()}
+                  onClick={(e: any) => {
                     e.preventDefault()
                     e.stopPropagation()
                     applyFormatting('highlight')
@@ -535,8 +535,8 @@ export const TailorEnhancedRichText = ({
               {showLink && (
                 <button
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
+                  onMouseDown={(e: any) => e.preventDefault()}
+                  onClick={(e: any) => {
                     e.preventDefault()
                     e.stopPropagation()
                     const url = prompt('Enter URL:')
@@ -557,8 +557,8 @@ export const TailorEnhancedRichText = ({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   applyFormatting('removeFormat')
@@ -571,8 +571,8 @@ export const TailorEnhancedRichText = ({
               
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   handleUndo()
@@ -589,8 +589,8 @@ export const TailorEnhancedRichText = ({
               
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
+                onMouseDown={(e: any) => e.preventDefault()}
+                onClick={(e: any) => {
                   e.preventDefault()
                   e.stopPropagation()
                   handleRedo()

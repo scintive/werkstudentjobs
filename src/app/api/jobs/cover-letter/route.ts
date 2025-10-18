@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing cover letter in variant - use variant_id if provided, otherwise query by job_id + user
-    let existingVariant = null;
+    let existingVariant: Record<string, unknown> | null = null;
 
     if (variant_id) {
       // Direct lookup by variant_id (fastest)
@@ -115,10 +115,10 @@ export async function POST(request: NextRequest) {
         .from('resume_variants')
         .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count, user_id')
         .eq('id', variant_id)
-        .eq('user_id', authUserId as any)
+        .eq('user_id', authUserId)
         .single();
 
-      existingVariant = variant;
+      existingVariant = variant as Record<string, unknown> | null;
       console.log(`📋 COVER LETTER: Queried by variant_id (${variant_id}):`, existingVariant ? 'Found' : 'Not found');
     } else {
       // Fallback: Query by job_id + user_id
@@ -126,18 +126,18 @@ export async function POST(request: NextRequest) {
         .from('resume_variants')
         .select('id, cover_letter_content, cover_letter_generated_at, cover_letter_generation_count, user_id')
         .eq('job_id', job_id)
-        .eq('user_id', authUserId as any)
+        .eq('user_id', authUserId)
         .order('updated_at', { ascending: false })
         .limit(1);
 
-      existingVariant = variants?.[0];
+      existingVariant = variants?.[0] ? (variants[0] as Record<string, unknown>) : null;
       console.log(`📋 COVER LETTER: Queried by job_id (${job_id}):`, existingVariant ? 'Found' : 'Not found');
     }
 
     // If variant exists with cover letter, return it (unless regenerating)
-    if ((existingVariant as any)?.cover_letter_content && !custom_instructions && !force_regenerate) {
+    if (existingVariant?.cover_letter_content && !custom_instructions && !force_regenerate) {
       console.log('📋 COVER LETTER: Found existing cover letter in variant');
-      const savedData = JSON.parse((existingVariant as any).cover_letter_content);
+      const savedData = JSON.parse(existingVariant.cover_letter_content as string);
 
       // Handle versioned format vs legacy format
       let versions = [];
@@ -151,19 +151,22 @@ export async function POST(request: NextRequest) {
         // Legacy format - convert to versioned
         versions = [{
           version: 1,
-          generated_at: (existingVariant as any).cover_letter_generated_at || new Date().toISOString(),
+          generated_at: (existingVariant.cover_letter_generated_at as string) || new Date().toISOString(),
           cover_letter: savedData
         }];
         currentVersion = 1;
       }
 
       // Get the current version for display
-      const currentLetter = versions.find((v: any) => v.version === currentVersion) || versions[versions.length - 1];
-      const savedLetter = currentLetter.cover_letter;
+      const currentLetter = versions.find((v: unknown) => (v as Record<string, unknown>).version === currentVersion) || versions[versions.length - 1];
+      const currentLetterObj = currentLetter as Record<string, unknown>;
+      const savedLetter = currentLetterObj.cover_letter;
 
       // Calculate word count for existing letter
-      const fullText = savedLetter.content
-        ? `${savedLetter.content.intro} ${savedLetter.content.body_paragraphs.join(' ')} ${savedLetter.content.closing}`
+      const savedLetterObj = savedLetter as Record<string, unknown>;
+      const contentObj = savedLetterObj.content as Record<string, unknown>;
+      const fullText = contentObj
+        ? `${contentObj.intro} ${(contentObj.body_paragraphs as string[]).join(' ')} ${contentObj.closing}`
         : '';
       const wordCount = fullText.split(' ').filter(w => w.length > 0).length;
 
@@ -176,9 +179,9 @@ export async function POST(request: NextRequest) {
         current_version: currentVersion,
         metadata: {
           word_count: wordCount,
-          generation_count: (existingVariant as any).cover_letter_generation_count || 0,
+          generation_count: (existingVariant.cover_letter_generation_count as number) || 0,
           generation_limit: 2,
-          generated_at: (currentLetter as any).generated_at,
+          generated_at: currentLetterObj.generated_at as string,
           total_versions: versions.length
         }
       });
@@ -200,12 +203,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce 2-generation limit
-    if (existingVariant && (existingVariant as any).cover_letter_generation_count >= 2) {
+    if (existingVariant && (existingVariant.cover_letter_generation_count as number) >= 2) {
       console.log('⚠️ COVER LETTER: Generation limit reached (2/2)');
       return NextResponse.json({
         error: 'Cover letter generation limit reached',
         message: 'You can only generate 2 cover letters per job. Please use the existing one or edit it manually.',
-        generation_count: (existingVariant as any).cover_letter_generation_count
+        generation_count: existingVariant.cover_letter_generation_count as number
       }, { status: 429 });
     }
 
@@ -232,7 +235,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add type assertion for all jobData accesses
-    const jobData = jobDataRaw as any;
+    const jobData = jobDataRaw as Record<string, unknown>;
     
     // Use provided student profile or fetch from database
     let profileData: Partial<StudentProfile> = student_profile || {};
@@ -247,7 +250,7 @@ export async function POST(request: NextRequest) {
         const { data: resumeDataList, error: resumeError } = await supabase
           .from('resume_data')
           .select('*')
-          .eq('user_id', authUserId as any)
+          .eq('user_id', authUserId)
           .order('updated_at', { ascending: false })
           .limit(1);
 
@@ -259,7 +262,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const resumeRecord = resumeDataList[0] as any;
+        const resumeRecord = resumeDataList[0] as Record<string, unknown>;
         console.log('🎓 COVER LETTER: Found resume data for user');
 
         // Get photo and student info from user_profiles
@@ -267,11 +270,12 @@ export async function POST(request: NextRequest) {
         const { data: userProfileData } = await supabase
           .from('user_profiles')
           .select('photo_url, hours_available, current_semester, university_name, start_preference')
-          .eq('user_id', authUserId as any)
+          .eq('user_id', authUserId)
           .single();
 
-        if (userProfileData && (userProfileData as any).photo_url) {
-          photoUrl = (userProfileData as any).photo_url;
+        const userProfileObj = userProfileData as Record<string, unknown> | null;
+        if (userProfileObj?.photo_url) {
+          photoUrl = userProfileObj.photo_url;
         }
 
         const dbProfile = {
@@ -285,53 +289,56 @@ export async function POST(request: NextRequest) {
           certifications: resumeRecord.certifications || [],
           customSections: resumeRecord.custom_sections || [],
           photoUrl: photoUrl,
-          hours_available: (userProfileData as any)?.hours_available,
-          current_semester: (userProfileData as any)?.current_semester,
-          university_name: (userProfileData as any)?.university_name,
-          start_preference: (userProfileData as any)?.start_preference
+          hours_available: userProfileObj?.hours_available,
+          current_semester: userProfileObj?.current_semester,
+          university_name: userProfileObj?.university_name,
+          start_preference: userProfileObj?.start_preference
         };
 
         console.log('🎓 COVER LETTER: Profile loaded successfully');
 
         // Extract user's actual name from profile
-        const userName = dbProfile.personalInfo?.name ||
-                        dbProfile.personal_info?.name ||
-                        dbProfile.name ||
-                        '';
+        const personalInfo = dbProfile.personalInfo as Record<string, unknown> | undefined;
+        const userName = (personalInfo?.name as string) || '';
 
         console.log('🎓 COVER LETTER: Extracted user name:', userName);
 
         // Extract CURRENT (latest) education from education array
-        const currentEducation = dbProfile.education && dbProfile.education.length > 0
-          ? dbProfile.education.sort((a: any, b: any) => {
-              const yearA = parseInt(a.year) || 0;
-              const yearB = parseInt(b.year) || 0;
+        const educationArray = dbProfile.education as unknown[];
+        const currentEducation = educationArray && educationArray.length > 0
+          ? educationArray.sort((a: unknown, b: unknown) => {
+              const aObj = a as Record<string, unknown>;
+              const bObj = b as Record<string, unknown>;
+              const yearA = parseInt((aObj.year as string) || '0') || 0;
+              const yearB = parseInt((bObj.year as string) || '0') || 0;
               return yearB - yearA; // Sort descending (most recent first)
             })[0]
           : null;
 
         // Calculate current year of study based on expected graduation
-        const expectedGradYear = currentEducation?.year ? parseInt(currentEducation.year) : new Date().getFullYear();
+        const currentEducationObj = currentEducation as Record<string, unknown> | null;
+        const expectedGradYear = currentEducationObj?.year ? parseInt(currentEducationObj.year as string) : new Date().getFullYear();
         const currentYear = new Date().getFullYear();
         const yearsUntilGrad = expectedGradYear - currentYear;
-        const estimatedTotalYears = currentEducation?.degree?.includes('Bachelor') ? 3 :
-                                     currentEducation?.degree?.includes('Master') ? 2 : 3;
+        const degreeStr = (currentEducationObj?.degree as string) || '';
+        const estimatedTotalYears = degreeStr.includes('Bachelor') ? 3 :
+                                     degreeStr.includes('Master') ? 2 : 3;
         const currentYearOfStudy = Math.max(1, estimatedTotalYears - yearsUntilGrad);
 
         profileData = {
           name: userName, // Add actual user name
-          degree_program: currentEducation?.field_of_study || dbProfile.degree_program || 'Computer Science',
-          university: currentEducation?.institution || dbProfile.university || '',
+          degree_program: (currentEducationObj?.field_of_study as string) || 'Computer Science',
+          university: (currentEducationObj?.institution as string) || (dbProfile.university_name as string) || '',
           current_year: currentYearOfStudy,
-          expected_graduation: currentEducation?.year || dbProfile.expected_graduation || '2025-06',
-          weekly_availability: dbProfile.weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
-          earliest_start_date: dbProfile.earliest_start_date || 'immediately',
-          preferred_duration: dbProfile.preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
+          expected_graduation: (currentEducationObj?.year as string) || '2025-06',
+          weekly_availability: { hours_min: (dbProfile.hours_available as number) || 15, hours_max: (dbProfile.hours_available as number) || 20, flexible: true },
+          earliest_start_date: (dbProfile.start_preference as string) || 'immediately',
+          preferred_duration: { months_min: 6, months_max: 12, open_ended: false },
           enrollment_status: 'enrolled',
-          language_proficiencies: dbProfile.language_proficiencies || [],
-          academic_projects: dbProfile.projects || dbProfile.academic_projects || [],
-          relevant_coursework: dbProfile.relevant_coursework || []
-        } as any;
+          language_proficiencies: [],
+          academic_projects: (dbProfile.projects as unknown[]) || [],
+          relevant_coursework: []
+        } as Partial<StudentProfile>;
       } else {
         const { data: dbProfile, error: profileError } = await supabase
           .from('user_profiles')
@@ -347,18 +354,19 @@ export async function POST(request: NextRequest) {
         }
         
         // Convert database profile to student profile format
+        const dbProfileObj = dbProfile as Record<string, unknown>;
         profileData = {
-          degree_program: (dbProfile as any).degree_program || 'Computer Science',
-          university: (dbProfile as any).university || '',
-          current_year: (dbProfile as any).current_year || 3,
-          expected_graduation: (dbProfile as any).expected_graduation || '2025-06',
-          weekly_availability: (dbProfile as any).weekly_availability || { hours_min: 15, hours_max: 20, flexible: true },
-          earliest_start_date: (dbProfile as any).earliest_start_date || 'immediately',
-          preferred_duration: (dbProfile as any).preferred_duration || { months_min: 6, months_max: 12, open_ended: false },
+          degree_program: (dbProfileObj.degree_program as string) || 'Computer Science',
+          university: (dbProfileObj.university as string) || '',
+          current_year: (dbProfileObj.current_year as number) || 3,
+          expected_graduation: (dbProfileObj.expected_graduation as string) || '2025-06',
+          weekly_availability: (dbProfileObj.weekly_availability as { hours_min: number; hours_max: number; flexible: boolean }) || { hours_min: 15, hours_max: 20, flexible: true },
+          earliest_start_date: (dbProfileObj.earliest_start_date as string) || 'immediately',
+          preferred_duration: (dbProfileObj.preferred_duration as { months_min: number; months_max: number; open_ended: boolean }) || { months_min: 6, months_max: 12, open_ended: false },
           enrollment_status: 'enrolled',
-          language_proficiencies: (dbProfile as any).language_proficiencies || [],
-          academic_projects: (dbProfile as any).academic_projects || [],
-          relevant_coursework: (dbProfile as any).relevant_coursework || []
+          language_proficiencies: (dbProfileObj.language_proficiencies as any) || [],
+          academic_projects: (dbProfileObj.academic_projects as any) || [],
+          relevant_coursework: (dbProfileObj.relevant_coursework as any) || []
         };
       }
     }
@@ -366,11 +374,13 @@ export async function POST(request: NextRequest) {
     // Determine language based on job requirements
     let targetLanguage = language;
     if (language === 'AUTO') {
-      const jobLang = jobData.language_required || jobData.german_required || 'EN';
-      const isGermanCompany = jobData.location_country?.toLowerCase().includes('germany') || 
-                             jobData.location_city?.toLowerCase().includes('berlin') ||
-                             jobData.location_city?.toLowerCase().includes('munich') ||
-                             jobData.location_city?.toLowerCase().includes('hamburg');
+      const jobLang = ((jobData.language_required as string) || (jobData.german_required as string) || 'EN');
+      const locationCountry = (jobData.location_country as string) || '';
+      const locationCity = (jobData.location_city as string) || '';
+      const isGermanCompany = locationCountry.toLowerCase().includes('germany') ||
+                             locationCity.toLowerCase().includes('berlin') ||
+                             locationCity.toLowerCase().includes('munich') ||
+                             locationCity.toLowerCase().includes('hamburg');
       targetLanguage = (jobLang.includes('DE') || isGermanCompany) ? 'DE' : 'EN';
     }
     
@@ -394,7 +404,11 @@ export async function POST(request: NextRequest) {
     const matchedSkills = strategy_context?.matchCalculation?.skillsOverlap?.matched || [];
     const matchedTools = strategy_context?.matchCalculation?.toolsOverlap?.matched || [];
     const topTasks = (strategy_context?.tasks || [])
-      .sort((a: any, b: any) => (b.alignment_score || 0) - (a.alignment_score || 0))
+      .sort((a: unknown, b: unknown) => {
+        const aObj = a as Record<string, unknown>;
+        const bObj = b as Record<string, unknown>;
+        return ((bObj.alignment_score as number) || 0) - ((aObj.alignment_score as number) || 0);
+      })
       .slice(0, 5); // Top 5 tasks with highest alignment
     const competitiveAdvantages = strategy_context?.competitive_advantages || [];
     const positioning = strategy_context?.positioning || {};
@@ -403,20 +417,26 @@ export async function POST(request: NextRequest) {
     console.log('🎓 STRATEGY DATA AVAILABLE:');
     console.log('  - Matched Skills:', matchedSkills.length, matchedSkills.slice(0, 5));
     console.log('  - Matched Tools:', matchedTools.length, matchedTools.slice(0, 5));
-    console.log('  - Top Tasks:', topTasks.length, topTasks.map((t: any) => `${t.task?.substring(0, 50)}... (${Math.round(t.alignment_score * 100)}%)`));
+    console.log('  - Top Tasks:', topTasks.length, topTasks.map((t: unknown) => {
+      const tObj = t as Record<string, unknown>;
+      return `${(tObj.task as string)?.substring(0, 50)}... (${Math.round(((tObj.alignment_score as number) || 0) * 100)}%)`;
+    }));
     console.log('  - Competitive Advantages:', competitiveAdvantages.length);
-    console.log('  - Positioning:', positioning.elevator_pitch?.substring(0, 100));
+    console.log('  - Positioning:', ((positioning as Record<string, unknown>)?.elevator_pitch as string)?.substring(0, 100));
 
     // Create COMPREHENSIVE context for student cover letter with ALL data
+    const companiesObj = jobData.companies as Record<string, unknown> | undefined;
+    const positioningObj = positioning as Record<string, unknown>;
+
     const letterContext = {
       job: {
         title: jobData.title,
         company: jobData.company_name || 'Your company',
-        company_description: jobData.companies?.description || '',
-        company_industry: jobData.companies?.industry || '',
+        company_description: (companiesObj?.description as string) || '',
+        company_industry: (companiesObj?.industry as string) || '',
         hiring_manager: jobData.hiring_manager || null, // CRITICAL: Add hiring manager for personalized salutation
-        is_werkstudent: jobData.title?.toLowerCase().includes('werkstudent') ||
-                        jobData.title?.toLowerCase().includes('working student'),
+        is_werkstudent: ((jobData.title as string) || '').toLowerCase().includes('werkstudent') ||
+                        ((jobData.title as string) || '').toLowerCase().includes('working student'),
         requirements: {
           skills: jobData.skills || [],
           tools: jobData.tools || [],
@@ -424,25 +444,28 @@ export async function POST(request: NextRequest) {
         },
         location: jobData.location_city,
         work_mode: jobData.work_mode,
-        description_excerpt: jobData.description?.slice(0, 500) || ''
+        description_excerpt: ((jobData.description as string) || '').slice(0, 500) || ''
       },
       // RICH STRATEGY DATA - This is the goldmine!
       strategy: {
         matched_skills: matchedSkills,
         matched_tools: matchedTools,
-        top_aligned_tasks: topTasks.map((task: any) => ({
-          task: task.task_description || task.task,
-          alignment_score: task.alignment_score,
-          why_qualified: task.evidence_from_profile || task.why_qualified || '',
-          specific_experience: task.specific_experience || ''
-        })),
+        top_aligned_tasks: topTasks.map((task: unknown) => {
+          const taskObj = task as Record<string, unknown>;
+          return {
+            task: (taskObj.task_description as string) || (taskObj.task as string),
+            alignment_score: taskObj.alignment_score,
+            why_qualified: (taskObj.evidence_from_profile as string) || (taskObj.why_qualified as string) || '',
+            specific_experience: (taskObj.specific_experience as string) || ''
+          };
+        }),
         competitive_advantages: competitiveAdvantages,
-        positioning_themes: positioning.themes || [],
-        elevator_pitch: positioning.elevator_pitch || '',
+        positioning_themes: (positioningObj.themes as unknown[]) || [],
+        elevator_pitch: (positioningObj.elevator_pitch as string) || '',
         evidence_map: evidenceMap
       },
       student: {
-        name: (profileData as any).name || '', // Use actual user name
+        name: (profileData as Record<string, unknown>).name || '', // Use actual user name
         degree: profileData.degree_program,
         university: profileData.university,
         year: profileData.current_year,
@@ -452,21 +475,27 @@ export async function POST(request: NextRequest) {
         duration: profileData.preferred_duration ?
           `${profileData.preferred_duration.months_min}-${profileData.preferred_duration.months_max} months` :
           '6-12 months',
-        projects: (profileData.academic_projects || []).slice(0, 3).map((p: any) => ({
-          title: p.title,
-          description: p.description,
-          technologies: p.technologies || [],
-          metrics: p.metrics || [],
-          outcomes: p.outcomes || ''
-        })),
-        coursework: (profileData.relevant_coursework || []).slice(0, 4).map((c: any) => ({
-          course_name: c.course_name,
-          key_topics: c.key_topics || [],
-          relevance: c.relevance_to_job || ''
-        })),
+        projects: (profileData.academic_projects || []).slice(0, 3).map((p: unknown) => {
+          const pObj = p as Record<string, unknown>;
+          return {
+            title: pObj.title,
+            description: pObj.description,
+            technologies: pObj.technologies || [],
+            metrics: pObj.metrics || [],
+            outcomes: (pObj.outcomes as string) || ''
+          };
+        }),
+        coursework: (profileData.relevant_coursework || []).slice(0, 4).map((c: unknown) => {
+          const cObj = c as Record<string, unknown>;
+          return {
+            course_name: cObj.course_name,
+            key_topics: cObj.key_topics || [],
+            relevance: (cObj.relevance_to_job as string) || ''
+          };
+        }),
         languages: profileData.language_proficiencies || [],
-        skills: (profileData as any).technical_skills || [],
-        tools: (profileData as any).tools_familiar_with || []
+        skills: (profileData as Record<string, unknown>).technical_skills || [],
+        tools: (profileData as Record<string, unknown>).tools_familiar_with || []
       },
       language: targetLanguage,
       tone,
@@ -521,15 +550,21 @@ ${matchedTools.slice(0, 6).join(', ')}
 → Mention specific tools you know they need
 
 TOP 5 JOB TASKS with EVIDENCE:
-${topTasks.map((t: any, i: number) => `${i + 1}. ${t.task} (${Math.round(t.alignment_score * 100)}% match)
-   Evidence: ${t.why_qualified || 'Strong background'}
-   Experience: ${t.specific_experience || 'Related project work'}`).join('\n')}
+${topTasks.map((t: unknown, i: number) => {
+  const tObj = t as Record<string, unknown>;
+  return `${i + 1}. ${(tObj.task as string)} (${Math.round(((tObj.alignment_score as number) || 0) * 100)}% match)
+   Evidence: ${(tObj.why_qualified as string) || 'Strong background'}
+   Experience: ${(tObj.specific_experience as string) || 'Related project work'}`;
+}).join('\n')}
 
 COMPETITIVE ADVANTAGES:
-${competitiveAdvantages.slice(0, 3).map((adv: any) => `- ${adv.advantage || adv}: ${adv.evidence || ''}`).join('\n')}
+${competitiveAdvantages.slice(0, 3).map((adv: unknown) => {
+  const advObj = adv as Record<string, unknown>;
+  return `- ${(advObj.advantage as string) || adv}: ${(advObj.evidence as string) || ''}`;
+}).join('\n')}
 
 POSITIONING:
-${positioning.elevator_pitch || 'Motivated student with strong technical foundation'}
+${(positioningObj.elevator_pitch as string) || 'Motivated student with strong technical foundation'}
 
 NARRATIVE STRUCTURE (Evidence-Based):
 
@@ -806,20 +841,20 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
       console.log(`🎓 STUDENT COVER LETTER: Generated ${tone} ${length} letter (${targetLanguage}) - ${wordCount} words`);
 
       // Save cover letter to variant with versioning
-      if ((existingVariant as any)?.id) {
-        const newGenerationCount = ((existingVariant as any).cover_letter_generation_count || 0) + 1;
+      if (existingVariant?.id) {
+        const newGenerationCount = ((existingVariant.cover_letter_generation_count as number) || 0) + 1;
 
         // Load existing versions or create new array
         let versions = [];
-        if ((existingVariant as any).cover_letter_content) {
-          const savedData = JSON.parse((existingVariant as any).cover_letter_content);
+        if (existingVariant.cover_letter_content) {
+          const savedData = JSON.parse(existingVariant.cover_letter_content as string);
           if (savedData.versions && Array.isArray(savedData.versions)) {
             versions = savedData.versions;
           } else {
             // Convert legacy format to versioned
             versions = [{
               version: 1,
-              generated_at: (existingVariant as any).cover_letter_generated_at || new Date().toISOString(),
+              generated_at: (existingVariant.cover_letter_generated_at as string) || new Date().toISOString(),
               tone: savedData.tone,
               length: savedData.length,
               cover_letter: savedData
@@ -849,8 +884,8 @@ ${custom_instructions ? `\n🎯 CUSTOM INSTRUCTIONS FROM USER:\n${custom_instruc
             cover_letter_content: JSON.stringify(versionedData),
             cover_letter_generated_at: new Date().toISOString(),
             cover_letter_generation_count: newGenerationCount
-          } as any)
-          .eq('id', (existingVariant as any).id);
+          } as never)
+          .eq('id', existingVariant.id as string);
 
         console.log(`💾 COVER LETTER: Saved version ${newGenerationCount}/2 (total ${versions.length} versions)`);
 

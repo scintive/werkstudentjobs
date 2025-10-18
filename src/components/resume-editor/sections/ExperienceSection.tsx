@@ -11,11 +11,11 @@ interface ExperienceSectionProps {
   localData: ResumeData
   setLocalData: (data: ResumeData) => void
   suggestionsEnabled: boolean
-  getSuggestionsForSection: (section: string) => any[]
-  getSuggestionForField: (field: string) => any
+  getSuggestionsForSection: (section: string) => unknown[]
+  getSuggestionForField: (field: string) => unknown
   acceptSuggestion: (id: string) => void
   declineSuggestion: (id: string) => void
-  InlineSuggestionRow: React.ComponentType<{ s: any }>
+  InlineSuggestionRow: React.ComponentType<{ s: unknown }>
 }
 
 export const ExperienceSection = React.memo(({
@@ -48,7 +48,7 @@ export const ExperienceSection = React.memo(({
             <CleanInput
               label="Position"
               value={exp.position}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newExp = [...localData.experience]
                 newExp[index].position = value
                 setLocalData({ ...localData, experience: newExp })
@@ -57,7 +57,7 @@ export const ExperienceSection = React.memo(({
             <CleanInput
               label="Company"
               value={exp.company}
-              onChange={(value) => {
+              onChange={(value: any) => {
                 const newExp = [...localData.experience]
                 newExp[index].company = value
                 setLocalData({ ...localData, experience: newExp })
@@ -68,7 +68,7 @@ export const ExperienceSection = React.memo(({
           <CleanInput
             label="Duration"
             value={exp.duration}
-            onChange={(value) => {
+            onChange={(value: any) => {
               const newExp = [...localData.experience]
               newExp[index].duration = value
               setLocalData({ ...localData, experience: newExp })
@@ -120,7 +120,7 @@ export const ExperienceSection = React.memo(({
                     <span className="text-purple-500 mt-1">•</span>
                     <EnhancedRichText
                       value={achievement}
-                      onChange={(value) => {
+                      onChange={(value: any) => {
                         const newExp = [...localData.experience]
                         newExp[index].achievements[achIndex] = value
                         setLocalData({ ...localData, experience: newExp })

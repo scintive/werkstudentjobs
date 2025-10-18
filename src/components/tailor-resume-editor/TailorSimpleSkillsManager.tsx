@@ -14,7 +14,7 @@ import {
 
 interface TailorSimpleSkillsManagerProps {
   skills: any // Current skills object
-  onSkillsChange: (skills: any) => void
+  onSkillsChange: (skills: unknown) => void
   jobData?: any
   strategy?: any // Add strategy for AI recommendations
 }
@@ -71,7 +71,7 @@ export function TailorSimpleSkillsManager({
           const normalizedReq = requirement.toLowerCase()
           
           // Check if skill is missing from current skills
-          const hasSkill = Object.values(skills).flat().some((skill: any) => 
+          const hasSkill = Object.values(skills).flat().some((skill: unknown) => 
             (typeof skill === 'string' ? skill : skill.skill || skill)
               .toLowerCase()
               .includes(normalizedReq.toLowerCase()) ||
@@ -140,7 +140,7 @@ export function TailorSimpleSkillsManager({
     onSkillsChange(updatedSkills)
   }
 
-  const getSkillDisplayName = (skill: any): string => {
+  const getSkillDisplayName = (skill: unknown): string => {
     return typeof skill === 'string' ? skill : skill.skill || skill.name || String(skill)
   }
 
@@ -186,7 +186,7 @@ export function TailorSimpleSkillsManager({
                   {Array.isArray(skillArray) && skillArray.map((skill, index) => {
                     const skillName = getSkillDisplayName(skill)
                     const shouldRemove = strategy?.skills_analysis?.skills_to_remove?.some(
-                      s => s.toLowerCase() === skillName.toLowerCase()
+                      (s: string) => s.toLowerCase() === skillName.toLowerCase()
                     )
                     
                     return (

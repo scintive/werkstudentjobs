@@ -91,7 +91,7 @@ export class FastMatchingService {
   /**
    * Safely gather job skills from multiple possible fields
    */
-  private getJobSkills(job: any): string[] {
+  private getJobSkills(job: unknown): string[] {
     const pools: Array<unknown> = [
       job?.skills,            // PRIMARY: Standard skills field from database
       job?.skills_original,
@@ -118,7 +118,7 @@ export class FastMatchingService {
   /**
    * Safely gather job tools from multiple possible fields
    */
-  private getJobTools(job: any): string[] {
+  private getJobTools(job: unknown): string[] {
     const pools: Array<unknown> = [
       job?.tools,             // PRIMARY: Standard tools field from database
       job?.tools_original,
@@ -348,7 +348,7 @@ export class FastMatchingService {
   /**
    * Calculate total years of experience from user profile
    */
-  private calculateTotalExperienceYears(userExperience: any[]): number {
+  private calculateTotalExperienceYears(userExperience: unknown[]): number {
     if (!userExperience || !Array.isArray(userExperience)) return 0;
     
     let totalYears = 0;
@@ -364,8 +364,8 @@ export class FastMatchingService {
         
         if (startDate) {
           const start = new Date(startDate);
-          const end = endDate === 'present' ? new Date() : new Date(endDate);
-          
+          const end = endDate === 'present' ? new Date() : (endDate ? new Date(endDate) : new Date());
+
           if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start) {
             const years = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
             totalYears += Math.max(years, 0);
@@ -383,7 +383,7 @@ export class FastMatchingService {
   /**
    * Parse various date formats commonly found in resumes
    */
-  private parseDate(dateStr: any): string | null {
+  private parseDate(dateStr: unknown): string | null {
     if (!dateStr || typeof dateStr !== 'string') return null;
     
     const cleaned = dateStr.toLowerCase().trim();
@@ -433,7 +433,7 @@ export class FastMatchingService {
   /**
    * Experience matching based on years and relevance
    */
-  private calculateExperienceMatch(userExperience: any[], jobExperience: string): {
+  private calculateExperienceMatch(userExperience: unknown[], jobExperience: string): {
     score: number;
     explanation: string;
   } {
@@ -470,7 +470,7 @@ export class FastMatchingService {
   /**
    * Normalize language requirements from various job fields
    */
-  private normalizeLanguageRequirement(job: any): string | null {
+  private normalizeLanguageRequirement(job: unknown): string | null {
     // Priority: language_required > german_required > fallback
     const langReq = job.language_required || job.german_required;
     if (!langReq) return null;
@@ -505,7 +505,7 @@ export class FastMatchingService {
    */
   private calculateLanguageMatch(
     jobLanguageRequired: string | null,
-    userLanguages: any[]
+    userLanguages: unknown[]
   ): { score: number; explanation: string } {
     
     if (!jobLanguageRequired) {
@@ -608,7 +608,7 @@ export class FastMatchingService {
     
     const experienceMatch = this.calculateExperienceMatch(
       userProfile.experience || [],
-      job.experience_required || ''
+      (job as unknown).experience_required || ''
     );
     
     const languageMatch = this.calculateLanguageMatch(
@@ -617,9 +617,9 @@ export class FastMatchingService {
     );
     
     const locationMatch = this.calculateLocationMatch(
-      job.location_city || job.city,
+      job.location_city || (job as unknown).city,
       job.is_remote || job.remote_allowed || false,
-      userProfile.personal_details?.city || null
+      (userProfile.personal_details as unknown)?.city || userProfile.personal_details?.contact?.address || null
     );
     
     // Calculate weighted total score
@@ -726,7 +726,7 @@ export class FastMatchingService {
     userProfile: LegacyUserProfile
   ): Promise<Array<JobWithCompany & { 
     match_score: number; 
-    matchCalculation: any; 
+    matchCalculation: unknown; 
   }>> {
     
     console.log(`🎯 === FAST BATCH MATCHING: ${jobs.length} jobs ===`);
@@ -768,7 +768,7 @@ export class FastMatchingService {
             score: matchResult.breakdown.location.score,
             explanation: matchResult.breakdown.location.explanation,
             jobLocation: job.location_city || 'Unknown',
-            userLocation: userProfile.personal_details?.city || 'Unknown',
+            userLocation: (userProfile.personal_details as unknown)?.city || userProfile.personal_details?.contact?.address || 'Unknown',
             remoteAllowed: job.is_remote || job.remote_allowed || false
           },
           totalScore: matchResult.totalScore,

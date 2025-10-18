@@ -54,17 +54,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize LLM client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (llmService as any).client = llmService.initializeClient();
-    
+
     console.log('💡 Generating GPT-powered skill suggestions...');
-    const suggestions = await llmService.generateSkillSuggestions(profileData, currentSkills);
-    
+    const suggestionsRaw = await llmService.generateSkillSuggestions(profileData, currentSkills);
+    const suggestions = suggestionsRaw as Record<string, unknown>;
+
     console.log('💡 === SUGGESTIONS GENERATED ===');
-    console.log('💡 Technical:', suggestions.skill_suggestions?.technical?.length || 0);
-    console.log('💡 Soft Skills:', suggestions.skill_suggestions?.soft_skills?.length || 0);
-    console.log('💡 Industry Specific:', suggestions.skill_suggestions?.industry_specific?.length || 0);
-    console.log('💡 Tools/Platforms:', suggestions.skill_suggestions?.tools_platforms?.length || 0);
-    console.log('💡 Priority Recommendations:', suggestions.priority_recommendations?.length || 0);
+    const skillSuggestions = suggestions.skill_suggestions as Record<string, unknown> | undefined;
+    const technical = skillSuggestions?.technical as unknown[] | undefined;
+    const softSkills = skillSuggestions?.soft_skills as unknown[] | undefined;
+    const industrySpecific = skillSuggestions?.industry_specific as unknown[] | undefined;
+    const toolsPlatforms = skillSuggestions?.tools_platforms as unknown[] | undefined;
+    const priorityRecommendations = suggestions.priority_recommendations as unknown[] | undefined;
+    console.log('💡 Technical:', technical?.length || 0);
+    console.log('💡 Soft Skills:', softSkills?.length || 0);
+    console.log('💡 Industry Specific:', industrySpecific?.length || 0);
+    console.log('💡 Tools/Platforms:', toolsPlatforms?.length || 0);
+    console.log('💡 Priority Recommendations:', priorityRecommendations?.length || 0);
 
     return NextResponse.json({
       ...suggestions,

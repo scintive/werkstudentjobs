@@ -631,7 +631,7 @@ export function InlineSuggestionOverlay({
         overlay.appendChild(diffPanel)
 
         // Event handlers
-        chip.onclick = (e) => {
+        chip.onclick = (e: any) => {
           e.preventDefault()
           e.stopPropagation()
           chip.classList.toggle('expanded')
@@ -641,7 +641,7 @@ export function InlineSuggestionOverlay({
         const declineBtn = diffPanel.querySelector('[data-action="decline"]')
 
         if (acceptBtn) {
-          acceptBtn.addEventListener('click', (e) => {
+          acceptBtn.addEventListener('click', (e: any) => {
             console.log('🚨 INLINE OVERLAY ACCEPT CLICKED:', suggestion.id, suggestion)
             e.preventDefault()
             e.stopPropagation()
@@ -670,7 +670,7 @@ export function InlineSuggestionOverlay({
         }
 
         if (declineBtn) {
-          declineBtn.addEventListener('click', (e) => {
+          declineBtn.addEventListener('click', (e: any) => {
             console.log('🚨 INLINE OVERLAY DECLINE/SKIP CLICKED:', suggestion.id, suggestion)
             e.preventDefault()
             e.stopPropagation()

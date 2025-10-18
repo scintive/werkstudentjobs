@@ -18,7 +18,8 @@ export interface Education {
   field_of_study: string;
   institution: string;
   duration: string;
-  location: string;
+  location?: string;
+  year?: string;
 }
 
 export interface Certification {
@@ -31,6 +32,7 @@ export interface Experience {
   company: string;
   position: string;
   duration: string;
+  location?: string;
   responsibilities: string[];
 }
 
@@ -115,6 +117,7 @@ export interface ResumeData {
     location: string;
     linkedin?: string;
     website?: string;
+    portfolio?: string;
     customHeader?: string;
   };
   photoUrl?: string;

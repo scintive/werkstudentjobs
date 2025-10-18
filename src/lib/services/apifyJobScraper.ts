@@ -43,7 +43,7 @@ interface ActorRunResult {
  */
 async function runActor(
   actorId: string,
-  input: Record<string, any>
+  input: Record<string, unknown>
 ): Promise<ActorRunResult> {
   if (!APIFY_API_KEY) {
     throw new Error('APIFY_API_KEY is not set in environment variables');
@@ -110,7 +110,7 @@ async function runActor(
 /**
  * Fetch data from Apify dataset
  */
-async function fetchDataset(datasetId: string, limit: number = 100): Promise<any[]> {
+async function fetchDataset(datasetId: string, limit: number = 100): Promise<unknown[]> {
   if (!APIFY_API_KEY) {
     throw new Error('APIFY_API_KEY is not set');
   }
@@ -145,7 +145,7 @@ export async function scrapeLinkedInJobs(
   const result = await runActor(ACTORS.linkedin, input);
   const data = await fetchDataset(result.datasetId, limit);
 
-  return data.map((job: any) => ({
+  return data.map((job: Record<string, any>) => ({
     title: job.title || job.position || '',
     company: job.company || job.companyName || '',
     location: job.location || '',
@@ -184,7 +184,7 @@ export async function scrapeIndeedJobs(
   const result = await runActor(ACTORS.indeed, input);
   const data = await fetchDataset(result.datasetId, limit);
 
-  return data.map((job: any) => ({
+  return data.map((job: Record<string, any>) => ({
     title: job.title || job.jobTitle || '',
     company: job.company || job.companyName || '',
     location: job.location || '',
@@ -218,7 +218,7 @@ export async function scrapeStepStoneJobs(
   const result = await runActor(ACTORS.stepstone, input);
   const data = await fetchDataset(result.datasetId, limit);
 
-  return data.map((job: any) => ({
+  return data.map((job: Record<string, any>) => ({
     title: job.title || job.jobTitle || '',
     company: job.company || job.companyName || '',
     location: job.location || '',

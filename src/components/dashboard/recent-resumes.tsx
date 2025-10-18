@@ -49,7 +49,7 @@ export function RecentResumes({ resumes }: RecentResumesProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {resumes.length > 0 ? (
-          resumes.map((resume) => (
+          resumes.map((resume: any) => (
             <Link
               key={resume.id}
               href={`/jobs/${resume.job_id}/tailor?tab=strategy`}
@@ -86,25 +86,25 @@ export function RecentResumes({ resumes }: RecentResumesProps) {
                       variant="ghost"
                       size="icon"
                       className="w-8 h-8"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e: any) => e.stopPropagation()}
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/jobs/${resume.job_id}/tailor?tab=resume`); }}>
+                    <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); router.push(`/jobs/${resume.job_id}/tailor?tab=resume`); }}>
                       <Eye className="w-4 h-4 mr-2" />
                       View Resume
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/jobs/${resume.job_id}/tailor?tab=resume`); }}>
+                    <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); router.push(`/jobs/${resume.job_id}/tailor?tab=resume`); }}>
                       <Edit3 className="w-4 h-4 mr-2" />
                       Edit Resume
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={(e: any) => e.stopPropagation()}>
                       <Download className="w-4 h-4 mr-2" />
                       Download PDF
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>Delete</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={(e: any) => e.stopPropagation()}>Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

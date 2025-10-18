@@ -59,8 +59,8 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area, rotation = 0): P
     Math.round(0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y)
   )
 
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
+  return new Promise((resolve: any) => {
+    canvas.toBlob((blob: any) => {
       resolve(blob!)
     }, 'image/jpeg', 0.95)
   })
@@ -70,7 +70,7 @@ function createImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.addEventListener('load', () => resolve(image))
-    image.addEventListener('error', (error) => reject(error))
+    image.addEventListener('error', (error: any) => reject(error))
     image.src = url
   })
 }
@@ -162,7 +162,7 @@ export function ImageCropModal({ image, onComplete, onCancel }: ImageCropModalPr
                   max={3}
                   step={0.1}
                   value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
+                  onChange={(e: any) => setZoom(Number(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
                 />
               </div>
@@ -179,7 +179,7 @@ export function ImageCropModal({ image, onComplete, onCancel }: ImageCropModalPr
                   max={360}
                   step={1}
                   value={rotation}
-                  onChange={(e) => setRotation(Number(e.target.value))}
+                  onChange={(e: any) => setRotation(Number(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
                 />
               </div>

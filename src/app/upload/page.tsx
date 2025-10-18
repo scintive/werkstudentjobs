@@ -41,12 +41,12 @@ export default function UploadPage() {
     checkAuth()
   }, [router])
 
-  const handleProfileExtracted = async (profile: UserProfile, organizedSkills?: any) => {
+  const handleProfileExtracted = async (profile: UserProfile, organizedSkills?: unknown) => {
     console.log('✅ Profile extracted:', profile)
     console.log('✅ Organized skills:', organizedSkills)
 
     // Convert profile to ResumeData format
-    const resumeData: any = {
+    const resumeData = {
       personalInfo: {
         name: profile.personal_details?.name || 'Unknown',
         email: profile.personal_details?.contact?.email || '',
@@ -68,12 +68,15 @@ export default function UploadPage() {
         duration: exp.duration,
         achievements: exp.responsibilities
       })),
-      education: (profile.education || []).map(edu => ({
-        degree: edu.degree,
-        field_of_study: edu.field_of_study,
-        institution: edu.institution,
-        year: ((edu as any).year ? String((edu as any).year) : edu.duration) || ''
-      })),
+      education: (profile.education || []).map(edu => {
+        const eduObj = edu as unknown as Record<string, unknown>;
+        return {
+          degree: edu.degree,
+          field_of_study: edu.field_of_study,
+          institution: edu.institution,
+          year: (eduObj.year ? String(eduObj.year) : edu.duration) || ''
+        };
+      }),
       projects: (profile.projects || []).map(proj => ({
         name: proj.title,
         description: proj.description,
@@ -98,20 +101,24 @@ export default function UploadPage() {
             proficiency: 'Not specified'
           }
         }
+        const langObj = lang as Record<string, unknown>;
         return {
-          name: lang.language || lang.name || '',
-          language: lang.language || lang.name || '',
-          level: lang.proficiency || lang.level || 'Not specified',
-          proficiency: lang.proficiency || lang.level || 'Not specified'
+          name: (langObj.language as string) || (langObj.name as string) || '',
+          language: (langObj.language as string) || (langObj.name as string) || '',
+          level: (langObj.proficiency as string) || (langObj.level as string) || 'Not specified',
+          proficiency: (langObj.proficiency as string) || (langObj.level as string) || 'Not specified'
         }
       }),
-      certifications: (profile.certifications || []).map(cert => ({
-        name: cert.title,
-        issuer: cert.institution || '',
-        date: cert.date || '',
-        description: (cert as any).description || ''
-      })),
-      customSections: (profile as any).custom_sections || []
+      certifications: (profile.certifications || []).map(cert => {
+        const certObj = cert as unknown as Record<string, unknown>;
+        return {
+          name: cert.title,
+          issuer: cert.institution || '',
+          date: cert.date || '',
+          description: (certObj.description as string) || ''
+        };
+      }),
+      customSections: (((profile as unknown as Record<string, unknown>).custom_sections as unknown[]) || []) as Array<{ id: string; title: string; type: "text" | "achievements" | "list"; items: Array<{ title?: string; subtitle?: string; date?: string; description?: string; details?: string[] }> }>
     }
 
     // Save using ResumeDataService

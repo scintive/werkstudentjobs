@@ -53,7 +53,7 @@ export function StatsGrid({ stats }: StatsGridProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {statCards.map((stat) => (
+      {statCards.map((stat: any) => (
         <Card
           key={stat.title}
           className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50"

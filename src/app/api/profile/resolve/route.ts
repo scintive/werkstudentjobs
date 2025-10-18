@@ -17,38 +17,40 @@ export async function POST(request: NextRequest) {
     }
     
     console.log(`🔍 PROFILE: Resolving profile for session ${session_id}`);
-    
+
     // Use existing RPC to get or create user profile
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .rpc('get_or_create_user_profile_from_resume', {
         p_session_id: session_id
       });
-    
+
     if (error) {
       console.error('Profile resolution failed:', error);
       return NextResponse.json(
-        { 
+        {
           error: 'Profile resolution failed',
-          details: error.message 
+          details: error.message
         },
         { status: 500 }
       );
     }
-    
-    if (!data || !data.user_profile_id) {
+
+    const dataRecord = data as Record<string, unknown> | null;
+    if (!dataRecord || !dataRecord.user_profile_id) {
       return NextResponse.json(
         { error: 'No profile found for session' },
         { status: 404 }
       );
     }
-    
-    console.log(`🔍 PROFILE: Resolved to ${data.user_profile_id}`);
-    
+
+    console.log(`🔍 PROFILE: Resolved to ${dataRecord.user_profile_id}`);
+
     return NextResponse.json({
       success: true,
-      user_profile_id: data.user_profile_id,
+      user_profile_id: dataRecord.user_profile_id,
       session_id: session_id,
-      profile_exists: !!data.user_profile_id
+      profile_exists: !!dataRecord.user_profile_id
     });
     
   } catch (error) {

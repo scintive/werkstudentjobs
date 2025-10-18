@@ -699,7 +699,7 @@ export function generateImpactResumeHTML(data: ResumeData & { showSkillLevelsInR
                 </section>
                 ` : ''}
                 
-                ${projects.length > 0 ? `
+                ${projects && projects.length > 0 ? `
                 <!-- Projects Section -->
                 <section class="section projects-section">
                     <div class="section-header">
@@ -747,15 +747,15 @@ export function generateImpactResumeHTML(data: ResumeData & { showSkillLevelsInR
                             <div class="skill-category" data-category="${category}">
                                 <div class="skill-category-title">${category}</div>
                                 <div class="skill-pills">
-                                    ${skillList.map((skill, i) => {
+                                    ${skillList.map((skill: Record<string, any>, i) => {
                                         if (typeof skill === 'string') {
                                             return `<span class=\"skill-pill\" data-section=\"skills\" data-category=\"${category}\" data-index=\"${i}\">${skill}</span>`;
-                                        } else if (skill.skill && showSkillLevelsInResume && skill.proficiency) {
-                                            const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' : 
-                                                             skill.proficiency === 'Advanced' ? 'ADV' : 
+                                        } else if (skill?.skill && showSkillLevelsInResume && skill?.proficiency) {
+                                            const levelAbbr = skill.proficiency === 'Expert' ? 'EXP' :
+                                                             skill.proficiency === 'Advanced' ? 'ADV' :
                                                              skill.proficiency === 'Intermediate' ? 'INT' : 'BEG';
                                             return `<span class=\"skill-pill with-proficiency\" data-section=\"skills\" data-category=\"${category}\" data-index=\"${i}\">${skill.skill} <span class=\"skill-level\">${levelAbbr}</span></span>`;
-                                        } else if (skill.skill) {
+                                        } else if (skill?.skill) {
                                             return `<span class=\"skill-pill\" data-section=\"skills\" data-category=\"${category}\" data-index=\"${i}\">${skill.skill}</span>`;
                                         }
                                         return '';
@@ -808,14 +808,14 @@ export function generateImpactResumeHTML(data: ResumeData & { showSkillLevelsInR
                     </div>
                 ${languages.map(lang => `
                         <div class="language-item">
-                            <span class="language-name">${(lang.language || lang.name || '').toString()}</span>
-                            <span class="language-proficiency">${(lang.proficiency || lang.level || '').toString()}</span>
+                            <span class="language-name">${lang.name || ''}</span>
+                            <span class="language-proficiency">${lang.level || ''}</span>
                         </div>
                     `).join('')}
                 </section>
                 ` : ''}
                 
-                ${certifications.length > 0 ? `
+                ${certifications && certifications.length > 0 ? `
                 <!-- Certifications Section -->
                 <section class="section">
                     <div class="section-header" style="border-color: ${colors.success};">
@@ -853,19 +853,19 @@ export function generateImpactResumeHTML(data: ResumeData & { showSkillLevelsInR
                         </div>
                         ${section.items.map(item => `
                             <div class="custom-item">
-                                ${item.title || item.field1 ? `
+                                ${item.title ? `
                                     <div style="font-size: 10px; font-weight: 700; color: #1e293b; margin-bottom: 1mm;">
-                                        ${item.title || item.field1}
+                                        ${item.title}
                                     </div>
                                 ` : ''}
-                                ${item.date || item.field3 ? `
-                                    <div style="font-size: 9px; color: ${colors.warning}; font-weight: 600; margin-bottom: 0.5mm;">${item.date || item.field3}</div>
+                                ${item.date ? `
+                                    <div style="font-size: 9px; color: ${colors.warning}; font-weight: 600; margin-bottom: 0.5mm;">${item.date}</div>
                                 ` : ''}
-                                ${item.subtitle || item.field2 ? `
-                                    <div style="font-size: 9px; color: #64748b; margin-bottom: 1mm;">${item.subtitle || item.field2}</div>
+                                ${item.subtitle ? `
+                                    <div style="font-size: 9px; color: #64748b; margin-bottom: 1mm;">${item.subtitle}</div>
                                 ` : ''}
-                                ${item.description || item.field4 ? `
-                                    <div style="font-size: 9px; color: #475569; line-height: 1.4;">${item.description || item.field4}</div>
+                                ${item.description ? `
+                                    <div style="font-size: 9px; color: #475569; line-height: 1.4;">${item.description}</div>
                                 ` : ''}
                             </div>
                         `).join('')}

@@ -298,7 +298,7 @@ export function InlineSuggestionRenderer({
       acceptBtn.innerHTML = 'Apply'
       acceptBtn.onmouseover = () => acceptBtn.style.background = '#059669'
       acceptBtn.onmouseout = () => acceptBtn.style.background = '#10b981'
-      acceptBtn.onclick = (e) => {
+      acceptBtn.onclick = (e: any) => {
         e.stopPropagation()
         console.log('🚨🚨 GRAMMARLY ACCEPT BUTTON CLICKED:', {
           suggestionId: suggestion.id,
@@ -331,7 +331,7 @@ export function InlineSuggestionRenderer({
       declineBtn.innerHTML = 'Skip'
       declineBtn.onmouseover = () => declineBtn.style.background = '#dc2626'
       declineBtn.onmouseout = () => declineBtn.style.background = '#ef4444'
-      declineBtn.onclick = (e) => {
+      declineBtn.onclick = (e: any) => {
         e.stopPropagation()
         console.log('🚨🚨 GRAMMARLY DECLINE BUTTON CLICKED:', {
           suggestionId: suggestion.id,

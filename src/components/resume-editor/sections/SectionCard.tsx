@@ -58,7 +58,7 @@ export const SectionCard = ({
         onClick={onToggle}
       >
         <div className="flex items-center gap-2">
-          {React.isValidElement(icon) ? React.cloneElement(icon, { className: cn('w-5 h-5', colors.icon) } as any) : icon}
+          {React.isValidElement(icon) ? React.cloneElement(icon, { className: cn('w-5 h-5', colors.icon) } as unknown) : icon}
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
           {badge !== undefined && (typeof badge === 'number' ? badge > 0 : badge) && (
             <span className={cn(
@@ -74,7 +74,7 @@ export const SectionCard = ({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={(e) => {
+              onClick={(e: any) => {
                 e.stopPropagation()
                 onAdd()
               }}

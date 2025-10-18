@@ -5,8 +5,8 @@ import type { ResumeData } from '@/lib/types'
 
 interface UsePhotoUploadProps {
   localData: ResumeData & { photoUrl?: string | null }
-  setLocalData: (data: any) => void
-  updateField: (field: string, value: any) => void
+  setLocalData: (data: unknown) => void
+  updateField: (field: string, value: unknown) => void
   saveNow: () => Promise<void>
 }
 
@@ -47,8 +47,8 @@ export const usePhotoUpload = ({
       const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`
 
       // Update state
-      setLocalData({ ...localData, photoUrl } as any)
-      updateField('photoUrl' as any, photoUrl)
+      setLocalData({ ...localData, photoUrl } as Record<string, any>)
+      updateField('photoUrl', photoUrl)
 
       // Force immediate save (context will save to variant in tailor mode, or base resume in base mode)
       await saveNow()

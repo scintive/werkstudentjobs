@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import type { UserProfile } from "@/lib/types"
 
 interface ResumeUploadProps {
-  onProfileExtracted: (profile: UserProfile, organizedSkills?: any) => void
+  onProfileExtracted: (profile: UserProfile, organizedSkills?: unknown) => void
   onNext: () => void
   className?: string
 }

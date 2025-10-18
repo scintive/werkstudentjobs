@@ -184,8 +184,7 @@ const ProfileExtractionSchema = {
   required: [
     "personal_details", "professional_title", "professional_summary",
     "education", "certifications", "experience", "skills", "languages", "projects", "custom_sections"
-  ],
-  additionalProperties: false
+  ]
 };
 
 const SkillsOrganizationSchema = {
@@ -283,7 +282,7 @@ class LLMService {
     return {
       chat: {
         completions: {
-          create: async ({ messages }: { messages: any[] }) => {
+          create: async ({ messages }: { messages: unknown[] }) => {
             const lastMessage = messages[messages.length - 1]?.content || '';
             console.warn('🤖 Using mock LLM responses - set OPENAI_API_KEY for real AI');
             
@@ -297,7 +296,7 @@ class LLMService {
           }
         }
       }
-    } as any;
+    } as unknown;
   }
 
   /**
@@ -326,13 +325,13 @@ class LLMService {
     model?: string;
     system: string;
     user: string;
-    schema: Record<string, any>;
+    schema: Record<string, unknown>;
     temperature?: number;
     maxTokens?: number;
     retries?: number;
   }): Promise<T> {
     const client = this.getClient();
-    let lastErr: any;
+    let lastErr: unknown;
 
     // Build payload for caching
     const payload = { model, system, user, schema }
@@ -349,7 +348,7 @@ class LLMService {
         console.log(`🚀 Using chat.completions API with structured outputs: ${model} (attempt ${attempt}/${retries})`);
         console.log('📊 Request details - maxTokens:', maxTokens, 'temperature:', temperature);
         
-        const response = await client.chat.completions.create({
+        const response = await client!.chat.completions.create({
           model,
           messages: [
             { role: 'system', content: system },
@@ -422,7 +421,7 @@ class LLMService {
     max_tokens?: number;
     model?: string;
     allowArray?: boolean;
-  }) {
+  }): Promise<OpenAI.Chat.Completions.ChatCompletion> {
     const {
       messages,
       temperature,
@@ -453,10 +452,10 @@ class LLMService {
           if (cached) {
             return cached
           }
-          const response = await client.chat.completions.create({
+          const response = await client!.chat.completions.create({
             model: modelName,
             ...(allowArray ? {} : { response_format: { type: 'json_object' } }),
-            messages,
+            messages: messages as unknown,
             // Standard OpenAI models configuration
             temperature: effectiveTemperature,
             max_tokens: Math.min(max_tokens, modelConfig?.max_tokens || max_tokens)
@@ -483,7 +482,7 @@ class LLMService {
    * Extract job information from raw job data  
    * Now uses responses.create API for better reliability and schema validation
    */
-  async extractJobInfo(jobData: any): Promise<ExtractedJob> {
+  async extractJobInfo(jobData: unknown): Promise<ExtractedJob> {
     const systemPrompt = getPrompt('JOB_EXTRACTION', 'SYSTEM');
     const userPrompt = fillPromptTemplate(
       getPrompt('JOB_EXTRACTION', 'USER_TEMPLATE'),
@@ -528,7 +527,7 @@ class LLMService {
   /**
    * Parse job information only (no company research) to reduce token costs
    */
-  async parseJobInfoOnly(jobData: any): Promise<ExtractedJob> {
+  async parseJobInfoOnly(jobData: unknown): Promise<ExtractedJob> {
     console.log('📋 === PARSING JOB INFO ONLY (NO COMPANY RESEARCH) ===');
     console.log('📋 Job Title:', jobData.title);
     console.log('📋 Company:', jobData.companyName);
@@ -824,7 +823,7 @@ Focus on skills that would be valuable for vector database matching with user pr
    * Enhanced job extraction with web research capabilities (EXPENSIVE - use parseJobInfoOnly + smartCompanyResearch separately)
    * @deprecated Use parseJobInfoOnly() + smartCompanyResearch() separately to reduce costs
    */
-  async extractJobInfoWithResearch(jobData: any): Promise<ExtractedJob> {
+  async extractJobInfoWithResearch(jobData: unknown): Promise<ExtractedJob> {
     console.log('🔍🌐 === STARTING ENHANCED JOB EXTRACTION WITH WEB RESEARCH ===');
     console.log('🔍🌐 Job Title:', jobData.title);
     console.log('🔍🌐 Company:', jobData.companyName);
@@ -1053,8 +1052,10 @@ Please return the response as a valid JSON object following the schema above.`;
             languages: []
           },
           projects: [],
-          custom_sections: []
-        } as UserProfile;
+          custom_sections: [],
+          certifications: [],
+          languages: []
+        } as unknown as UserProfile;
       }
     }
   }
@@ -1112,7 +1113,7 @@ Please return the response as a valid JSON object following the schema above.`;
   async reviewProfile(profileData: UserProfile): Promise<{
     critique: string[];
     improvement_plan: string[];
-    base_resume: any;
+    base_resume: unknown;
   }> {
     const systemPrompt = getPrompt('PROFILE_REVIEW', 'SYSTEM');
     const userPrompt = fillPromptTemplate(
@@ -1136,7 +1137,7 @@ Please return the response as a valid JSON object following the schema above.`;
   /**
    * Repair malformed JSON using LLM
    */
-  async repairMalformedJson(malformedJson: string, promptCategory: string): Promise<any> {
+  async repairMalformedJson(malformedJson: string, promptCategory: string): Promise<unknown> {
     const schema = this.getSchemaForCategory(promptCategory);
     const systemPrompt = getPrompt(promptCategory, 'JSON_REPAIR_SYSTEM');
     const userPrompt = fillPromptTemplate(
@@ -1190,7 +1191,7 @@ Please return the response as a valid JSON object following the schema above.`;
   /**
    * Generate category-specific skill suggestions
    */
-  async generateCategorySkillSuggestions(categoryName: string, profileData: any, currentCategorySkills: string[] = []): Promise<string[]> {
+  async generateCategorySkillSuggestions(categoryName: string, profileData: unknown, currentCategorySkills: string[] = []): Promise<string[]> {
     console.log('🎯📂 === STARTING CATEGORY-SPECIFIC SKILL SUGGESTIONS ===');
     console.log('🎯📂 Category:', categoryName);
     console.log('🎯📂 Current skills in category:', currentCategorySkills);
@@ -1206,7 +1207,7 @@ Please return the response as a valid JSON object following the schema above.`;
       const currentRole = experience[0]?.position || 'Professional';
       const industry = experience[0]?.company || 'General';
       const allSkills = Object.values(profileData?.skills || {}).flat()
-        .map((s: any) => typeof s === 'string' ? s : s?.skill || s)
+        .map((s: unknown) => typeof s === 'string' ? s : s?.skill || s)
         .filter(Boolean);
 
       const categoryPrompt = `You are an expert career consultant analyzing a ${currentRole}'s resume.
@@ -1216,7 +1217,7 @@ CATEGORY: "${categoryName}"
 PROFESSIONAL BACKGROUND:
 - Current/Recent Role: ${currentRole}
 - Industry/Company: ${industry}
-- Education: ${education.map((e: any) => `${e.degree || ''} in ${e.field_of_study || e.field || ''}`).join(', ') || 'Not specified'}
+- Education: ${education.map((e: Record<string, any>) => `${e.degree || ''} in ${e.field_of_study || e.field || ''}`).join(', ') || 'Not specified'}
 - Years of Experience: ${experience.length > 0 ? 'Experienced professional' : 'Entry level'}
 
 EXISTING SKILLS PROFILE (shows their skill level):
@@ -1333,7 +1334,7 @@ Return ONLY a JSON array of skill names:
   /**
    * Intelligent skill organization and suggestions based on user profile
    */
-  async organizeSkillsIntelligently(profileData: any, currentSkills: any): Promise<any> {
+  async organizeSkillsIntelligently(profileData: unknown, currentSkills: unknown): Promise<unknown> {
     console.log('🧠🎯 === STARTING INTELLIGENT SKILL ORGANIZATION ===');
     console.log('🧠🎯 Profile Keys:', Object.keys(profileData || {}));
     console.log('🧠🎯 Current Skills:', JSON.stringify(currentSkills, null, 2));
@@ -1367,7 +1368,7 @@ Return ONLY a JSON array of skill names:
       let organization;
       try {
         // Use new responses.create API with schema validation
-        organization = await this.createJsonResponse<any>({
+        organization = await this.createJsonResponse<unknown>({
           model: 'gpt-4o-mini', // Using gpt-4o-mini for skills organization
           system: systemPrompt,
           user: userPrompt,
@@ -1453,7 +1454,7 @@ ${userPrompt}` }
   /**
    * Determine career level from profile data
    */
-  private determineCareerLevel(profileData: any): string {
+  private determineCareerLevel(profileData: unknown): string {
     if (!profileData?.experience) return 'entry';
     
     const experience = profileData.experience;
@@ -1491,7 +1492,7 @@ ${userPrompt}` }
   /**
    * Generate intelligent skill suggestions based on user profile analysis
    */
-  async generateSkillSuggestions(profileData: any, currentSkills: any): Promise<any> {
+  async generateSkillSuggestions(profileData: unknown, currentSkills: unknown): Promise<unknown> {
     console.log('🎯🔍 === STARTING GPT SKILL SUGGESTIONS ===');
     console.log('🎯🔍 Profile Data Keys:', Object.keys(profileData || {}));
     console.log('🎯🔍 Current Skills:', JSON.stringify(currentSkills, null, 2));
@@ -1593,7 +1594,7 @@ ${userPrompt}` }
   /**
    * Format education entries using AI to expand abbreviations and improve typography
    */
-  async formatEducationEntries(educationData: any[]): Promise<any[]> {
+  async formatEducationEntries(educationData: unknown[]): Promise<any[]> {
     if (!educationData || educationData.length === 0) {
       console.log('🎓 No education data to format');
       return educationData;
@@ -1651,7 +1652,7 @@ ${userPrompt}` }
         console.log('🎓🔍 Attempting JSON Repair...');
         
         // Try to extract just the array part
-        const arrayMatch = content.match(/\[.*\]/s);
+        const arrayMatch = content.match(/\[[\s\S]*\]/);
         if (arrayMatch) {
           console.log('🎓🔍 Found Array Match:', arrayMatch[0]);
           formattedEducation = JSON.parse(arrayMatch[0]);
@@ -1679,9 +1680,9 @@ ${userPrompt}` }
       return result;
     } catch (error) {
       console.error('🎓🔍 === GPT FORMATTING FAILED ===');
-      console.error('🎓🔍 Error Type:', error.constructor.name);
-      console.error('🎓🔍 Error Message:', error.message);
-      console.error('🎓🔍 Error Stack:', error.stack);
+      console.error('🎓🔍 Error Type:', (error as unknown).constructor.name);
+      console.error('🎓🔍 Error Message:', (error as Error).message);
+      console.error('🎓🔍 Error Stack:', (error as Error).stack);
       console.log('🎓🔍 Returning Original Data:', JSON.stringify(educationData, null, 2));
       return educationData;
     }
@@ -1690,7 +1691,7 @@ ${userPrompt}` }
   /**
    * Generate a compact style guide for consistent tone/voice/keywords per job+session
    */
-  async generateStyleGuide(context: { job: any; profile: any }) {
+  async generateStyleGuide(context: { job: unknown; profile: any }) {
     const model = 'gpt-4o-mini'
     const system = `You are a concise style guide generator for resumes.
 Return strict JSON only with keys: {"voice": string, "tone": string, "keywords": string[], "action_verbs": string[], "notes": string}`
@@ -1725,8 +1726,8 @@ Rules:
    * Confidence-based company research with optional web search
    * First checks if GPT can confidently answer, then searches if needed
    */
-  async smartCompanyResearch(companyName: string, jobData: any): Promise<{
-    research: any;
+  async smartCompanyResearch(companyName: string, jobData: unknown): Promise<{
+    research: unknown;
     confidence: number;
     searchUsed: boolean;
     cost: string;
@@ -1759,7 +1760,7 @@ Rules:
       });
 
       // Parse structured content from completion safely
-      let confidencePayload: any = { confidence: 0.0 };
+      let confidencePayload: unknown = { confidence: 0.0 };
       try {
         const content = confidenceCompletion.choices?.[0]?.message?.content || '{}';
         confidencePayload = JSON.parse(content);
@@ -1815,7 +1816,7 @@ Rules:
   /**
    * Generate company research using internal knowledge only
    */
-  private async generateCompanyResearchFromKnowledge(companyName: string, jobData: any): Promise<any> {
+  private async generateCompanyResearchFromKnowledge(companyName: string, jobData: unknown): Promise<unknown> {
     const researchPrompt = `Based on your training knowledge, provide comprehensive research about "${companyName}" in JSON format.
 
     Include MAXIMUM DETAIL:
@@ -1859,7 +1860,7 @@ Rules:
   /**
    * Generate company research using Tavily Search + Web Scraping + GPT parsing (COST EFFICIENT)
    */
-  private async generateCompanyResearchWithGoogleSearch(companyName: string, jobData: any): Promise<any> {
+  private async generateCompanyResearchWithGoogleSearch(companyName: string, jobData: unknown): Promise<unknown> {
     console.log(`🔍 === TAVILY SEARCH + SCRAPING FOR: ${companyName} ===`);
     
     try {
@@ -1930,7 +1931,7 @@ Rules:
       };
       
     } catch (error) {
-      console.error(`🔍 Tavily Search + Scraping failed for ${companyName}:`, error.message);
+      console.error(`🔍 Tavily Search + Scraping failed for ${companyName}:`, (error as Error).message);
       throw error;
     }
   }
@@ -1938,7 +1939,7 @@ Rules:
   /**
    * Perform Tavily Search API call (replacing Google Search)
    */
-  private async performTavilySearchWithAnswer(companyName: string): Promise<{results: any[], answer: string | null}> {
+  private async performTavilySearchWithAnswer(companyName: string): Promise<{results: unknown[], answer: string | null}> {
     const API_KEY = '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';
 
     // SMART SEARCH: Prioritize LinkedIn company pages + search for specific data points
@@ -1979,7 +1980,7 @@ Rules:
       }
       
       // Convert Tavily format to our format
-      const convertedResults = results.map((item: any) => ({
+      const convertedResults = results.map((item: Record<string, any>) => ({
         title: item.title,
         url: item.url,
         snippet: item.content,
@@ -1987,7 +1988,7 @@ Rules:
         score: item.score
       }));
       
-      console.log(`🔍 Tavily Search Results for ${companyName}:`, convertedResults.map(r => r.displayLink));
+      console.log(`🔍 Tavily Search Results for ${companyName}:`, convertedResults.map((r: Record<string, any>) => r.displayLink));
       return { results: convertedResults, answer };
       
     } catch (error) {
@@ -2035,7 +2036,7 @@ Rules:
       }
       
       // Convert Tavily format to our format
-      const results = data.results.map((item: any) => ({
+      const results = data.results.map((item: Record<string, any>) => ({
         title: item.title,
         url: item.url,
         snippet: item.content,
@@ -2043,7 +2044,7 @@ Rules:
         score: item.score
       }));
       
-      console.log(`🔍 Tavily Search Results for ${companyName}:`, results.map(r => r.displayLink));
+      console.log(`🔍 Tavily Search Results for ${companyName}:`, results.map((r: Record<string, any>) => r.displayLink));
       return results;
       
     } catch (error) {
@@ -2055,10 +2056,10 @@ Rules:
   /**
    * Scrape content from websites using HTTP requests + content extraction
    */
-  private async scrapeWebsiteContent(searchResults: any[], companyName: string): Promise<any[]> {
+  private async scrapeWebsiteContent(searchResults: unknown[], companyName: string): Promise<any[]> {
     console.log(`🕷️ Scraping content from ${searchResults.length} URLs for ${companyName}`);
     
-    const scrapedContent: any[] = [];
+    const scrapedContent: unknown[] = [];
     
     for (const result of searchResults) {
       try {
@@ -2072,9 +2073,9 @@ Rules:
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
-          },
-          timeout: 10000 // 10 second timeout
-        });
+          }
+          // timeout: 10000 // 10 second timeout - commented out as timeout is not a valid RequestInit property
+        } as unknown);
         
         if (!response.ok) {
           console.log(`🕷️ Failed to fetch ${result.displayLink}: ${response.status}`);
@@ -2101,7 +2102,7 @@ Rules:
         }
         
       } catch (error) {
-        console.log(`🕷️ Scraping failed for ${result.displayLink}:`, error.message);
+        console.log(`🕷️ Scraping failed for ${result.displayLink}:`, (error as Error).message);
         continue;
       }
     }
@@ -2186,7 +2187,7 @@ Rules:
   /**
    * Parse scraped content using GPT to extract structured company data
    */
-  private async parseScrapedContentWithGPT(scrapedContent: any[], companyName: string, jobData: any): Promise<any> {
+  private async parseScrapedContentWithGPT(scrapedContent: unknown[], companyName: string, jobData: unknown): Promise<unknown> {
     console.log(`🤖 GPT parsing scraped content for ${companyName}`);
     console.log(`🤖 DEBUG - scrapedContent type:`, typeof scrapedContent[0]);
     console.log(`🤖 DEBUG - scrapedContent first item:`, typeof scrapedContent[0] === 'string' ? scrapedContent[0].substring(0, 200) : JSON.stringify(scrapedContent[0], null, 2).substring(0, 200));
@@ -2311,7 +2312,7 @@ Extract ALL information available. Be aggressive - infer company values and cult
   /**
    * FALLBACK: Original OpenAI web search tool (EXPENSIVE - use only if Google Search fails)
    */
-  private async generateCompanyResearchWithWebSearch(companyName: string, jobData: any): Promise<any> {
+  private async generateCompanyResearchWithWebSearch(companyName: string, jobData: unknown): Promise<unknown> {
     const searchInput = `Perform COMPREHENSIVE web research on company "${companyName}" and analyze the specific job posting "${jobData.title}". I need detailed intelligence for job matching:
 
     **COMPANY RESEARCH:**
@@ -2378,11 +2379,11 @@ Extract ALL information available. Be aggressive - infer company values and cult
       const client = this.getClient();
       
       // Use the Responses API with actual web search tool
-      const response = await client.responses.create({
+      const response = await client!.responses.create({
         model: 'gpt-4o-mini',
         input: searchInput,
         // Enable actual built-in Web search tool (let model decide when to use)
-        tools: [{ type: 'web_search' }],
+        tools: [{ type: 'web_search_preview' as unknown }],
         max_output_tokens: 3000
       });
 
@@ -2418,20 +2419,20 @@ Extract ALL information available. Be aggressive - infer company values and cult
           for (const item of output) {
             if (item && typeof item === 'object') {
               // Check if this looks like an OpenAI message response
-              if (item.content && Array.isArray(item.content)) {
-                const outputText = item.content.find((c: any) => c.type === 'output_text');
+              if ((item as unknown).content && Array.isArray((item as unknown).content)) {
+                const outputText = (item as unknown).content.find((c: Record<string, any>) => c.type === 'output_text');
                 if (outputText && outputText.text) {
                   extractedContent = outputText.text;
                   console.log('🔍🌐 Found nested OpenAI response text');
                   break;
                 }
               }
-              
+
               // Fallback to direct text/content fields
-              const possibleContent = item.content || item.text || item.output || item.message || item.response;
+              const possibleContent = (item as unknown).content || (item as unknown).text || (item as unknown).output || (item as unknown).message || (item as unknown).response;
               if (possibleContent && typeof possibleContent === 'string') {
                 extractedContent = possibleContent;
-                console.log('🔍🌐 Found content in object field:', item.type || 'unknown type');
+                console.log('🔍🌐 Found content in object field:', (item as unknown).type || 'unknown type');
                 break;
               }
             }
@@ -2439,9 +2440,9 @@ Extract ALL information available. Be aggressive - infer company values and cult
           
           // Strategy 2: Look for direct string responses
           if (!extractedContent) {
-            const stringResponse = output.find(item => typeof item === 'string' && item.trim().length > 0);
+            const stringResponse = output.find(item => typeof item === 'string' && (item as string).trim().length > 0);
             if (stringResponse) {
-              extractedContent = stringResponse;
+              extractedContent = stringResponse as string;
               console.log('🔍🌐 Found direct string response');
             }
           }
@@ -2494,7 +2495,7 @@ Extract ALL information available. Be aggressive - infer company values and cult
         }
         
       } catch (parseError) {
-        console.warn('🔍🌐 Could not parse web search JSON:', parseError.message);
+        console.warn('🔍🌐 Could not parse web search JSON:', (parseError as Error).message);
         console.log('🔍🌐 Using fallback structured format');
         researchData = {
           company_name: companyName,
@@ -2605,7 +2606,7 @@ ${tasks.map((t, i) => `${i + 1}. ${t.task}`).join('\n')}`;
 
       const client = this.getClient(); // Get OpenAI client instance
 
-      const response = await client.chat.completions.create({
+      const response = await client!.chat.completions.create({
         model: 'gpt-4o-mini', // Using gpt-4o-mini for cost efficiency and speed
         messages: [{
           role: 'system',
@@ -2643,7 +2644,7 @@ ${tasks.map((t, i) => `${i + 1}. ${t.task}`).join('\n')}`;
 
       // Verify all URLs and filter out invalid ones
       console.log('🔗 Verifying all URLs...');
-      const verifiedPaths: Record<string, any> = {};
+      const verifiedPaths: Record<string, unknown> = {};
 
       for (const [task, categories] of Object.entries(learningPaths)) {
         verifiedPaths[task] = {
@@ -2653,7 +2654,7 @@ ${tasks.map((t, i) => `${i + 1}. ${t.task}`).join('\n')}`;
         };
 
         // Verify quick_wins
-        for (const resource of (categories as any).quick_wins || []) {
+        for (const resource of (categories as unknown).quick_wins || []) {
           const url = resource.url?.toLowerCase() || '';
 
           // Skip Udemy/Coursera
@@ -2670,7 +2671,7 @@ ${tasks.map((t, i) => `${i + 1}. ${t.task}`).join('\n')}`;
         }
 
         // Verify certifications
-        for (const resource of (categories as any).certifications || []) {
+        for (const resource of (categories as unknown).certifications || []) {
           const url = resource.url?.toLowerCase() || '';
 
           // Skip Udemy/Coursera
@@ -2687,7 +2688,7 @@ ${tasks.map((t, i) => `${i + 1}. ${t.task}`).join('\n')}`;
         }
 
         // Verify deepening
-        for (const resource of (categories as any).deepening || []) {
+        for (const resource of (categories as unknown).deepening || []) {
           const url = resource.url?.toLowerCase() || '';
 
           // Skip Udemy/Coursera

@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cast to any for easier property access
-    const jobDataAny = jobData as any;
+    // Cast to Record for property access
+    const jobDataAny = jobData as Record<string, unknown>;
 
     // Get latest profile data (use current request origin to avoid port/env mismatch)
     let profileData = null;
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.resumeData) {
@@ -63,25 +63,25 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.log('🎯 STRATEGY: Could not fetch latest profile, using fallback');
     }
-    
+
     if (!profileData) {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
       );
     }
-    
+
     // Create strategy prompt
     const strategyPrompt = {
       job: {
         title: jobDataAny.title,
         company: jobDataAny.company_name || 'Company',
         must_haves: [
-          ...(jobDataAny.skills || []),
-          ...(jobDataAny.tools || []),
-          ...(jobDataAny.responsibilities || [])
+          ...((jobDataAny.skills as unknown[] | undefined) || []),
+          ...((jobDataAny.tools as unknown[] | undefined) || []),
+          ...((jobDataAny.responsibilities as unknown[] | undefined) || [])
         ].slice(0, 8),
-        nice_to_haves: (jobDataAny.nice_to_have || []).slice(0, 6),
+        nice_to_haves: ((jobDataAny.nice_to_have as unknown[] | undefined) || []).slice(0, 6),
         work_mode: jobDataAny.work_mode,
         location: jobDataAny.location_city
       },

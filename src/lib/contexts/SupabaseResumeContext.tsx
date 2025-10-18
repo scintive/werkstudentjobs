@@ -9,7 +9,7 @@ import type { ResumeData } from '@/lib/types'
 // Extended context that adds Supabase persistence
 interface SupabaseResumeContextValue {
   resumeData: ResumeData
-  dispatch: React.Dispatch<any>
+  dispatch: React.Dispatch<unknown>
   canUndo: boolean
   canRedo: boolean
   // Supabase-specific additions
@@ -163,9 +163,9 @@ export function SupabaseResumeProvider({
         if (variantId) {
           const { resumeVariantService } = await import('@/lib/services/resumeVariantService');
           // Normalize languages into both top-level and skills.languages before saving variant
-          const normalized = { ...data } as any
-          const topLangs = Array.isArray((normalized as any).languages) ? (normalized as any).languages : []
-          const skillsLanguages = topLangs.map((l: any) => {
+          const normalized = { ...data } as unknown
+          const topLangs = Array.isArray((normalized as unknown).languages) ? (normalized as unknown).languages : []
+          const skillsLanguages = topLangs.map((l: Record<string, any>) => {
             if (typeof l === 'string') return l
             const name = (l?.language ?? l?.name ?? '').toString().trim()
             const level = (l?.proficiency ?? l?.level ?? '').toString().trim()
@@ -182,9 +182,9 @@ export function SupabaseResumeProvider({
         }
       } else {
         // Normalize languages back into skills.languages for base save (no top-level column in DB)
-        const normalized = { ...data } as any
-        const topLangs = Array.isArray((normalized as any).languages) ? (normalized as any).languages : []
-        const skillsLanguages = topLangs.map((l: any) => {
+        const normalized = { ...data } as unknown
+        const topLangs = Array.isArray((normalized as unknown).languages) ? (normalized as unknown).languages : []
+        const skillsLanguages = topLangs.map((l: Record<string, any>) => {
           if (typeof l === 'string') return l
           const name = (l?.language ?? l?.name ?? '').toString().trim()
           const level = (l?.proficiency ?? l?.level ?? '').toString().trim()
@@ -231,8 +231,8 @@ export function SupabaseResumeProvider({
   // DEBUG: Log photoUrl before passing to ResumeProvider (must be before early return)
   React.useEffect(() => {
     if (!isLoading) {
-      console.log('📊 SUPABASE CONTEXT: dataToUse photoUrl before ResumeProvider:', (dataToUse as any)?.photoUrl)
-      console.log('📊 SUPABASE CONTEXT: resumeDataFromDB photoUrl:', (resumeDataFromDB as any)?.photoUrl)
+      console.log('📊 SUPABASE CONTEXT: dataToUse photoUrl before ResumeProvider:', (dataToUse as unknown)?.photoUrl)
+      console.log('📊 SUPABASE CONTEXT: resumeDataFromDB photoUrl:', (resumeDataFromDB as unknown)?.photoUrl)
     }
   }, [dataToUse, resumeDataFromDB, isLoading])
 
