@@ -9,8 +9,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { User, Mail, Phone, MapPin, Trash2, Save } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Trash2, Save, CreditCard, Crown, TrendingUp, Calendar, ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -22,6 +24,8 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const autoSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [usageData, setUsageData] = useState<any>({})
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +42,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUserData()
+    loadSubscriptionData()
   }, [])
 
   // Auto-save functionality with 2-second debounce
@@ -173,6 +178,69 @@ export default function SettingsPage() {
     }
   }
 
+  const loadSubscriptionData = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session?.access_token) return
+
+      const response = await fetch('/api/subscription/status', {
+        headers: {
+          'Authorization': `Bearer ${sessionData.session.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSubscription(data)
+
+        // Load usage for key features
+        if (data.plan?.limits) {
+          const features = ['ai_tailoring_per_month', 'resume_exports_per_month', 'cover_letters_per_month']
+          const usage: any = {}
+
+          for (const feature of features) {
+            const usageResponse = await fetch(`/api/subscription/usage?feature=${feature}`, {
+              headers: {
+                'Authorization': `Bearer ${sessionData.session.access_token}`
+              }
+            })
+
+            if (usageResponse.ok) {
+              const usageInfo = await usageResponse.json()
+              usage[feature] = usageInfo
+            }
+          }
+
+          setUsageData(usage)
+        }
+      }
+    } catch (err) {
+      console.error('Error loading subscription data:', err)
+    }
+  }
+
+  const handleManageBilling = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session?.access_token) return
+
+      const response = await fetch('/api/stripe/create-portal-session', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionData.session.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const { url } = await response.json()
+        window.location.href = url
+      }
+    } catch (err) {
+      console.error('Error creating portal session:', err)
+      setError('Failed to open billing portal')
+    }
+  }
+
   const handleSave = async () => {
     if (!userId) return
 
@@ -295,6 +363,115 @@ export default function SettingsPage() {
             <AlertDescription className="text-green-800">{success}</AlertDescription>
           </Alert>
         )}
+
+        {/* Billing & Subscription */}
+        <Card className="mb-6 border-blue-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Billing & Subscription
+                </CardTitle>
+                <CardDescription>
+                  Manage your subscription and view usage
+                </CardDescription>
+              </div>
+              {subscription?.plan && (
+                <Badge className={`${
+                  subscription.plan.id === 'enterprise' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' :
+                  subscription.plan.id === 'pro' ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white' :
+                  'bg-gray-200 text-gray-700'
+                }`}>
+                  {subscription.plan.id === 'enterprise' && <Crown className="w-3 h-3 mr-1" />}
+                  {subscription.plan.name}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {subscription?.is_free ? (
+              <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                <h3 className="font-bold text-gray-900 mb-2">Upgrade to unlock premium features</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Get unlimited AI tailoring, premium templates, and priority support
+                </p>
+                <Link href="/pricing">
+                  <Button className="btn-primary">
+                    <TrendingUp className="w-4 h-4" />
+                    View Plans
+                  </Button>
+                </Link>
+              </div>
+            ) : subscription?.subscription ? (
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="text-sm text-blue-700 mb-1">Status</div>
+                    <div className="font-bold text-gray-900 capitalize">{subscription.subscription.status}</div>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <div className="text-sm text-purple-700 mb-1">Billing Cycle</div>
+                    <div className="font-bold text-gray-900 capitalize">{subscription.subscription.billing_cycle}</div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="text-sm text-green-700 mb-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Renews On
+                    </div>
+                    <div className="font-bold text-gray-900">
+                      {new Date(subscription.subscription.current_period_end).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Usage Metrics */}
+                {Object.keys(usageData).length > 0 && (
+                  <div className="space-y-3 mb-6">
+                    <h4 className="font-semibold text-gray-900">Usage This Month</h4>
+                    {Object.entries(usageData).map(([feature, data]: [string, any]) => {
+                      const featureName = feature.replace('_per_month', '').replace(/_/g, ' ')
+                      const isUnlimited = data.is_unlimited
+                      const percentage = isUnlimited ? 0 : (data.used / data.limit) * 100
+
+                      return (
+                        <div key={feature}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm capitalize text-gray-700">{featureName}</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {isUnlimited ? 'Unlimited' : `${data.used} / ${data.limit}`}
+                            </span>
+                          </div>
+                          {!isUnlimited && (
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  percentage >= 90 ? 'bg-red-500' :
+                                  percentage >= 70 ? 'bg-orange-500' :
+                                  'bg-blue-500'
+                                }`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleManageBilling}
+                  variant="outline"
+                  className="w-full md:w-auto"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Manage Billing
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         {/* Student Information */}
         <Card className="mb-6">

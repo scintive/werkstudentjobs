@@ -192,10 +192,10 @@ export default function HomePage() {
             </div>
 
             {/* Trust indicators */}
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                <span>Free</span>
+                <span>Free to start</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-green-600" />
@@ -203,7 +203,23 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                <span>1000+ jobs</span>
+                <span>1000+ jobs daily</span>
+              </div>
+            </div>
+
+            {/* Social Proof */}
+            <div className="flex items-center gap-6 pt-4 border-t border-gray-200">
+              <div>
+                <div className="text-2xl font-black text-gray-900">5,000+</div>
+                <div className="text-xs text-gray-600">Students helped</div>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-gray-900">95%</div>
+                <div className="text-xs text-gray-600">Success rate</div>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-gray-900">4.9/5</div>
+                <div className="text-xs text-gray-600">User rating</div>
               </div>
             </div>
           </div>
@@ -493,6 +509,96 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Testimonials Section */}
+      <div className="max-w-7xl mx-auto mb-24">
+        <h2 className="text-3xl font-black text-gray-900 text-center mb-12">
+          Trusted by students across Germany
+        </h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              name: "Sarah M.",
+              role: "Computer Science, TUM",
+              text: "Got 3 interviews in my first week! The AI tailoring made my resume stand out.",
+              rating: 5
+            },
+            {
+              name: "Max K.",
+              role: "Business Admin, LMU",
+              text: "Saved hours on applications. The cover letter generator is incredible!",
+              rating: 5
+            },
+            {
+              name: "Lena W.",
+              role: "Data Science, HU Berlin",
+              text: "Finally landed my dream Werkstudent role. Worth every cent of the Pro plan!",
+              rating: 5
+            }
+          ].map((testimonial, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="card p-6"
+            >
+              <div className="flex items-center gap-1 mb-4">
+                {Array.from({ length: testimonial.rating }).map((_, j) => (
+                  <Sparkles key={j} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                ))}
+              </div>
+              <p className="text-gray-700 mb-4">"{testimonial.text}"</p>
+              <div>
+                <div className="font-semibold text-gray-900">{testimonial.name}</div>
+                <div className="text-sm text-gray-600">{testimonial.role}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pricing Teaser */}
+      {!isAuthenticated && (
+        <div className="max-w-7xl mx-auto mb-24">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-12 text-center text-white">
+            <h2 className="text-4xl font-black mb-4">
+              Start free. Upgrade as you grow.
+            </h2>
+            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+              Get 5 free AI-tailored resumes per month. Upgrade to Pro for unlimited access and premium features.
+            </p>
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="text-3xl font-black">€0</div>
+                <div className="text-sm">Free Plan</div>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="text-3xl font-black">€9.99</div>
+                <div className="text-sm">Pro Monthly</div>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="text-3xl font-black">€8.33</div>
+                <div className="text-sm">Pro Yearly</div>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-4">
+              <Link href="/register">
+                <button className="bg-white text-blue-600 hover:bg-gray-100 font-bold px-8 py-4 rounded-lg transition-all shadow-lg">
+                  Start Free Today
+                  <ArrowRight className="w-5 h-5 inline ml-2" />
+                </button>
+              </Link>
+              <Link href="/pricing">
+                <button className="bg-white/10 text-white border-2 border-white hover:bg-white/20 font-bold px-8 py-4 rounded-lg transition-all">
+                  View All Plans
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Final CTA */}
       {!isAuthenticated && (
         <div className="max-w-3xl mx-auto text-center mb-24">
@@ -500,7 +606,7 @@ export default function HomePage() {
             Ready to land your next role?
           </h2>
           <p className="text-lg text-gray-600 mb-8">
-            Join thousands of students finding Werkstudent jobs with AI-powered applications
+            Join 5,000+ students finding Werkstudent jobs with AI-powered applications
           </p>
           <Link href="/register">
             <button className="btn btn-primary btn-lg">
@@ -508,6 +614,9 @@ export default function HomePage() {
               <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
+          <p className="text-sm text-gray-500 mt-4">
+            No credit card required • Cancel anytime • 14-day money-back guarantee
+          </p>
         </div>
       )}
     </div>
