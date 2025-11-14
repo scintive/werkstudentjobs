@@ -172,7 +172,7 @@ export const APP_CONFIG = {
  * @returns {*} The configuration value
  */
 export function getConfig(path: string): unknown {
-  return path.split('.').reduce((obj: unknown, key: string) => obj?.[key], APP_CONFIG as unknown);
+  return path.split('.').reduce((obj: any, key: string) => obj?.[key], APP_CONFIG as any);
 }
 
 /**
@@ -211,7 +211,7 @@ export function validateConfig(): { warnings: string[], errors: string[], isVali
   // Validate template availability
   const availableTemplates = getConfig('RESUME_TEMPLATES.AVAILABLE');
   const defaultTemplate = getConfig('RESUME_TEMPLATES.DEFAULT');
-  if (!availableTemplates.includes(defaultTemplate)) {
+  if (!(availableTemplates as any).includes(defaultTemplate)) {
     errors.push(`Default template '${defaultTemplate}' not in available templates`);
   }
 
