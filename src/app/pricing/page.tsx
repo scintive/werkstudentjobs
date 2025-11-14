@@ -306,11 +306,11 @@ export default function PricingPage() {
           {[
             {
               question: 'Can I switch plans at any time?',
-              answer: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate any charges.'
+              answer: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we will prorate any charges.'
             },
             {
               question: 'What happens when I hit my usage limit?',
-              answer: 'On the free plan, you'll be prompted to upgrade to continue using premium features. Pro and Enterprise plans have unlimited usage for core features.'
+              answer: 'On the free plan, you will be prompted to upgrade to continue using premium features. Pro and Enterprise plans have unlimited usage for core features.'
             },
             {
               question: 'Do you offer refunds?',
@@ -322,7 +322,7 @@ export default function PricingPage() {
             },
             {
               question: 'Can I cancel anytime?',
-              answer: 'Absolutely! You can cancel your subscription at any time from your account settings. You'll retain access until the end of your billing period.'
+              answer: 'Absolutely! You can cancel your subscription at any time from your account settings. You will retain access until the end of your billing period.'
             }
           ].map((faq, i) => (
             <details key={i} className="card p-4 cursor-pointer group">
