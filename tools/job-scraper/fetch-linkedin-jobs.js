@@ -9,7 +9,7 @@ import { ApifyClient } from 'apify-client';
 
 // Initialize Apify client
 const client = new ApifyClient({
-  token: 'APIFY_TOKEN_REMOVED',
+  token: process.env.APIFY_API_TOKEN,
 });
 
 // Use logical_scrapers actor - it works and returns Schema.org data
@@ -58,7 +58,7 @@ async function fetchWerkstudentJobs() {
     console.log('\n' + '═'.repeat(80));
 
     // Build dataset URL for the import-apify endpoint
-    const datasetUrl = `https://api.apify.com/v2/datasets/${run.defaultDatasetId}/items?token=APIFY_TOKEN_REMOVED`;
+    const datasetUrl = `https://api.apify.com/v2/datasets/${run.defaultDatasetId}/items?token=${process.env.APIFY_API_TOKEN}`;
 
     console.log('\n🔄 Processing jobs through GPT parsing pipeline...');
     console.log(`📡 Dataset URL: ${datasetUrl}\n`);
